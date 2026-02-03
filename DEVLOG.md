@@ -780,3 +780,177 @@ Cards are displayed in a 3-column grid layout.
 | **Co-maker** | ✅ | ✅ (new) |
 | Funding source | ✅ | ❌ (not needed for MVP) |
 | Documents | ✅ | ❌ (not needed for MVP) |
+
+---
+
+## 2026-02-04 - Deployment & Branding
+
+### Summary
+Attempted deployment to multiple platforms (Cloudflare, Render), added gradient UI enhancements, and implemented animated branding components with Framer Motion.
+
+---
+
+### Deployment Attempts
+
+#### Cloudflare Workers ❌
+- Configured `@cloudflare/vite-plugin` with TanStack Start
+- Set up GitHub Actions workflow for auto-deploy
+- Issues encountered:
+  - `DATABASE_URL` not available during build phase
+  - `BETTER_AUTH_URL` needed for auth client
+- **Reverted** - Setup was too complex for initial deployment
+
+#### Render ✅ (In Progress)
+- Configured `node-server` preset for TanStack Start
+- Added `render.yaml` for infrastructure-as-code
+- Build command: `drizzle-kit push && vite build`
+- Start command: `node .output/server/index.mjs`
+- **Issue**: `@noble/ciphers` ESM compatibility with `better-auth`
+
+---
+
+### @noble/ciphers Compatibility Issue
+
+**Problem**: `better-auth` imports from `@noble/ciphers/chacha.js` but newer versions of `@noble/ciphers` (v2.0.0+) changed to ESM-only and removed `.js` extension exports.
+
+**Error:**
+```
+Missing "./chacha.js" specifier in "@noble/ciphers" package
+```
+
+**Attempted Fixes:**
+1. Pinning `@noble/ciphers` to `0.6.0` - didn't work
+2. Pinning to `0.5.3` - didn't work
+3. Adding overrides in `package.json` - didn't work
+
+**Current Fix** (in progress):
+- Added Vite resolve aliases to map old paths to new:
+  ```typescript
+  resolve: {
+    alias: {
+      '@noble/ciphers/chacha.js': '@noble/ciphers/chacha',
+      '@noble/ciphers/utils.js': '@noble/ciphers/utils',
+    },
+  },
+  ```
+
+**Sources:**
+- [GitHub Issue #4531](https://github.com/better-auth/better-auth/issues/4531)
+- Root cause: `@noble/ciphers@2.0.0` is ESM-only
+
+---
+
+### UI/UX Enhancements
+
+#### Gradient System ✅
+Added gradient utilities to `src/styles.css`:
+
+| Class | Effect |
+|-------|--------|
+| `bg-gradient-page` | Subtle radial mesh gradient for backgrounds |
+| `bg-gradient-primary` | Linear gradient for buttons/accents |
+| `bg-gradient-sidebar` | Vertical gradient for sidebars |
+| `bg-gradient-card-header` | Subtle gradient for card headers |
+| `glass` | Frosted glass effect with backdrop blur |
+| `border-gradient` | Gradient border using pseudo-element |
+| `glow-primary` | Primary color glow shadow |
+
+Applied to:
+- Dashboard layout background
+- Header with glass effect
+- Auth pages
+
+#### Decorative Circles ✅
+Added floating circles to dashboard background:
+- Top right: 10% opacity, large blur
+- Left middle: 7% opacity
+- Bottom right: 5% opacity
+
+---
+
+### Auth Pages Redesign ✅
+
+#### Split-Screen Layout (Desktop)
+- **Left panel**: Blue gradient with brand, features grid, decorative circles
+- **Right panel**: Form with gradient background
+
+#### Features Grid
+- Track Everything (ChartLineUp icon)
+- Manage Contacts (Users icon)
+- Fast & Simple (Lightning icon)
+- Secure & Private (ShieldCheck icon)
+
+#### Mobile Layout
+- Single column with centered branding
+- Full-width form card
+
+---
+
+### Animated Branding (Framer Motion) ✅
+
+**New Components** (`src/components/ui/loona-brand.tsx`):
+
+#### `<LoonaBrand />`
+Animated logo with letter-by-letter reveal animation.
+
+```tsx
+<LoonaBrand
+  size="sm" | "md" | "lg" | "xl"
+  variant="default" | "white" | "gradient"
+  animated={true | false}
+/>
+```
+
+Animation features:
+- Staggered letter entrance
+- Spring physics
+- 3D rotation effect
+- Glow pulse (white variant)
+
+#### `<AnimatedTagline />`
+Fade-in text animation with configurable delay.
+
+#### `<FloatingCircle />`
+Decorative circles with gentle up/down bobbing motion.
+
+---
+
+### Files Created
+
+**Components:**
+- `src/components/ui/loona-brand.tsx` - Animated brand components
+
+**Config:**
+- `render.yaml` - Render deployment config
+
+---
+
+### Files Updated
+
+**Styles:**
+- `src/styles.css` - Added gradient utilities, glass effect, dark mode variants
+
+**Routes:**
+- `src/routes/_auth.tsx` - Split-screen layout with animations
+- `src/routes/_auth/login.tsx` - New design with gradient button
+- `src/routes/_auth/signup.tsx` - New design with password requirements
+- `src/routes/_dashboard.tsx` - Removed nav icon, added decorative circles
+
+**Config:**
+- `vite.config.ts` - Added resolve aliases for @noble/ciphers
+- `package.json` - Added framer-motion, @noble/ciphers dependencies
+
+---
+
+### Dependencies Added
+
+- `framer-motion` - Animation library for React
+
+---
+
+### Next Steps
+
+1. [ ] Resolve @noble/ciphers compatibility issue
+2. [ ] Complete Render deployment
+3. [ ] Test animations in production
+4. [ ] Add landing page with LoonaBrand component
