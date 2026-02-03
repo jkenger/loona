@@ -22,6 +22,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@noble/ciphers": "0.6.0",
     "@base-ui/react": "^1.1.0",
     "@fontsource-variable/outfit": "^5.2.8",
     "@neondatabase/serverless": "^1.0.2",
@@ -39,6 +40,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.1",
+    "framer-motion": "^12.31.0",
     "nitro": "latest",
     "react": "^19.2.0",
     "react-day-picker": "^9.13.0",
@@ -52,7 +54,7 @@
     "zod": "^4.3.6"
   },
   "overrides": {
-    "@noble/ciphers": "1.2.1"
+    "@noble/ciphers": "0.6.0"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.3.11",
