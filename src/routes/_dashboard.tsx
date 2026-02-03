@@ -82,10 +82,7 @@ function DashboardLayout() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link to={homeLink} className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-sm">
-                <CurrencyCircleDollar className="h-5 w-5 text-primary-foreground" weight="bold" />
-              </div>
+            <Link to={homeLink} className="flex items-center">
               <span className="text-xl font-bold">Loona</span>
             </Link>
 
