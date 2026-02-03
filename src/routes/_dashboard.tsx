@@ -73,17 +73,17 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-page">
       {/* Route loading progress */}
       <RouteProgress />
 
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 border-b border-border/50 glass">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link to={homeLink} className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded bg-primary flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-sm">
                 <CurrencyCircleDollar className="h-5 w-5 text-primary-foreground" weight="bold" />
               </div>
               <span className="text-xl font-bold">Loona</span>

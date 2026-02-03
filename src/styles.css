@@ -130,6 +130,116 @@
   }
 }
 
+/* Gradient utilities */
+@layer utilities {
+  /* Page background gradient - subtle mesh */
+  .bg-gradient-page {
+    background:
+      radial-gradient(ellipse at 0% 0%, hsl(207 83% 49% / 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 0%, hsl(207 83% 60% / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 100%, hsl(207 83% 49% / 0.03) 0%, transparent 50%),
+      var(--background);
+  }
+
+  /* Primary gradient for buttons/accents */
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, hsl(207 83% 52%) 0%, hsl(207 83% 42%) 100%);
+  }
+
+  .bg-gradient-primary:hover {
+    background: linear-gradient(135deg, hsl(207 83% 48%) 0%, hsl(207 83% 38%) 100%);
+  }
+
+  /* Sidebar gradient */
+  .bg-gradient-sidebar {
+    background: linear-gradient(180deg, hsl(210 20% 99%) 0%, hsl(210 20% 96%) 100%);
+  }
+
+  /* Card header gradient */
+  .bg-gradient-card-header {
+    background: linear-gradient(135deg, hsl(207 83% 49% / 0.08) 0%, hsl(207 83% 60% / 0.04) 100%);
+  }
+
+  /* Glass effect */
+  .glass {
+    background: hsl(0 0% 100% / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(210 15% 90% / 0.5);
+  }
+
+  /* Gradient border (using pseudo element) */
+  .border-gradient {
+    position: relative;
+    border: none;
+    background: var(--card);
+  }
+
+  .border-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(207 83% 49% / 0.3), hsl(207 83% 60% / 0.1));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Glow effect for focus states */
+  .glow-primary {
+    box-shadow: 0 0 20px hsl(207 83% 49% / 0.3);
+  }
+
+  /* Animated gradient background */
+  .bg-gradient-animated {
+    background: linear-gradient(-45deg,
+      hsl(207 83% 49% / 0.1),
+      hsl(210 20% 98%),
+      hsl(207 83% 60% / 0.1),
+      hsl(210 20% 98%)
+    );
+    background-size: 400% 400%;
+    animation: gradient-shift 15s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+}
+
+/* Dark mode gradient overrides */
+.dark {
+  .bg-gradient-page {
+    background:
+      radial-gradient(ellipse at 0% 0%, hsl(207 83% 55% / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 0%, hsl(207 83% 60% / 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 100%, hsl(207 83% 55% / 0.03) 0%, transparent 50%),
+      var(--background);
+  }
+
+  .bg-gradient-sidebar {
+    background: linear-gradient(180deg, hsl(215 25% 11%) 0%, hsl(215 25% 8%) 100%);
+  }
+
+  .bg-gradient-card-header {
+    background: linear-gradient(135deg, hsl(207 83% 55% / 0.12) 0%, hsl(207 83% 60% / 0.05) 100%);
+  }
+
+  .glass {
+    background: hsl(215 25% 12% / 0.7);
+    border: 1px solid hsl(215 20% 22% / 0.5);
+  }
+
+  .border-gradient::before {
+    background: linear-gradient(135deg, hsl(207 83% 55% / 0.4), hsl(207 83% 60% / 0.15));
+  }
+}
+
 /* Route progress animation */
 @keyframes progress {
   0% {
