@@ -4,8 +4,7 @@ import { signUp } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { CurrencyCircleDollar, Spinner, User, Envelope, Lock } from "@phosphor-icons/react"
+import { Spinner, User, Envelope, Lock, ArrowRight, CheckCircle } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_auth/signup")({
   component: SignupPage,
@@ -19,6 +18,11 @@ function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  const passwordRequirements = [
+    { met: password.length >= 8, text: "At least 8 characters" },
+    { met: password === confirmPassword && password.length > 0, text: "Passwords match" },
+  ]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,99 +61,149 @@ function SignupPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <div className="mx-auto h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center mb-4 shadow-lg shadow-primary/25">
-          <CurrencyCircleDollar className="h-7 w-7 text-primary-foreground" weight="bold" />
+    <div className="space-y-8">
+      {/* Header - visible on mobile only */}
+      <div className="lg:hidden text-center">
+        <h1 className="text-2xl font-bold text-primary">Loona</h1>
+        <p className="text-muted-foreground text-sm mt-1">Loan Management Made Simple</p>
+      </div>
+
+      {/* Form Card */}
+      <div className="bg-card border border-border rounded-2xl shadow-sm p-8">
+        <div className="space-y-2 mb-8">
+          <h2 className="text-2xl font-semibold tracking-tight">Create your account</h2>
+          <p className="text-muted-foreground">
+            Start managing your loans in minutes
+          </p>
         </div>
-        <CardTitle className="text-2xl">Create an account</CardTitle>
-        <CardDescription>Start managing your loans with Loona</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="name">Full name</Label>
+            <Label htmlFor="name" className="text-sm font-medium">
+              Full name
+            </Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="name"
                 type="text"
                 placeholder="Juan dela Cruz"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-11"
                 required
+                autoComplete="name"
               />
             </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-sm font-medium">
+              Email address
+            </Label>
             <div className="relative">
-              <Envelope className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Envelope className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-11"
                 required
+                autoComplete="email"
               />
             </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-sm font-medium">
+              Password
+            </Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-11"
                 required
+                autoComplete="new-password"
               />
             </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm password</Label>
+            <Label htmlFor="confirmPassword" className="text-sm font-medium">
+              Confirm password
+            </Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-11"
                 required
+                autoComplete="new-password"
               />
             </div>
           </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
+
+          {/* Password requirements */}
+          {(password || confirmPassword) && (
+            <div className="space-y-2">
+              {passwordRequirements.map((req) => (
+                <div key={req.text} className="flex items-center gap-2 text-xs">
+                  <CheckCircle
+                    className={`h-4 w-4 ${req.met ? "text-green-600" : "text-muted-foreground/50"}`}
+                    weight={req.met ? "fill" : "regular"}
+                  />
+                  <span className={req.met ? "text-green-600" : "text-muted-foreground"}>
+                    {req.text}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
-          <Button type="submit" className="w-full" disabled={loading}>
+
+          {error && (
+            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full h-11 bg-gradient-primary hover:opacity-90 transition-opacity"
+            disabled={loading}
+          >
             {loading ? (
               <>
                 <Spinner className="h-4 w-4 animate-spin mr-2" />
                 Creating account...
               </>
             ) : (
-              "Create account"
+              <>
+                Create account
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
             )}
           </Button>
         </form>
-      </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" className="text-primary hover:underline font-medium">
-            Sign in
-          </Link>
-        </p>
-      </CardFooter>
-    </Card>
+      </div>
+
+      {/* Footer */}
+      <p className="text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link to="/login" className="text-primary hover:underline font-medium">
+          Sign in
+        </Link>
+      </p>
+    </div>
   )
 }
