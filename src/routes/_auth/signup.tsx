@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner, User, Envelope, Lock, ArrowRight, CheckCircle } from "@phosphor-icons/react"
+import { LoonaBrand, AnimatedTagline } from "@/components/ui/loona-brand"
 
 export const Route = createFileRoute("/_auth/signup")({
   component: SignupPage,
@@ -64,8 +65,12 @@ function SignupPage() {
     <div className="space-y-8">
       {/* Header - visible on mobile only */}
       <div className="lg:hidden text-center">
-        <h1 className="text-2xl font-bold text-primary">Loona</h1>
-        <p className="text-muted-foreground text-sm mt-1">Loan Management Made Simple</p>
+        <LoonaBrand size="lg" variant="gradient" animated />
+        <AnimatedTagline
+          text="Loan Management Made Simple"
+          className="text-muted-foreground text-sm mt-1"
+          delay={0.5}
+        />
       </div>
 
       {/* Form Card */}
