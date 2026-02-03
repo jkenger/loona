@@ -8,37 +8,37 @@
 :root {
     /* Loona Theme - Warm, sophisticated, minimal */
     --background: hsl(40 20% 97%);           /* Warm cream #f8f7f4 */
-    --foreground: hsl(222 47% 11%);          /* Dark navy #0f172a */
+    --foreground: hsl(220 70% 12%);          /* Rich navy blue */
     --card: hsl(40 15% 99%);                 /* Slightly warmer white */
-    --card-foreground: hsl(222 47% 11%);
+    --card-foreground: hsl(220 70% 12%);
     --popover: hsl(40 15% 99%);
-    --popover-foreground: hsl(222 47% 11%);
-    --primary: hsl(222 47% 11%);             /* Dark navy blue - main brand */
+    --popover-foreground: hsl(220 70% 12%);
+    --primary: hsl(220 70% 12%);             /* Rich navy blue - main brand */
     --primary-foreground: hsl(40 20% 97%);   /* Cream on dark */
     --secondary: hsl(40 15% 94%);            /* Warm light gray */
-    --secondary-foreground: hsl(222 40% 18%);
+    --secondary-foreground: hsl(220 60% 18%);
     --muted: hsl(40 10% 93%);
-    --muted-foreground: hsl(222 20% 40%);
+    --muted-foreground: hsl(220 40% 40%);
     --accent: hsl(40 15% 92%);
-    --accent-foreground: hsl(222 40% 15%);
+    --accent-foreground: hsl(220 60% 15%);
     --destructive: hsl(0 65% 50%);
     --border: hsl(40 10% 88%);
     --input: hsl(40 10% 90%);
-    --ring: hsl(222 47% 11%);
-    --chart-1: hsl(222 47% 11%);
-    --chart-2: hsl(222 40% 22%);
-    --chart-3: hsl(222 35% 33%);
-    --chart-4: hsl(222 30% 44%);
-    --chart-5: hsl(222 25% 55%);
+    --ring: hsl(220 70% 12%);
+    --chart-1: hsl(220 70% 12%);
+    --chart-2: hsl(220 60% 22%);
+    --chart-3: hsl(220 50% 33%);
+    --chart-4: hsl(220 45% 44%);
+    --chart-5: hsl(220 40% 55%);
     --radius: 0.625rem;                       /* Slightly more rounded */
     --sidebar: hsl(40 20% 97%);
-    --sidebar-foreground: hsl(222 47% 11%);
-    --sidebar-primary: hsl(222 47% 11%);
+    --sidebar-foreground: hsl(220 70% 12%);
+    --sidebar-primary: hsl(220 70% 12%);
     --sidebar-primary-foreground: hsl(40 20% 97%);
     --sidebar-accent: hsl(40 15% 92%);
-    --sidebar-accent-foreground: hsl(222 40% 15%);
+    --sidebar-accent-foreground: hsl(220 60% 15%);
     --sidebar-border: hsl(40 10% 88%);
-    --sidebar-ring: hsl(222 47% 11%);
+    --sidebar-ring: hsl(220 70% 12%);
 }
 
 /* Dark theme - Warm sophisticated dark */
