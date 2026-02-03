@@ -1,6 +1,13 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import {
+  HeadContent,
+  Scripts,
+  createRootRoute,
+  Link,
+} from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { Toaster } from 'sonner'
+import { ThemeProvider } from '@/lib/theme'
 
 import appCss from '../styles.css?url'
 
@@ -15,7 +22,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Loona - Loan Management',
       },
     ],
     links: [
@@ -27,16 +34,36 @@ export const Route = createRootRoute({
   }),
 
   shellComponent: RootDocument,
+  notFoundComponent: NotFound,
 })
+
+function NotFound() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <h1 className="text-6xl font-bold text-primary">404</h1>
+        <p className="text-xl text-muted-foreground">Page not found</p>
+        <Link
+          to="/dashboard"
+          className="inline-block mt-4 text-primary hover:underline"
+        >
+          Go to Dashboard
+        </Link>
+      </div>
+    </div>
+  )
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-right" richColors closeButton />
         <TanStackDevtools
           config={{
             position: 'bottom-right',
@@ -48,6 +75,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             },
           ]}
         />
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>

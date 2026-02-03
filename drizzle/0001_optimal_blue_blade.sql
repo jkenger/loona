@@ -1,0 +1,2 @@
+ALTER TABLE "loans" ADD COLUMN "assigned_agent_id" text;--> statement-breakpoint
+ALTER TABLE "loans" ADD CONSTRAINT "loans_assigned_agent_id_agents_id_fk" FOREIGN KEY ("assigned_agent_id") REFERENCES "public"."agents"("id") ON DELETE no action ON UPDATE no action;
