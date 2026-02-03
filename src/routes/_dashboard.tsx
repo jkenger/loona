@@ -73,12 +73,19 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-page">
+    <div className="min-h-screen bg-gradient-page relative overflow-hidden">
+      {/* Decorative background circles */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/[0.03] rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -left-20 w-60 h-60 bg-primary/[0.02] rounded-full blur-2xl" />
+        <div className="absolute -bottom-20 right-1/4 w-96 h-96 bg-primary/[0.02] rounded-full blur-3xl" />
+      </div>
+
       {/* Route loading progress */}
       <RouteProgress />
 
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 border-b border-border/50 glass">
+      <header className="sticky top-0 z-50 border-b border-border/50 glass relative">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
@@ -170,7 +177,7 @@ function DashboardLayout() {
       </header>
 
       {/* Page content - constrained width */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      <main className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <Outlet />
       </main>
     </div>
