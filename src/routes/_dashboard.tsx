@@ -76,9 +76,9 @@ function DashboardLayout() {
     <div className="min-h-screen bg-gradient-page relative overflow-hidden">
       {/* Decorative background circles */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/[0.03] rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -left-20 w-60 h-60 bg-primary/[0.02] rounded-full blur-2xl" />
-        <div className="absolute -bottom-20 right-1/4 w-96 h-96 bg-primary/[0.02] rounded-full blur-3xl" />
+        <div className="absolute -top-20 -right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-32 w-72 h-72 bg-primary/[0.07] rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 right-1/3 w-[500px] h-[500px] bg-primary/[0.05] rounded-full blur-3xl" />
       </div>
 
       {/* Route loading progress */}
