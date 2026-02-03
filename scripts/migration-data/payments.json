@@ -1,0 +1,972 @@
+[
+  {
+    "id": "b904f650-844b-4c8b-99bd-6423ac39df21",
+    "loanId": "a3b9f3d4-2435-467f-9572-571fd40f9a29",
+    "scheduleItemId": null,
+    "amount": "3385.00",
+    "method": "gcash",
+    "paidAt": "2025-09-06T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Quick payment recorded"
+  },
+  {
+    "id": "4ecfe4e0-ce10-4ca6-8c6d-3e9cf988b272",
+    "loanId": "a3b9f3d4-2435-467f-9572-571fd40f9a29",
+    "scheduleItemId": null,
+    "amount": "3385.00",
+    "method": "cash",
+    "paidAt": "2025-10-06T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Quick payment recorded"
+  },
+  {
+    "id": "0056f318-f84f-4ce7-acb0-4a7eb6a43386",
+    "loanId": "a3b9f3d4-2435-467f-9572-571fd40f9a29",
+    "scheduleItemId": null,
+    "amount": "3385.00",
+    "method": "gcash",
+    "paidAt": "2025-11-06T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Quick payment recorded"
+  },
+  {
+    "id": "cda6e530-6776-4ef1-b56b-ce7350aadcf7",
+    "loanId": "0dccfb7b-7fc6-47a5-b0d6-8ca7d2546fd9",
+    "scheduleItemId": null,
+    "amount": "3385.00",
+    "method": "gcash",
+    "paidAt": "2025-11-09T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Quick payment recorded"
+  },
+  {
+    "id": "1ee753f5-397a-4d04-bd20-61a744705940",
+    "loanId": "0dccfb7b-7fc6-47a5-b0d6-8ca7d2546fd9",
+    "scheduleItemId": null,
+    "amount": "3385.00",
+    "method": "cash",
+    "paidAt": "2025-10-06T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Quick payment recorded"
+  },
+  {
+    "id": "7ced0070-bba8-4362-b381-54108863120d",
+    "loanId": "0dccfb7b-7fc6-47a5-b0d6-8ca7d2546fd9",
+    "scheduleItemId": null,
+    "amount": "3385.00",
+    "method": "gcash",
+    "paidAt": "2025-11-06T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Quick payment recorded"
+  },
+  {
+    "id": "4e87ea82-d2ab-4719-9dc8-d64fc376e92a",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "bank",
+    "paidAt": "2025-11-11T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Quick payment recorded"
+  },
+  {
+    "id": "7d6fabb1-bdaf-4576-8885-d2da6d356aad",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "bank",
+    "paidAt": "2025-11-16T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Early Payment"
+  },
+  {
+    "id": "8003d1e6-074f-4fe1-8aa1-1e7929b32942",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "bank",
+    "paidAt": "2025-11-23T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "91083fad-033d-4c91-9a44-e9ca598046f0",
+    "loanId": "c90fa439-92a1-4928-a40e-56afcb7f3d13",
+    "scheduleItemId": null,
+    "amount": "4500.00",
+    "method": "bank",
+    "paidAt": "2025-11-25T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "08d8291e-be88-4bb8-9441-cfbe1a13e47f",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "cash",
+    "paidAt": "2025-11-25T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Hand over cash"
+  },
+  {
+    "id": "d520a32e-8c93-4917-bd80-5b1b5a14563f",
+    "loanId": "22bd03bc-2230-457e-b442-09e5c569a7f0",
+    "scheduleItemId": null,
+    "amount": "1916.67",
+    "method": "gcash",
+    "paidAt": "2025-11-28T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "19a6dd15-2861-4bf1-996a-dd8064a38eae",
+    "loanId": "05e99a63-46d2-4058-a156-0f11e45e7ac4",
+    "scheduleItemId": null,
+    "amount": "958.33",
+    "method": "gcash",
+    "paidAt": "2025-11-28T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "6e81bed2-b9ff-438a-8903-a80b094b96bc",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "cash",
+    "paidAt": "2025-12-01T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "9e44df47-c7ba-466a-86b5-8e91d3b0533f",
+    "loanId": "0dccfb7b-7fc6-47a5-b0d6-8ca7d2546fd9",
+    "scheduleItemId": null,
+    "amount": "3385.00",
+    "method": "gcash",
+    "paidAt": "2025-12-03T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "1069 - Cash"
+  },
+  {
+    "id": "4db32cb8-cb86-480a-89c5-2c9b6025a0f0",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "cash",
+    "paidAt": "2025-12-07T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "17ffbf18-5cae-45a8-a92c-f42853d0765b",
+    "loanId": "313a054b-109a-4e4c-b67f-759fca9b4117",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "cash",
+    "paidAt": "2025-12-07T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "61c6fcc6-8a09-4545-97ce-69e8e1a245e3",
+    "loanId": "9fc16b8e-1ed1-4cd0-a6ee-ed2e932156bd",
+    "scheduleItemId": null,
+    "amount": "18000.00",
+    "method": "cash",
+    "paidAt": "2025-11-14T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "8abcae52-5ebc-4746-889f-77f4619b6302",
+    "loanId": "9fc16b8e-1ed1-4cd0-a6ee-ed2e932156bd",
+    "scheduleItemId": null,
+    "amount": "18000.00",
+    "method": "cash",
+    "paidAt": "2025-11-28T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "90a041bb-a8ac-4361-a7be-8ed7745f1629",
+    "loanId": "9fc16b8e-1ed1-4cd0-a6ee-ed2e932156bd",
+    "scheduleItemId": null,
+    "amount": "18000.00",
+    "method": "cash",
+    "paidAt": "2025-12-07T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "31c476d5-9782-4d3a-aa09-7fa95a2eed96",
+    "loanId": "1337ac69-6245-48d5-b740-092c32f8d6fd",
+    "scheduleItemId": null,
+    "amount": "2266.67",
+    "method": "cash",
+    "paidAt": "2025-11-12T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "b7653c82-cf8e-4c7b-be9f-240eca3d2769",
+    "loanId": "1337ac69-6245-48d5-b740-092c32f8d6fd",
+    "scheduleItemId": null,
+    "amount": "2266.67",
+    "method": "cash",
+    "paidAt": "2025-11-27T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "ebaae281-267e-43b8-930b-e16fb00950f6",
+    "loanId": "ea39d3b3-7d8e-4083-b720-0b6149f3ce26",
+    "scheduleItemId": null,
+    "amount": "3000.00",
+    "method": "cash",
+    "paidAt": "2025-11-12T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "2500 deficit on 1st Installament"
+  },
+  {
+    "id": "7ae848d2-e5d4-40aa-a4ea-9c45cfa53f73",
+    "loanId": "b9458804-4033-4e08-9e3e-fa8b0cfad535",
+    "scheduleItemId": null,
+    "amount": "2000.00",
+    "method": "cash",
+    "paidAt": "2025-12-08T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "750 End of Hulog"
+  },
+  {
+    "id": "56f436bc-7452-49c2-baf9-66cb561f183c",
+    "loanId": "b9458804-4033-4e08-9e3e-fa8b0cfad535",
+    "scheduleItemId": null,
+    "amount": "2000.00",
+    "method": "cash",
+    "paidAt": "2025-12-08T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "750 Balance"
+  },
+  {
+    "id": "c2ff6725-47a9-4476-817f-26c85657e41c",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "bank",
+    "paidAt": "2025-12-09T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "c20e5e70-0698-4463-872f-e252719370a6",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "bank",
+    "paidAt": "2025-12-13T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "43831d60-2c38-4c55-bf35-a5889774a309",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "gcash",
+    "paidAt": "2025-12-14T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "3305a738-8d23-494b-9ffb-a181b59c6c6f",
+    "loanId": "05e99a63-46d2-4058-a156-0f11e45e7ac4",
+    "scheduleItemId": null,
+    "amount": "958.33",
+    "method": "gcash",
+    "paidAt": "2025-12-15T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "8a745656-bf96-4e49-b094-fde3fa10c392",
+    "loanId": "375e3bca-54ec-49ec-bc40-232031892b85",
+    "scheduleItemId": null,
+    "amount": "4000.00",
+    "method": "cash",
+    "paidAt": "2025-12-15T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "7a5f2b9d-fed6-4012-833b-55d398c73a74",
+    "loanId": "313a054b-109a-4e4c-b67f-759fca9b4117",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "cash",
+    "paidAt": "2025-12-14T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "48726881-c41b-4b55-bd63-af23b875935c",
+    "loanId": "ea39d3b3-7d8e-4083-b720-0b6149f3ce26",
+    "scheduleItemId": null,
+    "amount": "8000.00",
+    "method": "cash",
+    "paidAt": "2025-12-12T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "3423e566-0741-4c98-b0bc-a38f1b73724d",
+    "loanId": "b9458804-4033-4e08-9e3e-fa8b0cfad535",
+    "scheduleItemId": null,
+    "amount": "2000.00",
+    "method": "cash",
+    "paidAt": "2025-12-14T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "6ab593c7-d970-42e4-9482-2d521c63c0ec",
+    "loanId": "1337ac69-6245-48d5-b740-092c32f8d6fd",
+    "scheduleItemId": null,
+    "amount": "2266.67",
+    "method": "cash",
+    "paidAt": "2025-12-12T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "df01e777-8acc-4bc1-993a-3ff8d4db606c",
+    "loanId": "a79ed854-c3a5-4f0e-92ee-4e26a0fe2d0e",
+    "scheduleItemId": null,
+    "amount": "5300.00",
+    "method": "bank",
+    "paidAt": "2025-12-17T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "249af64e-1e96-430e-b374-566d59d6f973",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "bank",
+    "paidAt": "2025-12-21T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "3ef07bc1-ac70-4eee-bf63-547101bf9dee",
+    "loanId": "313a054b-109a-4e4c-b67f-759fca9b4117",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "cash",
+    "paidAt": "2025-12-21T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "4f282a4e-b1c6-437b-925e-f346953ade49",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "gcash",
+    "paidAt": "2025-12-21T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "11b3ec0e-cc37-4407-88ff-ca24a35eb208",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "gcash",
+    "paidAt": "2025-12-21T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Corrected from ₱442.31 - Reason: Uploaded receipt"
+  },
+  {
+    "id": "1fce25bf-e2f5-42c3-a1fd-b6515294e721",
+    "loanId": "b9458804-4033-4e08-9e3e-fa8b0cfad535",
+    "scheduleItemId": null,
+    "amount": "2750.00",
+    "method": "cash",
+    "paidAt": "2025-12-22T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "22cf59fd-7830-40a4-8465-91e9f0ee62e6",
+    "loanId": "9fc16b8e-1ed1-4cd0-a6ee-ed2e932156bd",
+    "scheduleItemId": null,
+    "amount": "18000.00",
+    "method": "cash",
+    "paidAt": "2025-12-19T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "c586b110-6455-4bb4-a1cd-38d3c2b5b2f0",
+    "loanId": "c90fa439-92a1-4928-a40e-56afcb7f3d13",
+    "scheduleItemId": null,
+    "amount": "4500.00",
+    "method": "bank",
+    "paidAt": "2025-12-23T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "3a68584c-41ab-4d10-a177-fffef2070126",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "gcash",
+    "paidAt": "2025-12-28T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "59602357-bda3-4c32-af42-e093380f3d82",
+    "loanId": "22bd03bc-2230-457e-b442-09e5c569a7f0",
+    "scheduleItemId": null,
+    "amount": "1916.67",
+    "method": "gcash",
+    "paidAt": "2025-12-31T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "595eb0ca-f5fd-4c46-9b69-09029922c4d0",
+    "loanId": "05e99a63-46d2-4058-a156-0f11e45e7ac4",
+    "scheduleItemId": null,
+    "amount": "958.33",
+    "method": "gcash",
+    "paidAt": "2025-12-31T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "60d2b0ac-da11-41e1-989f-5497f4d25390",
+    "loanId": "313a054b-109a-4e4c-b67f-759fca9b4117",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "cash",
+    "paidAt": "2025-12-28T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "1b9781f2-4771-47a6-ae54-bac1b8c22b81",
+    "loanId": "7bd72ba3-4d8d-4d60-867f-67b04c021f96",
+    "scheduleItemId": null,
+    "amount": "1190.48",
+    "method": "cash",
+    "paidAt": "2025-12-28T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "c0010506-1d49-46a6-bac5-08dfd3bb278d",
+    "loanId": "4fa8f58c-9eef-4e4b-945e-152a60b955fd",
+    "scheduleItemId": null,
+    "amount": "5500.00",
+    "method": "cash",
+    "paidAt": "2025-12-27T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "d43bbae8-ebce-44ac-8882-842603878757",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "cash",
+    "paidAt": "2026-01-01T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "1014da39-4b1b-4b3a-990a-1ef829252bf1",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "gcash",
+    "paidAt": "2026-01-04T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "9ac5754f-3ab6-428e-8733-16908e6a13ef",
+    "loanId": "bc9c4905-8ddd-4d14-95dc-aba8f7ea538f",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "cash",
+    "paidAt": "2025-12-29T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "013889be-2308-4d1b-9dc2-7e42dda7162e",
+    "loanId": "bc9c4905-8ddd-4d14-95dc-aba8f7ea538f",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "cash",
+    "paidAt": "2026-01-05T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "P 2,000.00"
+  },
+  {
+    "id": "9ea48e4b-ce38-4c96-91ba-3e4cb00f2873",
+    "loanId": "7bd72ba3-4d8d-4d60-867f-67b04c021f96",
+    "scheduleItemId": null,
+    "amount": "1190.48",
+    "method": "cash",
+    "paidAt": "2026-01-05T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "78e6734f-5e79-4c11-b4f3-2ed5b48eba3f",
+    "loanId": "38360289-daea-4d6a-987c-acc418bb2b5b",
+    "scheduleItemId": null,
+    "amount": "3709.09",
+    "method": "gcash",
+    "paidAt": "2026-01-04T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "bf1fa972-17f9-4a74-a2d3-a7175fd028d9",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "443.00",
+    "method": "gcash",
+    "paidAt": "2026-01-04T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "71483fdb-0748-497d-bcf9-0490c0f08544",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "bank",
+    "paidAt": "2026-01-11T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "0e3e5b29-d609-4b09-96df-a39ff3d567ff",
+    "loanId": "033defe1-2ca3-436a-9951-5939ddf4b11e",
+    "scheduleItemId": null,
+    "amount": "6000.00",
+    "method": "cash",
+    "paidAt": "2026-01-11T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "+ 3000 cash"
+  },
+  {
+    "id": "fd955288-c8b6-49da-9a88-1772520693cb",
+    "loanId": "0dccfb7b-7fc6-47a5-b0d6-8ca7d2546fd9",
+    "scheduleItemId": null,
+    "amount": "3385.00",
+    "method": "cash",
+    "paidAt": "2026-01-09T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "3694af7f-57d7-495a-8283-a04fbc88e328",
+    "loanId": "13887980-9d39-4b71-b7e4-400ad9035f33",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "cash",
+    "paidAt": "2026-01-05T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "d8ddb17c-a7bf-49bd-b748-ed7eb38e1a23",
+    "loanId": "8fd421a1-4d0c-4d54-a0d0-a027cb13db8b",
+    "scheduleItemId": null,
+    "amount": "1500.00",
+    "method": "cash",
+    "paidAt": "2026-01-08T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "6489ba7f-494c-4f8e-85f9-cfae696cbb27",
+    "loanId": "313a054b-109a-4e4c-b67f-759fca9b4117",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "cash",
+    "paidAt": "2026-01-11T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "249c2693-7799-41db-ba2d-a34123418134",
+    "loanId": "1337ac69-6245-48d5-b740-092c32f8d6fd",
+    "scheduleItemId": null,
+    "amount": "2266.67",
+    "method": "cash",
+    "paidAt": "2026-01-12T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "597c8e32-7d07-41ef-8812-cb8117a1f00b",
+    "loanId": "1337ac69-6245-48d5-b740-092c32f8d6fd",
+    "scheduleItemId": null,
+    "amount": "2266.67",
+    "method": "cash",
+    "paidAt": "2026-01-12T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "90558d58-8482-417b-8ded-d9122dea458d",
+    "loanId": "7bd72ba3-4d8d-4d60-867f-67b04c021f96",
+    "scheduleItemId": null,
+    "amount": "1190.48",
+    "method": "cash",
+    "paidAt": "2026-01-11T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "f81cf341-6ba4-4d6b-9542-7930456402fe",
+    "loanId": "05e99a63-46d2-4058-a156-0f11e45e7ac4",
+    "scheduleItemId": null,
+    "amount": "958.33",
+    "method": "cash",
+    "paidAt": "2026-01-14T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "541cee4f-b951-4517-a35a-3c1267a085b5",
+    "loanId": "9fc16b8e-1ed1-4cd0-a6ee-ed2e932156bd",
+    "scheduleItemId": null,
+    "amount": "18000.00",
+    "method": "cash",
+    "paidAt": "2026-01-03T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "37fa48b8-0c71-4081-90d8-728398d277b8",
+    "loanId": "9fc16b8e-1ed1-4cd0-a6ee-ed2e932156bd",
+    "scheduleItemId": null,
+    "amount": "18000.00",
+    "method": "cash",
+    "paidAt": "2026-01-29T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "Received January 17, 2026"
+  },
+  {
+    "id": "f1cb5205-3570-4f2e-91f4-f29d4921e37b",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "cash",
+    "paidAt": "2026-01-17T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "fc56b048-4eed-41cb-b6b5-40467397b876",
+    "loanId": "b783230c-b84f-42ef-8c69-5af49ed29e69",
+    "scheduleItemId": null,
+    "amount": "1816.67",
+    "method": "gcash",
+    "paidAt": "2026-01-17T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "ed1fb57c-b775-40c6-b18a-5d40dc0375a8",
+    "loanId": "414b6dcf-dabd-4248-b99d-9048c24e9426",
+    "scheduleItemId": null,
+    "amount": "1816.67",
+    "method": "cash",
+    "paidAt": "2026-01-17T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "7572d031-2110-412b-a860-dfd343bcdb85",
+    "loanId": "7d86efd7-beb0-4840-be62-667b70df7fd2",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "bank",
+    "paidAt": "2026-01-16T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "49c1147d-4cfb-494f-b9f4-d5ccb9c7f6b0",
+    "loanId": "4a45f04e-172b-4538-b279-e0fc10d905c8",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "cash",
+    "paidAt": "2026-01-04T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "4c5c45db-79b6-4208-b2f4-b21358a3190a",
+    "loanId": "4a45f04e-172b-4538-b279-e0fc10d905c8",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "bank",
+    "paidAt": "2026-01-11T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "1d2afd79-6e1f-43cb-ba8b-3a795796cdcc",
+    "loanId": "7bd72ba3-4d8d-4d60-867f-67b04c021f96",
+    "scheduleItemId": null,
+    "amount": "1190.48",
+    "method": "cash",
+    "paidAt": "2026-01-18T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "57c38f1e-fed4-4607-84a0-a5e8232ca5e5",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "gcash",
+    "paidAt": "2026-01-18T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "02e7d78f-c2b2-4807-abdd-76ac02f0a885",
+    "loanId": "4a45f04e-172b-4538-b279-e0fc10d905c8",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "cash",
+    "paidAt": "2026-01-18T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": "P 2,000 - January 18, 2025"
+  },
+  {
+    "id": "4d1d9ca2-474a-4f33-83f9-28e9b74eeb7c",
+    "loanId": "313a054b-109a-4e4c-b67f-759fca9b4117",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "gcash",
+    "paidAt": "2026-01-20T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "e085ac5e-b484-4f41-a392-b3890a78ca29",
+    "loanId": "313a054b-109a-4e4c-b67f-759fca9b4117",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "gcash",
+    "paidAt": "2026-01-22T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "4e3f974a-10c9-4d7d-8ec2-2bdde87ca367",
+    "loanId": "313a054b-109a-4e4c-b67f-759fca9b4117",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "gcash",
+    "paidAt": "2026-01-22T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "44aaabcd-5885-4701-8ca8-5a8d1622385e",
+    "loanId": "13887980-9d39-4b71-b7e4-400ad9035f33",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "gcash",
+    "paidAt": "2026-01-23T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "7d547b7d-7736-46aa-8ed0-7fa370744bc5",
+    "loanId": "c90fa439-92a1-4928-a40e-56afcb7f3d13",
+    "scheduleItemId": null,
+    "amount": "4500.00",
+    "method": "bank",
+    "paidAt": "2026-01-24T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "6aa1f0eb-218f-44af-ae51-8f2944c442d0",
+    "loanId": "7d86efd7-beb0-4840-be62-667b70df7fd2",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "bank",
+    "paidAt": "2026-01-23T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "05484a59-b96a-449d-9b4a-e8d327d49ab6",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "cash",
+    "paidAt": "2026-01-25T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "20b79725-6c69-45d5-ad8c-a3ea722535c0",
+    "loanId": "bf19f1f3-beed-42c0-91c0-28569d62a9d8",
+    "scheduleItemId": null,
+    "amount": "708.00",
+    "method": "cash",
+    "paidAt": "2026-01-24T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "334bb01d-e184-4e4d-b4be-97fe34e46e51",
+    "loanId": "7bd72ba3-4d8d-4d60-867f-67b04c021f96",
+    "scheduleItemId": null,
+    "amount": "1190.48",
+    "method": "bank",
+    "paidAt": "2026-01-25T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "53fbba19-7be7-41f5-aec4-ba22b4ae8d82",
+    "loanId": "4a45f04e-172b-4538-b279-e0fc10d905c8",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "bank",
+    "paidAt": "2026-01-25T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "2d17e0e3-fa6f-4e46-97a3-40ca9027d28f",
+    "loanId": "dd50884b-c641-4f20-96b2-fa16db20e08f",
+    "scheduleItemId": null,
+    "amount": "4333.33",
+    "method": "gcash",
+    "paidAt": "2026-01-29T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "ecc71c14-7a8d-40e8-876e-c844d044601d",
+    "loanId": "05e99a63-46d2-4058-a156-0f11e45e7ac4",
+    "scheduleItemId": null,
+    "amount": "958.33",
+    "method": "cash",
+    "paidAt": "2026-01-30T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "539cc28e-56cc-4d13-828c-23a52b037a4e",
+    "loanId": "22bd03bc-2230-457e-b442-09e5c569a7f0",
+    "scheduleItemId": null,
+    "amount": "1916.66",
+    "method": "cash",
+    "paidAt": "2026-01-30T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "f613f782-cb26-4f17-8c15-cf1fd82e347e",
+    "loanId": "bda091eb-00bf-4a80-ad3d-7b5ee55e1cc2",
+    "scheduleItemId": null,
+    "amount": "5500.00",
+    "method": "cash",
+    "paidAt": "2026-01-29T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "c8b8fd19-8ff8-4d4d-a741-f50e738156f9",
+    "loanId": "9fc16b8e-1ed1-4cd0-a6ee-ed2e932156bd",
+    "scheduleItemId": null,
+    "amount": "18000.00",
+    "method": "cash",
+    "paidAt": "2026-01-31T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "6df93bcd-bc10-4a60-9660-452ea8a94cc4",
+    "loanId": "7d86efd7-beb0-4840-be62-667b70df7fd2",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "bank",
+    "paidAt": "2026-01-31T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "f921fbe6-8858-46ae-9341-d79fd09a4a2f",
+    "loanId": "3d5701fb-2d80-4151-a3fc-841f5e5257fd",
+    "scheduleItemId": null,
+    "amount": "750.00",
+    "method": "gcash",
+    "paidAt": "2026-02-01T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "424803c8-19c5-4baf-9b4d-0a01ea819605",
+    "loanId": "2c628382-d1be-461e-be61-73fd6bc650a0",
+    "scheduleItemId": null,
+    "amount": "442.31",
+    "method": "cash",
+    "paidAt": "2026-02-01T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "6ee28e49-4413-46b5-8e56-a3af2870eb7b",
+    "loanId": "4a45f04e-172b-4538-b279-e0fc10d905c8",
+    "scheduleItemId": null,
+    "amount": "1375.00",
+    "method": "bank",
+    "paidAt": "2026-02-01T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "ea15079d-e5f1-492b-8076-7f80051c1b93",
+    "loanId": "7bd72ba3-4d8d-4d60-867f-67b04c021f96",
+    "scheduleItemId": null,
+    "amount": "1190.48",
+    "method": "bank",
+    "paidAt": "2026-02-01T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  },
+  {
+    "id": "c82db09e-5d08-40b4-b74d-3f56375cf89e",
+    "loanId": "69bed560-e3d0-4180-b0ed-f708739241ec",
+    "scheduleItemId": null,
+    "amount": "6000.00",
+    "method": "gcash",
+    "paidAt": "2026-02-01T00:00:00.000Z",
+    "recordedByAgentId": null,
+    "notes": ""
+  }
+]

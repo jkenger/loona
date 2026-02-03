@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1769994669180,
+      "tag": "0000_stiff_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769997505258,
+      "tag": "0001_optimal_blue_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770050400564,
+      "tag": "0002_reflective_peter_quill",
+      "breakpoints": true
+    }
+  ]
+}

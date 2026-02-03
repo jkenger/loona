@@ -1,0 +1,14 @@
+{
+  "exportedAt": "2026-02-02T20:14:56.265Z",
+  "sourceDatabase": "postgresql://neondb_owner:***@ep-damp-bar-admw5wwv-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+  "counts": {
+    "users": 42,
+    "accounts": 43,
+    "contacts": 25,
+    "loans": 45,
+    "scheduleItems": 355,
+    "payments": 97,
+    "agents": 1,
+    "commissions": 0
+  }
+}

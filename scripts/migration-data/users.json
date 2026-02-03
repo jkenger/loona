@@ -1,0 +1,380 @@
+[
+  {
+    "id": "jhljUSsoaijgXr6q9PHT5d6uuHcWUayy",
+    "name": "Mariah Jane Abrillo",
+    "email": "mariah6.abrillo@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-09T08:30:39.231Z"
+  },
+  {
+    "id": "ASKGhTOIlAoxjOr8o3a18L2gq8ez7n5a",
+    "name": "Michael Angelo",
+    "email": "mallanaoangelo4@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-09T08:36:00.241Z"
+  },
+  {
+    "id": "5cvacHfN3nCOkvMCww4GkNcVwEW62E0y",
+    "name": "Jhenn Oregas Alipante",
+    "email": "jhenn.oregas0923@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-09T08:39:34.967Z"
+  },
+  {
+    "id": "AHkJ5LQce19OUt6de6XCLRHnZpuWOSXc",
+    "name": "Ruby Guevarra",
+    "email": "09356045830@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-22T15:32:13.417Z"
+  },
+  {
+    "id": "ejWeww8r0CPAnYHw1TAplYIuWt52TKi1",
+    "name": "Micaella Rites",
+    "email": "micaellarites12@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-15T01:09:35.917Z"
+  },
+  {
+    "id": "qkaXVPL0mMwYp2g3r8P0TfpeT9OsScAe",
+    "name": "Renato JR Layderos Oregas",
+    "email": "dondonoregas717@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-19T06:27:07.005Z"
+  },
+  {
+    "id": "wb9DU04X5H53aYhckC5viV88mUJ7wdtA",
+    "name": "Bryan Kim Gervacio",
+    "email": "brycreatives@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-19T16:22:35.635Z"
+  },
+  {
+    "id": "10eaf585-593c-4a0c-9dfb-1978c5b0cf9d",
+    "name": "John Ken Ger",
+    "email": "johnkger@gmail.com",
+    "emailVerified": true,
+    "image": null,
+    "role": "lender",
+    "createdAt": "2025-11-23T22:05:27.199Z"
+  },
+  {
+    "id": "sgLtS8mDmUlPGZC4gYvTIhPAGE5mAhAx",
+    "name": "Jasper Paul Ancheta",
+    "email": "jnjco01@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-08T10:25:29.838Z"
+  },
+  {
+    "id": "d43fc7a0-8b6c-4ba1-93b7-af29cdf709d1",
+    "name": "Nestor Gervacio",
+    "email": "nhesgervacio26@gmail.com",
+    "emailVerified": true,
+    "image": "https://f005.backblazeb2.com/file/kapita-public/profile-pictures/d43fc7a0-8b6c-4ba1-93b7-af29cdf709d1/1764253518128-eklwz78c1gd.jpg",
+    "role": "lender",
+    "createdAt": "2025-11-23T22:00:18.508Z"
+  },
+  {
+    "id": "68wRXK832VfWXPOxvGz9dWVAlhMQNrYz",
+    "name": "RENZ ARDAMOY",
+    "email": "jnjmco@gmail.co",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-27T14:38:04.093Z"
+  },
+  {
+    "id": "gROoC6M3qsacQtu8RPjKtKL7s0pet8zd",
+    "name": "RENZ ARDAMOY",
+    "email": "jnjco@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-27T14:42:04.312Z"
+  },
+  {
+    "id": "sUOd7GA84rjyhUBb6wfVmhrTNryj2WFr",
+    "name": "Lucy D. Singson",
+    "email": "bhingpangit04@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-11-29T02:58:18.207Z"
+  },
+  {
+    "id": "U1JdJ4tBeFRprCiIMEaQVZ0XdFUBB1SQ",
+    "name": "Lanz Erwin Yula",
+    "email": "lanzerwinyula@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-08T13:33:35.219Z"
+  },
+  {
+    "id": "DnNwyX6uMRgycDVJTWDpetSuWlgZ8nM8",
+    "name": "Ronald Gimenez",
+    "email": "ronaldgimenez@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-04T02:43:17.385Z"
+  },
+  {
+    "id": "CLM17R1UYOmbmmUlz0eLyVffRJ0C61ZP",
+    "name": "Ronald Gimenez",
+    "email": "ronaldgimenez25@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-04T06:01:38.256Z"
+  },
+  {
+    "id": "zUlzc5B0d9F28WXAIu8Skq24Lgxrnkre",
+    "name": "Noel Cea Arraz",
+    "email": "noelceaarraz@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-08T14:12:00.448Z"
+  },
+  {
+    "id": "tnuRoUnItmvXRUJRHTtCMHS94f3kikmP",
+    "name": "Roschell Santos",
+    "email": "roschellsantos@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-05T12:35:06.822Z"
+  },
+  {
+    "id": "OZlFoeAD3o3kKag0NZooqPFGb3FTI1ft",
+    "name": "Eloida Franco Siobal",
+    "email": "eloidasiobal01@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-08T10:07:35.508Z"
+  },
+  {
+    "id": "q8n7i67OrA2iPlYbDOMEkBnwolD7lmTR",
+    "name": "John Rex Florendo",
+    "email": "florendojohnrex007@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-09T02:12:54.074Z"
+  },
+  {
+    "id": "Zt2Y77C7KEp2dFzJpDHERgnvex9jCZgQ",
+    "name": "Evenecer Cabarle",
+    "email": "cabarleevenecer@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-05T14:43:24.619Z"
+  },
+  {
+    "id": "bzwWLleZWETtLZRiXVRvCrocaNrP0N1T",
+    "name": "John Kenneth Gervacio",
+    "email": "johnkgervacio@gmail.com",
+    "emailVerified": false,
+    "image": "https://f005.backblazeb2.com/file/kapita-public/profile-pictures/bzwWLleZWETtLZRiXVRvCrocaNrP0N1T/1765245504523-34gksqhyjs.jpg",
+    "role": "admin,lender",
+    "createdAt": "2025-11-05T03:12:06.890Z"
+  },
+  {
+    "id": "xAl6Ucv7EUbzoAky5kb5mPUblTcJ7pv4",
+    "name": "Rolando Tamse",
+    "email": "rolandomagalona@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-16T08:38:34.770Z"
+  },
+  {
+    "id": "WdL6B4VdRvyrfazZdMvCUXUCr4C1QzkE",
+    "name": "Deosa Celestra",
+    "email": "deosacelestra@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-10-27T09:20:33.503Z"
+  },
+  {
+    "id": "XXrvYbiUtH0E198ji2d4bhezVCnoj5YM",
+    "name": "Rowena Guarico Quiton",
+    "email": "rowenaquiton63@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-17T10:38:27.049Z"
+  },
+  {
+    "id": "ZHNAJJWwyA56c1K6wPhLnLs15rR5CVfw",
+    "name": "Ken Gervacio",
+    "email": "gervacioken@kapita.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "admin",
+    "createdAt": "2025-10-19T12:08:14.202Z"
+  },
+  {
+    "id": "7cCzbTmBxcKCf9tvAtPY54IX8aA8w0QE",
+    "name": "Susan Apran Santos",
+    "email": "susansantos112486@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-17T10:39:29.331Z"
+  },
+  {
+    "id": "XtfRfEeCwty31u7IZUM93CgCJz27Hkov",
+    "name": "Erica G. Miranda",
+    "email": "ericawencee357@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-18T09:04:25.646Z"
+  },
+  {
+    "id": "ABhv8TisDwx4Tq69klCrXmVWCU8PIJA8",
+    "name": "Rosalyn Luzon",
+    "email": "rosalynluzon@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-21T11:34:44.324Z"
+  },
+  {
+    "id": "4RKB715eoJbxEWwoFAMeQY3LMSVoitkb",
+    "name": "Crispin Baliuag",
+    "email": "crisbaliuag@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-21T12:10:12.571Z"
+  },
+  {
+    "id": "72xfqA3W43rKsP6fInJBlEkzOTBJAi5k",
+    "name": "Adan Diamante",
+    "email": "09676472512@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2025-12-22T03:03:38.106Z"
+  },
+  {
+    "id": "ZQaNMXGNbREcYo8VCCidwxP60kO9IwKV",
+    "name": "Patricia Velasquez",
+    "email": "patriciavelasquez121989@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-11T14:11:50.633Z"
+  },
+  {
+    "id": "d0AtTTPMCRb1JSvKemvaT799LY0VKUQm",
+    "name": "Rochel Santos",
+    "email": "rochel@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-13T09:12:19.703Z"
+  },
+  {
+    "id": "DDt9TpGstvHgUPLSB9rLCf9GWbqu84U0",
+    "name": "Eugene Sta Catalina",
+    "email": "stacatalinaeugene6@gmail.com",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-14T01:47:29.956Z"
+  },
+  {
+    "id": "Pe9FUPj1KoYqran3xJE1C712aEEXTrOo",
+    "name": "Jocelyn Magalona",
+    "email": "09919247131@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-14T12:14:54.158Z"
+  },
+  {
+    "id": "xftVl8qizWPwI7bHKcgpXPlGlKpOD4pT",
+    "name": "Christina Barbin",
+    "email": "09298988654@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-17T03:05:42.849Z"
+  },
+  {
+    "id": "9R9YwfGnu6H4msJ0p0nCiITQPF5yMFqe",
+    "name": "Mark Mixto Anonical",
+    "email": "09166378523@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-17T10:04:13.612Z"
+  },
+  {
+    "id": "LpJhY3wkozyh8KXuzd3YtE98u1VxLMxH",
+    "name": "Avelino Esteban",
+    "email": "09971234567@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-20T00:45:26.455Z"
+  },
+  {
+    "id": "jOeSrOSM1iCN0badhmoFo4bYmAtJazu5",
+    "name": "Ruel Cagayan",
+    "email": "09166235625@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-20T12:37:17.423Z"
+  },
+  {
+    "id": "WUXbIpbl3etlqfFmNgINDjTQ0qPeF6jC",
+    "name": "Jackielou Gecain",
+    "email": "jackielou@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-21T12:09:39.159Z"
+  },
+  {
+    "id": "eDlAtnXmg1COn1RSy2D1kCOE3Kuval8f",
+    "name": "Pepito Bicera",
+    "email": "09196322563@kapita.ph",
+    "emailVerified": false,
+    "image": null,
+    "role": "borrower",
+    "createdAt": "2026-01-23T14:07:10.091Z"
+  },
+  {
+    "id": "S343rOkeCfXqCyfxwy6gbGYBGYSolxn6",
+    "name": "Agent 1",
+    "email": "agent@kapita.app",
+    "emailVerified": true,
+    "image": null,
+    "role": "agent",
+    "createdAt": "2026-01-25T20:00:59.756Z"
+  }
+]

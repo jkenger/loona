@@ -9,38 +9,307 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DashboardRouteImport } from './routes/_dashboard'
+import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
+import { Route as AuthLoginRouteImport } from './routes/_auth/login'
+import { Route as DashboardPaymentsIndexRouteImport } from './routes/_dashboard/payments/index'
+import { Route as DashboardLoansIndexRouteImport } from './routes/_dashboard/loans/index'
+import { Route as DashboardDashboardIndexRouteImport } from './routes/_dashboard/dashboard/index'
+import { Route as DashboardContactsIndexRouteImport } from './routes/_dashboard/contacts/index'
+import { Route as DashboardAgentsIndexRouteImport } from './routes/_dashboard/agents/index'
+import { Route as DashboardAgentIndexRouteImport } from './routes/_dashboard/agent/index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans/new'
+import { Route as DashboardLoansLoanIdRouteImport } from './routes/_dashboard/loans/$loanId'
+import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/contacts/new'
+import { Route as DashboardContactsContactIdRouteImport } from './routes/_dashboard/contacts/$contactId'
+import { Route as DashboardAgentPaymentsRouteImport } from './routes/_dashboard/agent/payments'
+import { Route as DashboardAgentCommissionsRouteImport } from './routes/_dashboard/agent/commissions'
+import { Route as DashboardAgentLoansIndexRouteImport } from './routes/_dashboard/agent/loans/index'
+import { Route as DashboardAgentContactsIndexRouteImport } from './routes/_dashboard/agent/contacts/index'
+import { Route as DashboardAgentLoansLoanIdRouteImport } from './routes/_dashboard/agent/loans/$loanId'
+import { Route as DashboardAgentContactsContactIdRouteImport } from './routes/_dashboard/agent/contacts/$contactId'
 
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/_dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const DashboardPaymentsIndexRoute = DashboardPaymentsIndexRouteImport.update({
+  id: '/payments/',
+  path: '/payments/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLoansIndexRoute = DashboardLoansIndexRouteImport.update({
+  id: '/loans/',
+  path: '/loans/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardDashboardIndexRoute = DashboardDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardContactsIndexRoute = DashboardContactsIndexRouteImport.update({
+  id: '/contacts/',
+  path: '/contacts/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAgentsIndexRoute = DashboardAgentsIndexRouteImport.update({
+  id: '/agents/',
+  path: '/agents/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAgentIndexRoute = DashboardAgentIndexRouteImport.update({
+  id: '/agent/',
+  path: '/agent/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardLoansNewRoute = DashboardLoansNewRouteImport.update({
+  id: '/loans/new',
+  path: '/loans/new',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLoansLoanIdRoute = DashboardLoansLoanIdRouteImport.update({
+  id: '/loans/$loanId',
+  path: '/loans/$loanId',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardContactsNewRoute = DashboardContactsNewRouteImport.update({
+  id: '/contacts/new',
+  path: '/contacts/new',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardContactsContactIdRoute =
+  DashboardContactsContactIdRouteImport.update({
+    id: '/contacts/$contactId',
+    path: '/contacts/$contactId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAgentPaymentsRoute = DashboardAgentPaymentsRouteImport.update({
+  id: '/agent/payments',
+  path: '/agent/payments',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAgentCommissionsRoute =
+  DashboardAgentCommissionsRouteImport.update({
+    id: '/agent/commissions',
+    path: '/agent/commissions',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAgentLoansIndexRoute =
+  DashboardAgentLoansIndexRouteImport.update({
+    id: '/agent/loans/',
+    path: '/agent/loans/',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAgentContactsIndexRoute =
+  DashboardAgentContactsIndexRouteImport.update({
+    id: '/agent/contacts/',
+    path: '/agent/contacts/',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAgentLoansLoanIdRoute =
+  DashboardAgentLoansLoanIdRouteImport.update({
+    id: '/agent/loans/$loanId',
+    path: '/agent/loans/$loanId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAgentContactsContactIdRoute =
+  DashboardAgentContactsContactIdRouteImport.update({
+    id: '/agent/contacts/$contactId',
+    path: '/agent/contacts/$contactId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof AuthLoginRoute
+  '/signup': typeof AuthSignupRoute
+  '/agent/commissions': typeof DashboardAgentCommissionsRoute
+  '/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/contacts/$contactId': typeof DashboardContactsContactIdRoute
+  '/contacts/new': typeof DashboardContactsNewRoute
+  '/loans/$loanId': typeof DashboardLoansLoanIdRoute
+  '/loans/new': typeof DashboardLoansNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/agent/': typeof DashboardAgentIndexRoute
+  '/agents/': typeof DashboardAgentsIndexRoute
+  '/contacts/': typeof DashboardContactsIndexRoute
+  '/dashboard/': typeof DashboardDashboardIndexRoute
+  '/loans/': typeof DashboardLoansIndexRoute
+  '/payments/': typeof DashboardPaymentsIndexRoute
+  '/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
+  '/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
+  '/agent/contacts/': typeof DashboardAgentContactsIndexRoute
+  '/agent/loans/': typeof DashboardAgentLoansIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof AuthLoginRoute
+  '/signup': typeof AuthSignupRoute
+  '/agent/commissions': typeof DashboardAgentCommissionsRoute
+  '/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/contacts/$contactId': typeof DashboardContactsContactIdRoute
+  '/contacts/new': typeof DashboardContactsNewRoute
+  '/loans/$loanId': typeof DashboardLoansLoanIdRoute
+  '/loans/new': typeof DashboardLoansNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/agent': typeof DashboardAgentIndexRoute
+  '/agents': typeof DashboardAgentsIndexRoute
+  '/contacts': typeof DashboardContactsIndexRoute
+  '/dashboard': typeof DashboardDashboardIndexRoute
+  '/loans': typeof DashboardLoansIndexRoute
+  '/payments': typeof DashboardPaymentsIndexRoute
+  '/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
+  '/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
+  '/agent/contacts': typeof DashboardAgentContactsIndexRoute
+  '/agent/loans': typeof DashboardAgentLoansIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_auth': typeof AuthRouteWithChildren
+  '/_dashboard': typeof DashboardRouteWithChildren
+  '/_auth/login': typeof AuthLoginRoute
+  '/_auth/signup': typeof AuthSignupRoute
+  '/_dashboard/agent/commissions': typeof DashboardAgentCommissionsRoute
+  '/_dashboard/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/_dashboard/contacts/$contactId': typeof DashboardContactsContactIdRoute
+  '/_dashboard/contacts/new': typeof DashboardContactsNewRoute
+  '/_dashboard/loans/$loanId': typeof DashboardLoansLoanIdRoute
+  '/_dashboard/loans/new': typeof DashboardLoansNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_dashboard/agent/': typeof DashboardAgentIndexRoute
+  '/_dashboard/agents/': typeof DashboardAgentsIndexRoute
+  '/_dashboard/contacts/': typeof DashboardContactsIndexRoute
+  '/_dashboard/dashboard/': typeof DashboardDashboardIndexRoute
+  '/_dashboard/loans/': typeof DashboardLoansIndexRoute
+  '/_dashboard/payments/': typeof DashboardPaymentsIndexRoute
+  '/_dashboard/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
+  '/_dashboard/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
+  '/_dashboard/agent/contacts/': typeof DashboardAgentContactsIndexRoute
+  '/_dashboard/agent/loans/': typeof DashboardAgentLoansIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/agent/commissions'
+    | '/agent/payments'
+    | '/contacts/$contactId'
+    | '/contacts/new'
+    | '/loans/$loanId'
+    | '/loans/new'
+    | '/api/auth/$'
+    | '/agent/'
+    | '/agents/'
+    | '/contacts/'
+    | '/dashboard/'
+    | '/loans/'
+    | '/payments/'
+    | '/agent/contacts/$contactId'
+    | '/agent/loans/$loanId'
+    | '/agent/contacts/'
+    | '/agent/loans/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/agent/commissions'
+    | '/agent/payments'
+    | '/contacts/$contactId'
+    | '/contacts/new'
+    | '/loans/$loanId'
+    | '/loans/new'
+    | '/api/auth/$'
+    | '/agent'
+    | '/agents'
+    | '/contacts'
+    | '/dashboard'
+    | '/loans'
+    | '/payments'
+    | '/agent/contacts/$contactId'
+    | '/agent/loans/$loanId'
+    | '/agent/contacts'
+    | '/agent/loans'
+  id:
+    | '__root__'
+    | '/'
+    | '/_auth'
+    | '/_dashboard'
+    | '/_auth/login'
+    | '/_auth/signup'
+    | '/_dashboard/agent/commissions'
+    | '/_dashboard/agent/payments'
+    | '/_dashboard/contacts/$contactId'
+    | '/_dashboard/contacts/new'
+    | '/_dashboard/loans/$loanId'
+    | '/_dashboard/loans/new'
+    | '/api/auth/$'
+    | '/_dashboard/agent/'
+    | '/_dashboard/agents/'
+    | '/_dashboard/contacts/'
+    | '/_dashboard/dashboard/'
+    | '/_dashboard/loans/'
+    | '/_dashboard/payments/'
+    | '/_dashboard/agent/contacts/$contactId'
+    | '/_dashboard/agent/loans/$loanId'
+    | '/_dashboard/agent/contacts/'
+    | '/_dashboard/agent/loans/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRouteWithChildren
+  DashboardRoute: typeof DashboardRouteWithChildren
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_dashboard': {
+      id: '/_dashboard'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_auth': {
+      id: '/_auth'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +317,201 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_auth/signup': {
+      id: '/_auth/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/login': {
+      id: '/_auth/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_dashboard/payments/': {
+      id: '/_dashboard/payments/'
+      path: '/payments'
+      fullPath: '/payments/'
+      preLoaderRoute: typeof DashboardPaymentsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/loans/': {
+      id: '/_dashboard/loans/'
+      path: '/loans'
+      fullPath: '/loans/'
+      preLoaderRoute: typeof DashboardLoansIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/dashboard/': {
+      id: '/_dashboard/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardDashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/contacts/': {
+      id: '/_dashboard/contacts/'
+      path: '/contacts'
+      fullPath: '/contacts/'
+      preLoaderRoute: typeof DashboardContactsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agents/': {
+      id: '/_dashboard/agents/'
+      path: '/agents'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof DashboardAgentsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/': {
+      id: '/_dashboard/agent/'
+      path: '/agent'
+      fullPath: '/agent/'
+      preLoaderRoute: typeof DashboardAgentIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard/loans/new': {
+      id: '/_dashboard/loans/new'
+      path: '/loans/new'
+      fullPath: '/loans/new'
+      preLoaderRoute: typeof DashboardLoansNewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/loans/$loanId': {
+      id: '/_dashboard/loans/$loanId'
+      path: '/loans/$loanId'
+      fullPath: '/loans/$loanId'
+      preLoaderRoute: typeof DashboardLoansLoanIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/contacts/new': {
+      id: '/_dashboard/contacts/new'
+      path: '/contacts/new'
+      fullPath: '/contacts/new'
+      preLoaderRoute: typeof DashboardContactsNewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/contacts/$contactId': {
+      id: '/_dashboard/contacts/$contactId'
+      path: '/contacts/$contactId'
+      fullPath: '/contacts/$contactId'
+      preLoaderRoute: typeof DashboardContactsContactIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/payments': {
+      id: '/_dashboard/agent/payments'
+      path: '/agent/payments'
+      fullPath: '/agent/payments'
+      preLoaderRoute: typeof DashboardAgentPaymentsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/commissions': {
+      id: '/_dashboard/agent/commissions'
+      path: '/agent/commissions'
+      fullPath: '/agent/commissions'
+      preLoaderRoute: typeof DashboardAgentCommissionsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/loans/': {
+      id: '/_dashboard/agent/loans/'
+      path: '/agent/loans'
+      fullPath: '/agent/loans/'
+      preLoaderRoute: typeof DashboardAgentLoansIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/contacts/': {
+      id: '/_dashboard/agent/contacts/'
+      path: '/agent/contacts'
+      fullPath: '/agent/contacts/'
+      preLoaderRoute: typeof DashboardAgentContactsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/loans/$loanId': {
+      id: '/_dashboard/agent/loans/$loanId'
+      path: '/agent/loans/$loanId'
+      fullPath: '/agent/loans/$loanId'
+      preLoaderRoute: typeof DashboardAgentLoansLoanIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/contacts/$contactId': {
+      id: '/_dashboard/agent/contacts/$contactId'
+      path: '/agent/contacts/$contactId'
+      fullPath: '/agent/contacts/$contactId'
+      preLoaderRoute: typeof DashboardAgentContactsContactIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
+interface AuthRouteChildren {
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthSignupRoute: typeof AuthSignupRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthLoginRoute: AuthLoginRoute,
+  AuthSignupRoute: AuthSignupRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
+interface DashboardRouteChildren {
+  DashboardAgentCommissionsRoute: typeof DashboardAgentCommissionsRoute
+  DashboardAgentPaymentsRoute: typeof DashboardAgentPaymentsRoute
+  DashboardContactsContactIdRoute: typeof DashboardContactsContactIdRoute
+  DashboardContactsNewRoute: typeof DashboardContactsNewRoute
+  DashboardLoansLoanIdRoute: typeof DashboardLoansLoanIdRoute
+  DashboardLoansNewRoute: typeof DashboardLoansNewRoute
+  DashboardAgentIndexRoute: typeof DashboardAgentIndexRoute
+  DashboardAgentsIndexRoute: typeof DashboardAgentsIndexRoute
+  DashboardContactsIndexRoute: typeof DashboardContactsIndexRoute
+  DashboardDashboardIndexRoute: typeof DashboardDashboardIndexRoute
+  DashboardLoansIndexRoute: typeof DashboardLoansIndexRoute
+  DashboardPaymentsIndexRoute: typeof DashboardPaymentsIndexRoute
+  DashboardAgentContactsContactIdRoute: typeof DashboardAgentContactsContactIdRoute
+  DashboardAgentLoansLoanIdRoute: typeof DashboardAgentLoansLoanIdRoute
+  DashboardAgentContactsIndexRoute: typeof DashboardAgentContactsIndexRoute
+  DashboardAgentLoansIndexRoute: typeof DashboardAgentLoansIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAgentCommissionsRoute: DashboardAgentCommissionsRoute,
+  DashboardAgentPaymentsRoute: DashboardAgentPaymentsRoute,
+  DashboardContactsContactIdRoute: DashboardContactsContactIdRoute,
+  DashboardContactsNewRoute: DashboardContactsNewRoute,
+  DashboardLoansLoanIdRoute: DashboardLoansLoanIdRoute,
+  DashboardLoansNewRoute: DashboardLoansNewRoute,
+  DashboardAgentIndexRoute: DashboardAgentIndexRoute,
+  DashboardAgentsIndexRoute: DashboardAgentsIndexRoute,
+  DashboardContactsIndexRoute: DashboardContactsIndexRoute,
+  DashboardDashboardIndexRoute: DashboardDashboardIndexRoute,
+  DashboardLoansIndexRoute: DashboardLoansIndexRoute,
+  DashboardPaymentsIndexRoute: DashboardPaymentsIndexRoute,
+  DashboardAgentContactsContactIdRoute: DashboardAgentContactsContactIdRoute,
+  DashboardAgentLoansLoanIdRoute: DashboardAgentLoansLoanIdRoute,
+  DashboardAgentContactsIndexRoute: DashboardAgentContactsIndexRoute,
+  DashboardAgentLoansIndexRoute: DashboardAgentLoansIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRouteWithChildren,
+  DashboardRoute: DashboardRouteWithChildren,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
