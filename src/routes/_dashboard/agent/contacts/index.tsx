@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { format } from 'date-fns'
 import { getAgentContacts } from '@/server/agents'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -7,7 +8,6 @@ import { hasRole, ROLES } from '@/lib/constants/roles'
 import { formatCurrencyCompact } from '@/lib/utils'
 import {
   Users,
-  Phone,
   ArrowRight,
   CurrencyCircleDollar,
 } from '@phosphor-icons/react'
@@ -41,16 +41,31 @@ function AgentContactsPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
-          Contacts
-        </h1>
-        <p className="text-sm text-muted-foreground hidden sm:block">
-          Borrowers with loans assigned to you
-        </p>
+    <div>
+      {/* Header with background */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Meta Bar */}
+          <div className="flex items-center gap-2 text-sm text-blue-200/70">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
+              Agent Portal
+            </span>
+            <span className="text-blue-300/40">·</span>
+            <span>Contacts</span>
+            <span className="text-blue-300/40">·</span>
+            <span>{format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+          </div>
+
+          {/* Title Row */}
+          <div className="border-l-4 border-amber-500 pl-4">
+            <h1 className="text-4xl font-bold tracking-tight">Contacts</h1>
+            <p className="text-blue-200/70">Borrowers with loans assigned to you</p>
+          </div>
+        </div>
       </div>
+
+      {/* Content - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
       {/* Stats - 3 column on mobile */}
       <div className="grid grid-cols-3 gap-2 md:gap-4">
@@ -102,7 +117,7 @@ function AgentContactsPage() {
 
       {/* Contacts List */}
       {contacts.length > 0 ? (
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-base md:text-lg">
               Your Contacts
@@ -165,6 +180,7 @@ function AgentContactsPage() {
           </CardContent>
         </Card>
       )}
+    </div>
     </div>
   )
 }

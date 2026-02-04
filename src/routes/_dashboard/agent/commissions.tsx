@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { format } from 'date-fns'
 import { getAgentDashboard } from '@/server/agents'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils'
+import { formatCurrencyCompact } from '@/lib/utils'
 import {
   CurrencyCircleDollar,
   Wallet,
@@ -45,16 +46,31 @@ function AgentCommissionsPage() {
   const paid = totalEarned - pending
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
-          Commissions
-        </h1>
-        <p className="text-sm text-muted-foreground hidden sm:block">
-          Track your earnings and payouts
-        </p>
+    <div>
+      {/* Header with background */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Meta Bar */}
+          <div className="flex items-center gap-2 text-sm text-blue-200/70">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
+              Agent Portal
+            </span>
+            <span className="text-blue-300/40">·</span>
+            <span>Commissions</span>
+            <span className="text-blue-300/40">·</span>
+            <span>{format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+          </div>
+
+          {/* Title Row */}
+          <div className="border-l-4 border-amber-500 pl-4">
+            <h1 className="text-4xl font-bold tracking-tight">Commissions</h1>
+            <p className="text-blue-200/70">Track your earnings and payouts</p>
+          </div>
+        </div>
       </div>
+
+      {/* Content - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
       {/* Stats Cards - 3 column on mobile */}
       <div className="grid grid-cols-3 gap-2 md:gap-4">
@@ -86,15 +102,15 @@ function AgentCommissionsPage() {
           </CardContent>
         </Card>
 
-        <Card className="p-0 border-primary/50 bg-primary/5">
+        <Card className="p-0 border-amber-500/50 bg-amber-50 dark:bg-amber-950">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1 md:pb-2">
             <CardTitle className="text-xs md:text-sm font-medium">
               Pending
             </CardTitle>
-            <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
+            <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-amber-500" />
           </CardHeader>
           <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-lg md:text-2xl font-bold text-primary">
+            <div className="text-lg md:text-2xl font-bold text-amber-500">
               {formatCurrencyCompact(pending)}
             </div>
           </CardContent>
@@ -102,7 +118,7 @@ function AgentCommissionsPage() {
       </div>
 
       {/* Commission by Lender */}
-      <Card>
+      <Card className="shadow-lg">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-base md:text-lg">By Lender</CardTitle>
         </CardHeader>
@@ -168,7 +184,7 @@ function AgentCommissionsPage() {
       </Card>
 
       {/* How it works - hidden on mobile */}
-      <Card className="hidden md:block">
+      <Card className="hidden md:block shadow-sm">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-lg">How Commissions Work</CardTitle>
         </CardHeader>
@@ -192,6 +208,7 @@ function AgentCommissionsPage() {
           </p>
         </CardContent>
       </Card>
+    </div>
     </div>
   )
 }

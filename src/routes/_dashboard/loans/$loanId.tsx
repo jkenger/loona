@@ -14,7 +14,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import {
   Dialog,
@@ -31,7 +30,6 @@ import {
   ArrowLeft,
   User,
   CalendarCheck,
-  Receipt,
   Check,
   Clock,
   Warning,
@@ -41,7 +39,6 @@ import {
   ShieldCheck,
   Users,
   Tag,
-  X,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/loans/$loanId")({
@@ -201,46 +198,52 @@ function LoanDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <Link to="/loans">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
+    <div>
+      {/* Header with background */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Back link */}
+          <Link to="/loans" className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Loans
           </Link>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">
-                {formatCurrency(loan.principal)}
-              </h1>
-              <Badge variant={statusConfig[loan.status].variant}>
-                {statusConfig[loan.status].label}
-              </Badge>
+
+          {/* Title Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="border-l-4 border-primary pl-4">
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {formatCurrency(loan.principal)}
+                </h1>
+                <Badge variant={statusConfig[loan.status].variant} className={loan.status === "active" ? "bg-primary/20 text-primary-foreground border-0" : ""}>
+                  {statusConfig[loan.status].label}
+                </Badge>
+              </div>
+              <p className="text-blue-200/70">
+                {loan.contact.name} · {loan.interestRate}% for {loan.termMonths} months
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              {loan.interestRate}% interest for {loan.termMonths} months
-            </p>
+            {loan.isLender && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="gap-2"
+                >
+                  <Trash className="h-4 w-4" weight="bold" />
+                  Delete
+                </Button>
+              </div>
+            )}
           </div>
-        </div>
-        <div className="flex gap-2 ml-12 sm:ml-0">
-          {loan.isLender && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
-          )}
         </div>
       </div>
 
+      {/* Content - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Loan Summary */}
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader className="p-4 pb-2">
             <CardTitle>Loan Summary</CardTitle>
           </CardHeader>
@@ -289,7 +292,7 @@ function LoanDetailPage() {
         </Card>
 
         {/* Borrower */}
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
@@ -314,7 +317,7 @@ function LoanDetailPage() {
         </Card>
 
         {/* Dates */}
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2">
               <CalendarCheck className="h-5 w-5 text-primary" />
@@ -348,12 +351,12 @@ function LoanDetailPage() {
         </Card>
       </div>
 
-      {/* Optional Details - Purpose, Collateral, Co-maker */}
-      {(loan.purpose || loan.collateralDescription || loan.coMakerName) && (
+      {/* Optional Details - Purpose, Collateral, Co-maker, Agent Assignment */}
+      {(loan.purpose || loan.collateralDescription || loan.coMakerName || loan.isLender) && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Purpose */}
           {loan.purpose && (
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Tag className="h-4 w-4 text-primary" />
@@ -368,7 +371,7 @@ function LoanDetailPage() {
 
           {/* Collateral */}
           {loan.collateralDescription && (
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <ShieldCheck className="h-4 w-4 text-primary" />
@@ -383,7 +386,7 @@ function LoanDetailPage() {
 
           {/* Co-maker */}
           {loan.coMakerName && (
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="h-4 w-4 text-primary" />
@@ -403,73 +406,64 @@ function LoanDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Agent Assignment */}
+          {loan.isLender && (
+            <Card className="shadow-sm">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <UsersThree className="h-4 w-4 text-primary" />
+                  Agent Assignment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {activeAgents.length > 0 ? (
+                  <div className="space-y-2">
+                    <Select
+                      value={loan.assignedAgentId || "unassigned"}
+                      onValueChange={handleAssignAgent}
+                      disabled={assigning}
+                    >
+                      <SelectTrigger className="w-full">
+                        {loan.assignedAgentId ? (
+                          (() => {
+                            const agent = activeAgents.find((a) => a.id === loan.assignedAgentId)
+                            return agent ? `${agent.agentName} (${agent.commissionRate}%)` : "Select an agent"
+                          })()
+                        ) : (
+                          <span className="text-muted-foreground">No agent assigned</span>
+                        )}
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">
+                          <span className="text-muted-foreground">No agent assigned</span>
+                        </SelectItem>
+                        {activeAgents.map((agent) => (
+                          <SelectItem key={agent.id} value={agent.id}>
+                            {agent.agentName} ({agent.commissionRate}%)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {assigning && <Spinner className="h-4 w-4 animate-spin" />}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No agents available.{" "}
+                    <Link to="/agents" className="text-primary hover:underline">
+                      Add agents
+                    </Link>{" "}
+                    to assign them to loans.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
-      {/* Agent Assignment - only shown to lenders */}
-      {loan.isLender && (
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <UsersThree className="h-5 w-5 text-primary" />
-              Agent Assignment
-            </CardTitle>
-            <CardDescription>
-              Assign an agent to manage collections for this loan
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            {activeAgents.length > 0 ? (
-              <div className="flex items-center gap-4">
-                <Select
-                  value={loan.assignedAgentId || "unassigned"}
-                  onValueChange={handleAssignAgent}
-                  disabled={assigning}
-                >
-                  <SelectTrigger className="w-[280px]">
-                    {loan.assignedAgentId ? (
-                      (() => {
-                        const agent = activeAgents.find((a) => a.id === loan.assignedAgentId)
-                        return agent ? `${agent.agentName} (${agent.commissionRate}%)` : "Select an agent"
-                      })()
-                    ) : (
-                      <span className="text-muted-foreground">No agent assigned</span>
-                    )}
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">
-                      <span className="text-muted-foreground">No agent assigned</span>
-                    </SelectItem>
-                    {activeAgents.map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.agentName} ({agent.commissionRate}%)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {assigning && <Spinner className="h-4 w-4 animate-spin" />}
-                {loan.assignedAgent && (
-                  <div className="text-sm text-muted-foreground">
-                    Currently: <span className="font-medium">{loan.assignedAgent.name}</span>
-                    {" · "}{loan.assignedAgent.email}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                No agents available.{" "}
-                <Link to="/agents" className="text-primary hover:underline">
-                  Add agents
-                </Link>{" "}
-                to assign them to loans.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Payment Schedule */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader className="p-4 pb-2">
           <CardTitle>Payment Schedule</CardTitle>
           <CardDescription>
@@ -534,7 +528,7 @@ function LoanDetailPage() {
 
       {/* Recent Payments */}
       {loan.payments.length > 0 && (
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader className="p-4 pb-2">
             <CardTitle>Recent Payments</CardTitle>
           </CardHeader>
@@ -561,6 +555,7 @@ function LoanDetailPage() {
           </CardContent>
         </Card>
       )}
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

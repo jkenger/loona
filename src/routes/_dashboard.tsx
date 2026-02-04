@@ -3,6 +3,7 @@ import { getServerSession } from "@/server/session"
 import { signOut } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { RouteProgress } from "@/components/ui/route-progress"
+import { LoonaBrand } from "@/components/ui/loona-brand"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { useTheme } from "@/lib/theme"
 import {
@@ -73,9 +74,9 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-page relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-page relative">
       {/* Decorative background circles */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute -top-20 -right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-32 w-72 h-72 bg-primary/[0.07] rounded-full blur-3xl" />
         <div className="absolute -bottom-32 right-1/3 w-[500px] h-[500px] bg-primary/[0.05] rounded-full blur-3xl" />
@@ -85,22 +86,22 @@ function DashboardLayout() {
       <RouteProgress />
 
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 border-b border-border/50 glass relative">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-50 bg-[hsl(215_50%_10%)] text-white relative">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link to={homeLink} className="flex items-center">
-              <span className="text-xl font-bold">Loona</span>
+              <span className="text-xl font-bold text-white">Loona</span>
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-1">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
                   activeOptions={{ exact: item.exact }}
-                  className="relative text-sm font-medium text-muted-foreground hover:text-foreground transition-colors [&.active]:text-primary after:absolute after:left-0 after:bottom-[-2px] after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-200 hover:after:w-full [&.active]:after:w-full"
+                  className="relative px-3 py-1.5 text-sm font-medium text-blue-200/70 hover:text-white transition-colors [&.active]:text-white after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 after:ease-out hover:after:w-full [&.active]:after:w-full"
                 >
                   {item.name}
                 </Link>
@@ -109,34 +110,20 @@ function DashboardLayout() {
 
             {/* User Menu */}
             <div className="flex items-center gap-3">
-              {/* Theme toggle */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                className="h-9 w-9 p-0"
-              >
-                {resolvedTheme === "dark" ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </Button>
-
               {/* User dropdown */}
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 px-2">
-                    <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary">
-                        {session.user.name?.charAt(0).toUpperCase() || "U"}
-                      </span>
-                    </div>
-                    <span className="hidden sm:block text-sm font-medium max-w-[120px] truncate">
-                      {session.user.name}
+                <DropdownMenuTrigger
+                  className="flex items-center gap-2 px-2 py-1.5 rounded text-sm font-medium hover:bg-white/10 transition-colors"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
+                    <span className="text-sm font-medium text-white">
+                      {session.user.name?.charAt(0).toUpperCase() || "U"}
                     </span>
-                    <CaretDown className="h-4 w-4 text-muted-foreground" />
-                  </Button>
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium max-w-[120px] truncate text-white">
+                    {session.user.name}
+                  </span>
+                  <CaretDown className="h-4 w-4 text-blue-200/60" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-2 py-1.5">
@@ -163,6 +150,18 @@ function DashboardLayout() {
                     </>
                   )}
                   <DropdownMenuItem
+                    onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                    className="cursor-pointer"
+                  >
+                    {resolvedTheme === "dark" ? (
+                      <Sun className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Moon className="h-4 w-4 mr-2" />
+                    )}
+                    {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
                     onClick={handleSignOut}
                     className="text-destructive focus:text-destructive cursor-pointer"
                   >
@@ -176,8 +175,8 @@ function DashboardLayout() {
         </div>
       </header>
 
-      {/* Page content - constrained width */}
-      <main className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      {/* Page content - full width, pages control their own constraints */}
+      <main className="relative">
         <Outlet />
       </main>
     </div>

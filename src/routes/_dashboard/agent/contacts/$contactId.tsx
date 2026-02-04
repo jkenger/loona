@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { getAgentContact } from "@/server/agents"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
-import { formatCurrency, formatCurrencyCompact } from "@/lib/utils"
+import { formatCurrencyCompact } from "@/lib/utils"
 import {
   ArrowLeft,
   Phone,
@@ -15,6 +14,7 @@ import {
   FacebookLogo,
   CurrencyCircleDollar,
   ArrowRight,
+  User,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/agent/contacts/$contactId")({
@@ -72,31 +72,48 @@ function AgentContactDetailPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link to="/agent/contacts">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+    <div>
+      {/* Header with background */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Back Link */}
+          <Link
+            to="/agent/contacts"
+            className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
+          >
             <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight truncate">{contact.name}</h1>
-            {activeLoans.length > 0 && (
-              <Badge variant="secondary" className="text-xs shrink-0">
-                {activeLoans.length} loan{activeLoans.length !== 1 ? "s" : ""}
-              </Badge>
-            )}
+            Back to Contacts
+          </Link>
+
+          {/* Title Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <User className="h-7 w-7 text-amber-300" weight="bold" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
+                  {activeLoans.length > 0 && (
+                    <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">
+                      {activeLoans.length} loan{activeLoans.length !== 1 ? "s" : ""}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-blue-200/70">
+                  {formatCurrencyCompact(totalRemaining)} remaining
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {formatCurrencyCompact(totalRemaining)} remaining
-          </p>
         </div>
       </div>
 
+      {/* Content - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+
       {/* Contact Info - Compact */}
-      <Card>
+      <Card className="shadow-lg">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-base md:text-lg">Contact Info</CardTitle>
         </CardHeader>
@@ -174,7 +191,7 @@ function AgentContactDetailPage() {
       </Card>
 
       {/* Assigned Loans */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="flex items-center gap-2 text-base md:text-lg">
             <CurrencyCircleDollar className="h-4 w-4 md:h-5 md:w-5 text-primary" />
@@ -239,6 +256,7 @@ function AgentContactDetailPage() {
           )}
         </CardContent>
       </Card>
+    </div>
     </div>
   )
 }

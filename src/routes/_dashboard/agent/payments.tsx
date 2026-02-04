@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { format } from 'date-fns'
 import { getAgentPayments, getAgentUpcomingPayments } from '@/server/agents'
 import { recordPayment } from '@/server/payments'
 import { toast } from 'sonner'
@@ -9,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,16 +22,14 @@ import {
 } from '@/components/ui/select'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils'
+import { formatCurrencyCompact } from '@/lib/utils'
 import { useState } from 'react'
 import {
   Receipt,
   Clock,
   Warning,
-  Phone,
   Check,
   Spinner,
-  CurrencyCircleDollar,
   X,
 } from '@phosphor-icons/react'
 import { formatRelativeDate } from '@/lib/utils/date'
@@ -136,16 +134,31 @@ function AgentPaymentsPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
-          Payments
-        </h1>
-        <p className="text-sm text-muted-foreground hidden sm:block">
-          Collect and record payments for your assigned loans
-        </p>
+    <div>
+      {/* Header with background */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Meta Bar */}
+          <div className="flex items-center gap-2 text-sm text-blue-200/70">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
+              Agent Portal
+            </span>
+            <span className="text-blue-300/40">·</span>
+            <span>Payments</span>
+            <span className="text-blue-300/40">·</span>
+            <span>{format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+          </div>
+
+          {/* Title Row */}
+          <div className="border-l-4 border-amber-500 pl-4">
+            <h1 className="text-4xl font-bold tracking-tight">Payments</h1>
+            <p className="text-blue-200/70">Collect and record payments for your assigned loans</p>
+          </div>
+        </div>
       </div>
+
+      {/* Content - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
       {/* Stats - 3 column on mobile */}
       <div className="grid grid-cols-3 gap-2 md:gap-4">
@@ -311,7 +324,7 @@ function AgentPaymentsPage() {
 
       {/* Overdue Payments */}
       {overduePayments.length > 0 && (
-        <Card className="border-destructive/50">
+        <Card className="border-destructive/50 shadow-lg">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-destructive text-base md:text-lg">
               <Warning className="h-4 w-4 md:h-5 md:w-5" />
@@ -354,7 +367,7 @@ function AgentPaymentsPage() {
 
       {/* Upcoming Payments */}
       {upcomingPayments.length > 0 && (
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <Clock className="h-4 w-4 md:h-5 md:w-5 text-primary" />
@@ -413,7 +426,7 @@ function AgentPaymentsPage() {
 
       {/* Payment History */}
       {payments.length > 0 && (
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-base md:text-lg">History</CardTitle>
           </CardHeader>
@@ -444,6 +457,7 @@ function AgentPaymentsPage() {
           </CardContent>
         </Card>
       )}
+    </div>
     </div>
   )
 }

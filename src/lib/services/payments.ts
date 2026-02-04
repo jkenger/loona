@@ -1,5 +1,5 @@
 import { db, payments, paymentSchedule, loans, contacts, commissions, agents } from "@/lib/db"
-import { eq, desc, and, sql, lte, ne, gte } from "drizzle-orm"
+import { eq, desc, and, sql, lte, ne } from "drizzle-orm"
 
 /**
  * Shared payment service functions

@@ -18,11 +18,11 @@ import {
   Check,
   Warning,
   Envelope,
-  Percent,
 } from "@phosphor-icons/react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
+import { format } from "date-fns"
 
 export const Route = createFileRoute("/_dashboard/agents/")({
   loader: async ({ context }) => {
@@ -39,34 +39,48 @@ export const Route = createFileRoute("/_dashboard/agents/")({
 
 function AgentsPageSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-28" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-        <Skeleton className="h-10 w-28" />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-lg border bg-card p-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <div className="space-y-1">
-                <Skeleton className="h-5 w-28" />
-                <Skeleton className="h-3 w-36" />
-              </div>
+    <div>
+      {/* Header skeleton */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          <Skeleton className="h-5 w-64 bg-white/10" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="border-l-4 border-primary pl-4 space-y-2">
+              <Skeleton className="h-10 w-28 bg-white/10" />
+              <Skeleton className="h-4 w-48 bg-white/10" />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Skeleton className="h-12" />
-              <Skeleton className="h-12" />
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-9 flex-1" />
-              <Skeleton className="h-9 w-24" />
-            </div>
+            <Skeleton className="h-10 w-28 bg-white/10" />
           </div>
-        ))}
+        </div>
+      </div>
+
+      {/* Content skeleton */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="shadow-sm">
+              <CardHeader className="p-4 pb-2">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-1">
+                    <Skeleton className="h-5 w-28" />
+                    <Skeleton className="h-3 w-36" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <Skeleton className="h-12" />
+                  <Skeleton className="h-12" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-9 flex-1" />
+                  <Skeleton className="h-9 w-24" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -193,22 +207,40 @@ function AgentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">Agents</h1>
-          <p className="text-muted-foreground">Manage your collection agents</p>
+    <div>
+      {/* Header with background */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Meta Bar */}
+          <div className="flex items-center gap-2 text-sm text-blue-200/70">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
+              Lender Portal
+            </span>
+            <span className="text-blue-300/40">·</span>
+            <span>Agents</span>
+            <span className="text-blue-300/40">·</span>
+            <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
+          </div>
+
+          {/* Title Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="border-l-4 border-primary pl-4">
+              <h1 className="text-4xl font-bold tracking-tight">Agents</h1>
+              <p className="text-blue-200/70">Manage your collection agents</p>
+            </div>
+            <Button className="gap-2" onClick={() => setShowAddForm(true)}>
+              <Plus className="h-4 w-4" weight="bold" />
+              Add Agent
+            </Button>
+          </div>
         </div>
-        <Button className="gap-2" onClick={() => setShowAddForm(true)}>
-          <Plus className="h-4 w-4" weight="bold" />
-          Add Agent
-        </Button>
       </div>
 
+      {/* Content - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
       {/* Credentials Modal */}
       {createdAgent && createdAgent.generatedPassword && (
-        <Card className="border-primary bg-primary/5">
+        <Card className="border-primary bg-primary/5 shadow-lg">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -355,7 +387,7 @@ function AgentsPage() {
       {agents.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {agents.map((agent) => (
-            <Card key={agent.id}>
+            <Card key={agent.id} className="shadow-sm">
               <CardHeader className="p-4 pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -420,7 +452,7 @@ function AgentsPage() {
           ))}
         </div>
       ) : (
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
             <UsersThree className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-semibold mb-1">No agents yet</h3>
@@ -434,6 +466,7 @@ function AgentsPage() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   )
 }
