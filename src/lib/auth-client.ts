@@ -10,6 +10,31 @@ export const {
   signOut,
   useSession,
   getSession,
-  forgetPassword,
-  resetPassword,
 } = authClient
+
+// Password reset - call API directly since method names vary by version
+export async function requestPasswordReset({ email, redirectTo }: { email: string; redirectTo?: string }) {
+  const res = await fetch('/api/auth/request-password-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, redirectTo }),
+  })
+  const data = await res.json()
+  if (!res.ok) {
+    return { error: { message: data.message || 'Failed to send reset email' } }
+  }
+  return { data }
+}
+
+export async function resetPassword({ newPassword, token }: { newPassword: string; token: string }) {
+  const res = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newPassword, token }),
+  })
+  const data = await res.json()
+  if (!res.ok) {
+    return { error: { message: data.message || 'Failed to reset password' } }
+  }
+  return { data }
+}
