@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { format } from "date-fns"
 import { getAgentDashboard, getAgentUpcomingPayments } from "@/server/agents"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
-import { formatRelativeDate, formatRelativeDateLower } from "@/lib/utils/date"
+import { formatRelativeDate } from "@/lib/utils/date"
 import {
   CurrencyCircleDollar,
   Receipt,
@@ -49,21 +50,39 @@ function AgentDashboardPage() {
   const upcomingPayments = upcoming.filter((p) => p.status !== "overdue").slice(0, 5)
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Header - Compact on mobile */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground hidden sm:block">Track your collections and earnings</p>
+    <div>
+      {/* Header with background */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Meta Bar */}
+          <div className="flex items-center gap-2 text-sm text-blue-200/70">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
+              Agent Portal
+            </span>
+            <span className="text-blue-300/40">·</span>
+            <span>Overview</span>
+            <span className="text-blue-300/40">·</span>
+            <span>{format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
+          </div>
+
+          {/* Title Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="border-l-4 border-amber-500 pl-4">
+              <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
+              <p className="text-blue-200/70">Track your collections and earnings</p>
+            </div>
+            <Link to="/agent/payments">
+              <Button className="gap-2">
+                <Receipt className="h-4 w-4" weight="bold" />
+                Collect Payment
+              </Button>
+            </Link>
+          </div>
         </div>
-        {/* Quick action on mobile */}
-        <Link to="/agent/payments" className="md:hidden">
-          <Button size="sm" className="gap-1.5">
-            <Receipt className="h-4 w-4" />
-            Collect
-          </Button>
-        </Link>
       </div>
+
+      {/* Content - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
       {/* Overdue Payments Banner - Compact */}
       {overduePayments.length > 0 && (
@@ -247,6 +266,7 @@ function AgentDashboardPage() {
           </CardContent>
         </Card>
       )}
+    </div>
     </div>
   )
 }

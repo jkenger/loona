@@ -66,7 +66,8 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
-  role: userRoleEnum("role").default("lender"),
+  // Using text for role to support multiple comma-separated roles (e.g., "lender,agent")
+  role: text("role").default("lender"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

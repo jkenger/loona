@@ -66,21 +66,23 @@ function NewContactPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/contacts">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Contact</h1>
-          <p className="text-muted-foreground">Add a new borrower to your network</p>
+    <div>
+      {/* Compact Header */}
+      <div className="bg-[hsl(215_45%_14%)] text-white py-4 pb-12">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <Link to="/contacts" className="text-sm text-blue-200/70 hover:text-white transition-colors">
+              Contacts
+            </Link>
+            <span className="text-blue-300/40">/</span>
+            <h1 className="text-lg font-semibold">New Contact</h1>
+          </div>
         </div>
       </div>
 
-      <Card>
+      {/* Form - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-6 pb-8">
+      <Card className="shadow-lg">
         <CardHeader className="p-4 pb-2">
           <CardTitle>Contact Information</CardTitle>
           <CardDescription>Enter the borrower's details</CardDescription>
@@ -207,6 +209,7 @@ function NewContactPage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

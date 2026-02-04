@@ -170,24 +170,26 @@ function NewLoanPage() {
   const selectedContact = contacts.find((c) => c.id === contactId)
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/loans">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Loan</h1>
-          <p className="text-muted-foreground">Create a new loan for a borrower</p>
+    <div>
+      {/* Compact Header */}
+      <div className="bg-[hsl(215_45%_14%)] text-white py-4 pb-12">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <Link to="/loans" className="text-sm text-blue-200/70 hover:text-white transition-colors">
+              Loans
+            </Link>
+            <span className="text-blue-300/40">/</span>
+            <h1 className="text-lg font-semibold">New Loan</h1>
+          </div>
         </div>
       </div>
 
+      {/* Form - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-6 pb-8">
       <form onSubmit={handleSubmit}>
         <div className="grid gap-6 lg:grid-cols-5">
           {/* Loan Details */}
-          <Card className="lg:col-span-3">
+          <Card className="lg:col-span-3 shadow-lg">
             <CardHeader className="p-4 pb-2">
               <CardTitle>Loan Details</CardTitle>
               <CardDescription>Enter the loan terms</CardDescription>
@@ -196,7 +198,7 @@ function NewLoanPage() {
               {/* Borrower Selection */}
               <div className="space-y-2">
                 <Label htmlFor="contactId">Borrower</Label>
-                <Select value={contactId} onValueChange={setContactId}>
+                <Select value={contactId} onValueChange={(v) => v && setContactId(v)}>
                   <SelectTrigger>
                     {selectedContact ? (
                       <span className="inline-flex items-center gap-2">
@@ -310,7 +312,6 @@ function NewLoanPage() {
                 <DatePicker
                   value={startDate}
                   onChange={(date) => date && setStartDate(date)}
-                  placeholder="Select start date"
                 />
               </div>
 
@@ -417,7 +418,7 @@ function NewLoanPage() {
           </Card>
 
           {/* Calculations */}
-          <Card className="lg:col-span-2 h-fit">
+          <Card className="lg:col-span-2 h-fit shadow-lg">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="h-5 w-5 text-primary" />
@@ -502,6 +503,7 @@ function NewLoanPage() {
           </Button>
         </div>
       </form>
+      </div>
     </div>
   )
 }

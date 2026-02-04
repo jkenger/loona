@@ -1,4 +1,4 @@
-import { db, contacts, loans, agents } from "@/lib/db"
+import { db, contacts, loans } from "@/lib/db"
 import { eq, desc, sql, and } from "drizzle-orm"
 
 /**

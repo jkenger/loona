@@ -31,6 +31,7 @@ import {
   PencilSimple,
   Trash,
   Spinner,
+  User,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
@@ -133,44 +134,64 @@ function ContactDetailPage() {
     }
   }
 
+  const activeLoansCount = contact.loans.filter(l => l.status === "active").length
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <Link to="/contacts">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
+    <div>
+      {/* Header with background */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          {/* Back link */}
+          <Link to="/contacts" className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Contacts
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{contact.name}</h1>
-            <p className="text-muted-foreground">{contact.city || "Contact"}</p>
+
+          {/* Title Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center">
+                <User className="h-7 w-7 text-primary-foreground" weight="bold" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
+                  {activeLoansCount > 0 && (
+                    <Badge variant="secondary" className="bg-primary/20 text-primary-foreground border-0">
+                      {activeLoansCount} active loan{activeLoansCount !== 1 ? "s" : ""}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-blue-200/70">{contact.city || "Contact"}</p>
+              </div>
+            </div>
+            {contact.isLender && (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowEditDialog(true)} className="gap-2">
+                  <PencilSimple className="h-4 w-4" weight="bold" />
+                  Edit
+                </Button>
+                <Button variant="outline" onClick={() => setShowDeleteDialog(true)} className="gap-2">
+                  <Trash className="h-4 w-4" weight="bold" />
+                  Delete
+                </Button>
+                <Link to="/loans/new" search={{ contactId: contact.id }}>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" weight="bold" />
+                    New Loan
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
-        {contact.isLender && (
-          <div className="flex gap-2 ml-12 sm:ml-0">
-            <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
-              <PencilSimple className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowDeleteDialog(true)}>
-              <Trash className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
-            <Link to="/loans/new" search={{ contactId: contact.id }}>
-              <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Loan
-              </Button>
-            </Link>
-          </div>
-        )}
       </div>
 
+      {/* Content - overlaps header */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Contact Info */}
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader className="p-4 pb-2">
             <CardTitle>Contact Information</CardTitle>
           </CardHeader>
@@ -215,7 +236,7 @@ function ContactDetailPage() {
         </Card>
 
         {/* Loans */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 shadow-lg">
           <CardHeader className="p-4 pb-2">
             <CardTitle>Loans</CardTitle>
             <CardDescription>
@@ -281,6 +302,7 @@ function ContactDetailPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
 
       {/* Edit Dialog */}
