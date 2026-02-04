@@ -17,6 +17,7 @@ import {
   CaretDown,
   Sun,
   Moon,
+  Flask,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -174,6 +175,24 @@ function DashboardLayout() {
           </div>
         </div>
       </header>
+
+      {/* Beta Banner */}
+      <div className="bg-amber-500 text-amber-950">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center gap-2 py-2 text-sm font-medium">
+            <Flask className="h-4 w-4" weight="fill" />
+            <span>
+              You're using the beta version of Loona.{" "}
+              <a
+                href="mailto:feedback@loona.app"
+                className="underline underline-offset-2 hover:no-underline"
+              >
+                Send feedback
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Page content - full width, pages control their own constraints */}
       <main className="relative">
