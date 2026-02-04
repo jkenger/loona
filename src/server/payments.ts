@@ -85,7 +85,7 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
 })
 
 export const recordPayment = createServerFn()
-  .validator(recordPaymentSchema)
+  .inputValidator(recordPaymentSchema)
   .handler(async ({ data }) => {
   const session = await requireAuth()
 

@@ -57,7 +57,7 @@ export const getLoans = createServerFn().handler(async () => {
 })
 
 export const getLoan = createServerFn()
-  .validator(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: id }) => {
     const session = await requireAuth()
 
@@ -128,7 +128,7 @@ export const getLoan = createServerFn()
 )
 
 export const createLoan = createServerFn()
-  .validator(createLoanSchema)
+  .inputValidator(createLoanSchema)
   .handler(async ({ data }) => {
   const session = await requireAuth()
   const log = createAuditLogger(session.user)
@@ -210,7 +210,7 @@ export const createLoan = createServerFn()
 })
 
 export const disburseLoan = createServerFn()
-  .validator(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: id }) => {
     const session = await requireAuth()
 
@@ -307,7 +307,7 @@ function generatePaymentSchedule(
 }
 
 export const deleteLoan = createServerFn()
-  .validator(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: id }) => {
     const session = await requireAuth()
     const log = createAuditLogger(session.user)
