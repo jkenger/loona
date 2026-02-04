@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   Card,
@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
 import { SkeletonDashboard } from '@/components/ui/skeleton'
@@ -29,7 +30,6 @@ import {
   Bell,
   ArrowRight,
 } from '@phosphor-icons/react'
-import { Link } from '@tanstack/react-router'
 import {
   format,
   startOfMonth,
@@ -62,7 +62,6 @@ export const Route = createFileRoute('/_dashboard/dashboard/')({
 
 function DashboardPage() {
   const { stats, unauthorized } = Route.useLoaderData()
-  const navigate = useNavigate()
 
   // Initialize state with default values for unauthorized case
   const [currentMonth, setCurrentMonth] = useState(
@@ -330,7 +329,6 @@ function DashboardPage() {
               <PaymentCalendar
                 calendarData={calendarData}
                 currentMonth={currentMonth}
-                onDateClick={() => navigate({ to: '/payments' })}
               />
             </CardContent>
           </Card>
@@ -497,11 +495,9 @@ function DashboardPage() {
 function PaymentCalendar({
   calendarData,
   currentMonth,
-  onDateClick,
 }: {
   calendarData: Record<string, CalendarDay>
   currentMonth: Date
-  onDateClick?: (date: string) => void
 }) {
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -511,6 +507,13 @@ function PaymentCalendar({
   const paddingDays = Array(startDay).fill(null)
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  const statusColors: Record<string, string> = {
+    paid: 'default',
+    partial: 'secondary',
+    pending: 'outline',
+    overdue: 'destructive',
+  }
 
   return (
     <div>
@@ -540,14 +543,12 @@ function PaymentCalendar({
           const hasPayments = !!dayData
           const today = isToday(date)
 
-          return (
+          const dayContent = (
             <div
-              key={dateKey}
-              onClick={hasPayments && onDateClick ? () => onDateClick(dateKey) : undefined}
               className={cn(
                 'h-12 rounded text-sm relative flex flex-col items-center justify-center transition-colors',
                 today && 'ring-1 ring-primary bg-primary/5',
-                hasPayments && onDateClick && 'hover:bg-muted/50 cursor-pointer',
+                hasPayments && 'hover:bg-muted/50 cursor-pointer',
                 !hasPayments && 'text-muted-foreground',
               )}
             >
@@ -570,6 +571,64 @@ function PaymentCalendar({
                 </div>
               )}
             </div>
+          )
+
+          if (!hasPayments) {
+            return <div key={dateKey}>{dayContent}</div>
+          }
+
+          return (
+            <Popover key={dateKey} openOnHover delay={200}>
+              <PopoverTrigger className="w-full">{dayContent}</PopoverTrigger>
+              <PopoverContent className="w-72 p-3">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-sm">
+                      {format(date, 'MMMM d, yyyy')}
+                    </p>
+                    <Badge variant="secondary" className="text-xs">
+                      {dayData.payments.length} payment{dayData.payments.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {dayData.payments.map((payment) => {
+                      const remaining = parseFloat(payment.amount) - parseFloat(payment.paidAmount)
+                      return (
+                        <div
+                          key={payment.id}
+                          className="flex items-center justify-between gap-2 p-2 rounded bg-muted/50"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate">
+                              {payment.borrowerName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {payment.status === 'paid'
+                                ? formatCurrency(payment.amount)
+                                : `${formatCurrency(remaining)} remaining`}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={statusColors[payment.status] as any}
+                            className="text-xs shrink-0"
+                          >
+                            {payment.status}
+                          </Badge>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <Link to="/payments" className="block">
+                    <Button size="sm" className="w-full gap-1.5">
+                      <Receipt className="h-4 w-4" />
+                      View Payments
+                    </Button>
+                  </Link>
+                </div>
+              </PopoverContent>
+            </Popover>
           )
         })}
       </div>
