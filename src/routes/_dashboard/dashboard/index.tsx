@@ -578,8 +578,8 @@ function PaymentCalendar({
           }
 
           return (
-            <Popover key={dateKey} openOnHover openOnClick={false} delay={200}>
-              <PopoverTrigger render={<div />} className="w-full">{dayContent}</PopoverTrigger>
+            <Popover key={dateKey}>
+              <PopoverTrigger openOnHover delay={100} closeDelay={100} render={<div />} className="w-full">{dayContent}</PopoverTrigger>
               <PopoverContent className="w-72 p-3">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
