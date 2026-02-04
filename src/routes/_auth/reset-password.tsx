@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { resetPassword } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,6 @@ export const Route = createFileRoute("/_auth/reset-password")({
 })
 
 function ResetPasswordPage() {
-  const router = useRouter()
   const { token } = Route.useSearch()
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")

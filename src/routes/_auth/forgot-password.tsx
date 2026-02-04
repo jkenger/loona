@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState } from "react"
-import { forgetPassword } from "@/lib/auth-client"
+import { requestPasswordReset } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,7 +23,7 @@ function ForgotPasswordPage() {
     setLoading(true)
 
     try {
-      const result = await forgetPassword({
+      const result = await requestPasswordReset({
         email,
         redirectTo: "/reset-password",
       })

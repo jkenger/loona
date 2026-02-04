@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PhoneInput } from "@/components/ui/phone-input"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
-import { ArrowLeft, Spinner, User, Envelope, MapPin, FacebookLogo } from "@phosphor-icons/react"
+import { Spinner, User, Envelope, MapPin, FacebookLogo } from "@phosphor-icons/react"
 import { Link } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/_dashboard/contacts/new")({

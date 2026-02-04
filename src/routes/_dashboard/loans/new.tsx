@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
-import { ArrowLeft, Spinner, Calculator, User, CurrencyCircleDollar, ShieldCheck, Users } from "@phosphor-icons/react"
+import { Spinner, Calculator, User, CurrencyCircleDollar, ShieldCheck, Users } from "@phosphor-icons/react"
 import { z } from "zod"
 
 const PURPOSE_TEMPLATES = [

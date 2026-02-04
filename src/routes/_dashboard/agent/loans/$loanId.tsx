@@ -140,13 +140,6 @@ function AgentLoanDetailPage() {
     }
   }
 
-  const statusColors: Record<string, string> = {
-    pending_disbursement: 'outline',
-    active: 'secondary',
-    completed: 'default',
-    defaulted: 'destructive',
-  }
-
   const scheduleStatusColors: Record<string, string> = {
     pending: 'outline',
     partial: 'secondary',
