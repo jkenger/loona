@@ -27,7 +27,7 @@
     "@fontsource-variable/manrope": "^5.2.8",
     "@fontsource-variable/outfit": "^5.2.8",
     "@neondatabase/serverless": "^1.0.2",
-    "@noble/ciphers": "^1.2.1",
+    "@noble/ciphers": "0.6.0",
     "@phosphor-icons/react": "^2.1.10",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
@@ -56,7 +56,7 @@
     "zod": "^4.3.6"
   },
   "overrides": {
-    "@noble/ciphers": "^1.2.1"
+    "@noble/ciphers": "0.6.0"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.3.11",
