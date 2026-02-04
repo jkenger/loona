@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   Card,
@@ -62,6 +62,7 @@ export const Route = createFileRoute('/_dashboard/dashboard/')({
 
 function DashboardPage() {
   const { stats, unauthorized } = Route.useLoaderData()
+  const navigate = useNavigate()
 
   // Initialize state with default values for unauthorized case
   const [currentMonth, setCurrentMonth] = useState(
@@ -329,6 +330,7 @@ function DashboardPage() {
               <PaymentCalendar
                 calendarData={calendarData}
                 currentMonth={currentMonth}
+                onDateClick={() => navigate({ to: '/payments' })}
               />
             </CardContent>
           </Card>
@@ -495,9 +497,11 @@ function DashboardPage() {
 function PaymentCalendar({
   calendarData,
   currentMonth,
+  onDateClick,
 }: {
   calendarData: Record<string, CalendarDay>
   currentMonth: Date
+  onDateClick?: (date: string) => void
 }) {
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -539,10 +543,11 @@ function PaymentCalendar({
           return (
             <div
               key={dateKey}
+              onClick={hasPayments && onDateClick ? () => onDateClick(dateKey) : undefined}
               className={cn(
                 'h-12 rounded text-sm relative flex flex-col items-center justify-center transition-colors',
                 today && 'ring-1 ring-primary bg-primary/5',
-                hasPayments && 'hover:bg-muted/50 cursor-pointer',
+                hasPayments && onDateClick && 'hover:bg-muted/50 cursor-pointer',
                 !hasPayments && 'text-muted-foreground',
               )}
             >
