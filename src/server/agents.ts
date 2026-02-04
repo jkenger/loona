@@ -13,6 +13,7 @@ import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
 import { ROLES } from "@/lib/constants/roles"
+import { sendEmail, agentInviteEmail } from "@/lib/email"
 
 // Validation schemas
 const createAgentSchema = z.object({
@@ -173,6 +174,22 @@ export const createAgent = createServerFn<{
     commissionRate: data.commissionRate,
     isNewUser: generatedPassword !== null,
   })
+
+  // Send invitation email if new user was created
+  if (generatedPassword) {
+    const email = agentInviteEmail({
+      agentName: data.name,
+      lenderName: session.user.name || 'A lender',
+      email: emailLower,
+      password: generatedPassword,
+    })
+    sendEmail({
+      to: emailLower,
+      ...email,
+    }).catch((err) => {
+      console.error('[Agent] Failed to send invite email:', err)
+    })
+  }
 
   return {
     ...agent,
