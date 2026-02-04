@@ -2,7 +2,9 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Loona <noreply@loona.app>'
+// IMPORTANT: Without a verified domain, Resend only sends to your own email.
+// Verify your domain at resend.com/domains, then set FROM_EMAIL env var.
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Loona <onboarding@resend.dev>'
 
 export type SendEmailParams = {
   to: string | string[]
