@@ -17,14 +17,15 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
-    sendResetPassword: async ({ user, url }) => {
-      const email = passwordResetEmail({
+    sendResetPassword: async ({ user, url, token }, request) => {
+      console.log('[Auth] Sending password reset email to:', user.email)
+      const emailContent = passwordResetEmail({
         name: user.name || 'User',
         resetUrl: url,
       })
       await sendEmail({
         to: user.email,
-        ...email,
+        ...emailContent,
       })
     },
   },
