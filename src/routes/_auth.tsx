@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router"
 import { getServerSession } from "@/server/session"
 import { ChartLineUp, ShieldCheck, Users, Lightning } from "@phosphor-icons/react"
 import { motion } from "framer-motion"
@@ -169,14 +169,22 @@ function AuthLayout() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5, duration: 0.6 }}
         >
-          <p className="text-primary-foreground/50 text-sm">
+          <p className="text-primary-foreground/50 text-sm mb-2">
             Trusted by lenders across the Philippines
           </p>
+          <div className="flex gap-4 text-xs text-primary-foreground/40">
+            <Link to="/privacy" className="hover:text-primary-foreground/70 transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/terms" className="hover:text-primary-foreground/70 transition-colors">
+              Terms of Service
+            </Link>
+          </div>
         </motion.div>
       </div>
 
       {/* Right side - Form */}
-      <div className="flex-1 flex items-center justify-center bg-gradient-page p-6 sm:p-8">
+      <div className="flex-1 flex flex-col items-center justify-center bg-gradient-page p-6 sm:p-8">
         <motion.div
           className="w-full max-w-md"
           initial={{ opacity: 0, y: 20 }}
@@ -184,6 +192,21 @@ function AuthLayout() {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <Outlet />
+        </motion.div>
+
+        {/* Footer links - visible on mobile */}
+        <motion.div
+          className="lg:hidden mt-8 flex gap-4 text-xs text-muted-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+        >
+          <Link to="/privacy" className="hover:text-foreground transition-colors">
+            Privacy Policy
+          </Link>
+          <Link to="/terms" className="hover:text-foreground transition-colors">
+            Terms of Service
+          </Link>
         </motion.div>
       </div>
     </div>
