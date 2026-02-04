@@ -950,7 +950,181 @@ Decorative circles with gentle up/down bobbing motion.
 
 ### Next Steps
 
-1. [ ] Resolve @noble/ciphers compatibility issue
+1. [x] Resolve @noble/ciphers compatibility issue
 2. [ ] Complete Render deployment
 3. [ ] Test animations in production
 4. [ ] Add landing page with LoonaBrand component
+
+---
+
+## 2026-02-04 - Beta Launch Preparation
+
+### Summary
+Comprehensive beta launch preparation including UI/UX overhaul, legal compliance pages, email service integration, password reset flow, and beta banner.
+
+---
+
+### @noble/ciphers Fix ✅
+
+**Root Cause**: `better-auth@1.4.x` requires `@noble/ciphers@^2.0.0` where `managedNonce` is exported from `utils.js`. Previous overrides to `0.6.0` broke the import.
+
+**Solution**:
+- Removed pinned version override
+- Added npm override to force `@noble/ciphers@^2.1.1` across all deps
+- Fixed Vite aliases direction (non-.js → .js)
+- Added `ssr.noExternal` to bundle properly
+
+---
+
+### UI/UX Overhaul ✅
+
+#### Payments Page Restructure
+- Two-column layout for better tracking
+- Stats row: Collected, Overdue, Upcoming, Recorded
+- Left column: Overdue (prominent) + Upcoming with pagination
+- Right column: History with date filters and export
+
+#### Loans Page Restructure
+- Status filter tabs with counts (All, Active, Pending, Completed, Defaulted)
+- Smart sorting by attention priority: defaulted → active by progress → pending → completed
+- Visual indicators for loan status (Warning icon for defaulted, Clock for pending)
+- Pagination with 10 items per page
+
+#### Dashboard Calendar
+- Hover popover on dates with payments
+- Shows borrower name, amount, status badge
+- "View Payments" button in popover
+
+#### Agent Portal
+- Consistent amber accent theming
+- Solid backgrounds for cards overlapping dark header
+
+---
+
+### Legal Pages ✅
+
+Created `/privacy` and `/terms` routes for Philippine compliance.
+
+#### Privacy Policy (`/privacy`)
+- Data collection disclosure (account, contact, financial info)
+- How data is used
+- Data security measures
+- RA 10173 rights (access, correction, erasure, portability)
+- Data retention, cookies, children's privacy
+
+#### Terms of Service (`/terms`)
+- Service description
+- Important disclaimer: "Loona is NOT a Lending Company"
+- User responsibilities
+- Legal compliance notes (RA 9474, RA 3765, RA 10173, BSP)
+- Beta service notice
+- Limitation of liability
+
+Added links to auth pages (desktop sidebar + mobile footer).
+
+---
+
+### Email Service ✅
+
+Integrated Resend for transactional emails.
+
+#### Templates Created
+- Welcome email
+- Agent invitation (with login credentials)
+- Password reset
+- Payment reminder
+
+#### Integration
+- Agent invite email auto-sends when creating new agent
+- Gracefully skips if `RESEND_API_KEY` not set
+
+#### Setup Required
+```env
+RESEND_API_KEY=re_xxxxxxxxxxxx
+FROM_EMAIL=Loona <noreply@yourdomain.com>
+```
+
+**Note**: Resend requires domain verification to send to addresses other than your own.
+
+---
+
+### Password Reset Flow ✅
+
+#### Pages Created
+- `/forgot-password` - Enter email to receive reset link
+- `/reset-password?token=xxx` - Set new password with token
+
+#### Features
+- "Forgot password?" link on login page
+- Success states with clear messaging
+- Invalid/expired token handling
+- Password validation (min 8 chars, confirmation match)
+
+#### API Endpoints
+- `POST /api/auth/request-password-reset` - Request reset email
+- `POST /api/auth/reset-password` - Set new password
+
+---
+
+### Beta Banner ✅
+
+Added amber banner to all dashboard pages:
+- Flask icon
+- "You're using the beta version of Loona"
+- Feedback email link
+
+---
+
+### Files Created
+
+**Routes:**
+- `src/routes/privacy.tsx` - Privacy Policy page
+- `src/routes/terms.tsx` - Terms of Service page
+- `src/routes/_auth/forgot-password.tsx` - Forgot password page
+- `src/routes/_auth/reset-password.tsx` - Reset password page
+
+**Email:**
+- `src/lib/email/index.ts` - Email service with Resend + templates
+
+---
+
+### Files Updated
+
+**Auth:**
+- `src/lib/auth.ts` - Added `sendResetPassword` config
+- `src/lib/auth-client.ts` - Added password reset API functions
+- `src/routes/_auth.tsx` - Added legal page links
+- `src/routes/_auth/login.tsx` - Added "Forgot password?" link
+
+**Dashboard:**
+- `src/routes/_dashboard.tsx` - Added beta banner
+- `src/routes/_dashboard/dashboard/index.tsx` - Calendar hover popover
+- `src/routes/_dashboard/payments/index.tsx` - Two-column restructure
+- `src/routes/_dashboard/loans/index.tsx` - Status filters + smart sorting
+
+**Config:**
+- `.env.example` - Added Resend config
+- `vite.config.ts` - Fixed noble/ciphers aliases
+- `package.json` - Added resend, updated overrides
+
+---
+
+### Beta Launch Checklist
+
+| Item | Status |
+|------|--------|
+| Legal pages (Privacy, Terms) | ✅ |
+| Email service (Resend) | ✅ |
+| Password reset flow | ✅ |
+| Beta banner | ✅ |
+| Error monitoring (Sentry) | ❌ |
+| Deployment | ⚠️ In progress |
+
+---
+
+### Next Steps
+
+1. [ ] Verify domain in Resend for email delivery
+2. [ ] Add Sentry for error monitoring
+3. [ ] Complete Render deployment
+4. [ ] Test full flow in production
