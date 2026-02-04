@@ -19,9 +19,14 @@ const config = defineConfig({
   ],
   resolve: {
     alias: {
-      '@noble/ciphers/chacha.js': '@noble/ciphers/chacha',
-      '@noble/ciphers/utils.js': '@noble/ciphers/utils',
+      // Ensure consistent resolution for @noble/ciphers subpath imports
+      '@noble/ciphers/chacha': '@noble/ciphers/chacha.js',
+      '@noble/ciphers/utils': '@noble/ciphers/utils.js',
     },
+  },
+  ssr: {
+    // Ensure @noble/ciphers is bundled, not externalized
+    noExternal: ['@noble/ciphers'],
   },
 })
 
