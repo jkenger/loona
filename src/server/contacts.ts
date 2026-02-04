@@ -50,10 +50,10 @@ export const getContacts = createServerFn().handler(async () => {
   }))
 })
 
-export const getContact = createServerFn<{ data: string }>().handler(
-  async (ctx) => {
+export const getContact = createServerFn()
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
     const session = await requireAuth()
-    const id = ctx.data
 
     const result = await db.query.contacts.findFirst({
       where: eq(contacts.id, id),
@@ -128,10 +128,10 @@ export const getContact = createServerFn<{ data: string }>().handler(
   }
 )
 
-export const searchContacts = createServerFn<{ data: string }>().handler(
-  async (ctx) => {
+export const searchContacts = createServerFn()
+  .validator(z.string())
+  .handler(async ({ data: query }) => {
     const session = await requireAuth()
-    const query = ctx.data
 
     if (!query || query.length < 2) {
       return []
@@ -161,11 +161,10 @@ export const searchContacts = createServerFn<{ data: string }>().handler(
   }
 )
 
-export const createContact = createServerFn<{
-  data: z.infer<typeof createContactSchema>
-}>().handler(async (ctx) => {
+export const createContact = createServerFn()
+  .validator(createContactSchema)
+  .handler(async ({ data }) => {
   const session = await requireAuth()
-  const data = createContactSchema.parse(ctx.data)
   const log = createAuditLogger(session.user)
 
   const [contact] = await db
@@ -186,11 +185,10 @@ export const createContact = createServerFn<{
   }
 })
 
-export const updateContact = createServerFn<{
-  data: z.infer<typeof updateContactSchema>
-}>().handler(async (ctx) => {
+export const updateContact = createServerFn()
+  .validator(updateContactSchema)
+  .handler(async ({ data }) => {
   const session = await requireAuth()
-  const data = updateContactSchema.parse(ctx.data)
   const { id, ...updates } = data
   const log = createAuditLogger(session.user)
 
@@ -222,10 +220,10 @@ export const updateContact = createServerFn<{
   }
 })
 
-export const deleteContact = createServerFn<{ data: string }>().handler(
-  async (ctx) => {
+export const deleteContact = createServerFn()
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
     const session = await requireAuth()
-    const id = ctx.data
     const log = createAuditLogger(session.user)
 
     // Verify ownership and check for loans

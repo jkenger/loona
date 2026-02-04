@@ -1,9 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useNavigate } from "@tanstack/react-router"
 import { getServerSession } from "@/server/session"
 import { signOut } from "@/lib/auth-client"
-import { Button } from "@/components/ui/button"
 import { RouteProgress } from "@/components/ui/route-progress"
-import { LoonaBrand } from "@/components/ui/loona-brand"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { useTheme } from "@/lib/theme"
 import {

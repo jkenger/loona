@@ -84,11 +84,10 @@ export const getAgents = createServerFn().handler(async () => {
   }))
 })
 
-export const createAgent = createServerFn<{
-  data: z.infer<typeof createAgentSchema>
-}>().handler(async (ctx) => {
+export const createAgent = createServerFn()
+  .validator(createAgentSchema)
+  .handler(async ({ data }) => {
   const session = await requireAuth()
-  const data = createAgentSchema.parse(ctx.data)
   const emailLower = data.email.toLowerCase()
 
   // Check if this is the lender's own email
@@ -201,11 +200,10 @@ export const createAgent = createServerFn<{
   }
 })
 
-export const updateAgent = createServerFn<{
-  data: z.infer<typeof updateAgentSchema>
-}>().handler(async (ctx) => {
+export const updateAgent = createServerFn()
+  .validator(updateAgentSchema)
+  .handler(async ({ data }) => {
   const session = await requireAuth()
-  const data = updateAgentSchema.parse(ctx.data)
   const { id, ...updates } = data
 
   // Verify ownership
@@ -262,10 +260,10 @@ export const updateAgent = createServerFn<{
   }
 })
 
-export const payCommission = createServerFn<{ data: string }>().handler(
-  async (ctx) => {
+export const payCommission = createServerFn()
+  .validator(z.string())
+  .handler(async ({ data: agentId }) => {
     const session = await requireAuth()
-    const agentId = ctx.data
 
     // Verify ownership
     const agent = await db.query.agents.findFirst({
@@ -446,11 +444,11 @@ const assignLoanSchema = z.object({
   agentId: z.string().nullable(),
 })
 
-export const assignLoanToAgent = createServerFn<{
-  data: z.infer<typeof assignLoanSchema>
-}>().handler(async (ctx) => {
+export const assignLoanToAgent = createServerFn()
+  .validator(assignLoanSchema)
+  .handler(async ({ data }) => {
   const session = await requireAuth()
-  const { loanId, agentId } = assignLoanSchema.parse(ctx.data)
+  const { loanId, agentId } = data
 
   // Verify loan ownership
   const loan = await db.query.loans.findFirst({
@@ -671,10 +669,10 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
 })
 
 // Get contact detail for agent (only shows assigned loans)
-export const getAgentContact = createServerFn<{ data: string }>().handler(
-  async (ctx) => {
+export const getAgentContact = createServerFn()
+  .validator(z.string())
+  .handler(async ({ data: contactId }) => {
     const session = await requireAuth()
-    const contactId = ctx.data
 
     // Get agent's relationships
     const agentRelationships = await db.query.agents.findMany({

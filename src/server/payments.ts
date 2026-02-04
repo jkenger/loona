@@ -84,11 +84,10 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
   }))
 })
 
-export const recordPayment = createServerFn<{
-  data: z.infer<typeof recordPaymentSchema>
-}>().handler(async (ctx) => {
+export const recordPayment = createServerFn()
+  .validator(recordPaymentSchema)
+  .handler(async ({ data }) => {
   const session = await requireAuth()
-  const data = recordPaymentSchema.parse(ctx.data)
 
   // Get the loan
   const loan = await db.query.loans.findFirst({

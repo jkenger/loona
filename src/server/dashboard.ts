@@ -8,6 +8,11 @@ import {
   format,
   addDays,
 } from "date-fns"
+import { z } from "zod"
+
+const dashboardStatsSchema = z.object({
+  month: z.string().optional(),
+}).optional()
 
 export type CalendarPayment = {
   id: string
@@ -27,13 +32,13 @@ export type CalendarDay = {
   hasOverdue: boolean
 }
 
-export const getDashboardStats = createServerFn<{
-  data?: { month?: string }
-}>().handler(async (ctx) => {
+export const getDashboardStats = createServerFn()
+  .validator(dashboardStatsSchema)
+  .handler(async ({ data }) => {
   const session = await requireAuth()
   const userId = session.user.id
 
-  const targetMonth = ctx?.data?.month ? new Date(ctx.data.month) : new Date()
+  const targetMonth = data?.month ? new Date(data.month) : new Date()
 
   // Get loan stats
   const loanStats = await db

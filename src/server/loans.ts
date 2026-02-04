@@ -56,10 +56,10 @@ export const getLoans = createServerFn().handler(async () => {
   }))
 })
 
-export const getLoan = createServerFn<{ data: string }>().handler(
-  async (ctx) => {
+export const getLoan = createServerFn()
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
     const session = await requireAuth()
-    const id = ctx.data
 
     const result = await db.query.loans.findFirst({
       where: eq(loans.id, id),
@@ -127,11 +127,10 @@ export const getLoan = createServerFn<{ data: string }>().handler(
   }
 )
 
-export const createLoan = createServerFn<{
-  data: z.input<typeof createLoanSchema>
-}>().handler(async (ctx) => {
+export const createLoan = createServerFn()
+  .validator(createLoanSchema)
+  .handler(async ({ data }) => {
   const session = await requireAuth()
-  const data = createLoanSchema.parse(ctx.data)
   const log = createAuditLogger(session.user)
 
   // Verify contact ownership
@@ -210,10 +209,10 @@ export const createLoan = createServerFn<{
   }
 })
 
-export const disburseLoan = createServerFn<{ data: string }>().handler(
-  async (ctx) => {
+export const disburseLoan = createServerFn()
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
     const session = await requireAuth()
-    const id = ctx.data
 
     const loan = await db.query.loans.findFirst({
       where: eq(loans.id, id),
@@ -307,10 +306,10 @@ function generatePaymentSchedule(
   return schedule
 }
 
-export const deleteLoan = createServerFn<{ data: string }>().handler(
-  async (ctx) => {
+export const deleteLoan = createServerFn()
+  .validator(z.string())
+  .handler(async ({ data: id }) => {
     const session = await requireAuth()
-    const id = ctx.data
     const log = createAuditLogger(session.user)
 
     // Get the loan with payments count
