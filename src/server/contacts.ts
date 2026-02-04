@@ -51,7 +51,7 @@ export const getContacts = createServerFn().handler(async () => {
 })
 
 export const getContact = createServerFn()
-  .validator(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: id }) => {
     const session = await requireAuth()
 
@@ -129,7 +129,7 @@ export const getContact = createServerFn()
 )
 
 export const searchContacts = createServerFn()
-  .validator(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: query }) => {
     const session = await requireAuth()
 
@@ -162,7 +162,7 @@ export const searchContacts = createServerFn()
 )
 
 export const createContact = createServerFn()
-  .validator(createContactSchema)
+  .inputValidator(createContactSchema)
   .handler(async ({ data }) => {
   const session = await requireAuth()
   const log = createAuditLogger(session.user)
@@ -186,7 +186,7 @@ export const createContact = createServerFn()
 })
 
 export const updateContact = createServerFn()
-  .validator(updateContactSchema)
+  .inputValidator(updateContactSchema)
   .handler(async ({ data }) => {
   const session = await requireAuth()
   const { id, ...updates } = data
@@ -221,7 +221,7 @@ export const updateContact = createServerFn()
 })
 
 export const deleteContact = createServerFn()
-  .validator(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: id }) => {
     const session = await requireAuth()
     const log = createAuditLogger(session.user)

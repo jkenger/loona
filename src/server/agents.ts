@@ -85,7 +85,7 @@ export const getAgents = createServerFn().handler(async () => {
 })
 
 export const createAgent = createServerFn()
-  .validator(createAgentSchema)
+  .inputValidator(createAgentSchema)
   .handler(async ({ data }) => {
   const session = await requireAuth()
   const emailLower = data.email.toLowerCase()
@@ -201,7 +201,7 @@ export const createAgent = createServerFn()
 })
 
 export const updateAgent = createServerFn()
-  .validator(updateAgentSchema)
+  .inputValidator(updateAgentSchema)
   .handler(async ({ data }) => {
   const session = await requireAuth()
   const { id, ...updates } = data
@@ -261,7 +261,7 @@ export const updateAgent = createServerFn()
 })
 
 export const payCommission = createServerFn()
-  .validator(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: agentId }) => {
     const session = await requireAuth()
 
@@ -445,7 +445,7 @@ const assignLoanSchema = z.object({
 })
 
 export const assignLoanToAgent = createServerFn()
-  .validator(assignLoanSchema)
+  .inputValidator(assignLoanSchema)
   .handler(async ({ data }) => {
   const session = await requireAuth()
   const { loanId, agentId } = data
@@ -670,7 +670,7 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
 
 // Get contact detail for agent (only shows assigned loans)
 export const getAgentContact = createServerFn()
-  .validator(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: contactId }) => {
     const session = await requireAuth()
 

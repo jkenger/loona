@@ -33,7 +33,7 @@ export type CalendarDay = {
 }
 
 export const getDashboardStats = createServerFn()
-  .validator(dashboardStatsSchema)
+  .inputValidator(dashboardStatsSchema)
   .handler(async ({ data }) => {
   const session = await requireAuth()
   const userId = session.user.id
