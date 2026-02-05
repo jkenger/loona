@@ -8,6 +8,14 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   UsersThree,
   Plus,
   Spinner,
@@ -102,6 +110,8 @@ function AgentsPage() {
   const [error, setError] = useState("")
   const [createdAgent, setCreatedAgent] = useState<CreatedAgent | null>(null)
   const [copied, setCopied] = useState(false)
+  const [payingCommission, setPayingCommission] = useState(false)
+  const [agentToPayCommission, setAgentToPayCommission] = useState<typeof agents[number] | null>(null)
 
   // Form state
   const [name, setName] = useState("")
@@ -174,13 +184,18 @@ function AgentsPage() {
     setCopied(false)
   }
 
-  const handlePayCommission = async (agentId: string) => {
+  const handlePayCommission = async () => {
+    if (!agentToPayCommission) return
+    setPayingCommission(true)
     try {
-      await payCommission({ data: agentId })
+      await payCommission({ data: agentToPayCommission.id })
       toast.success("Commission paid successfully")
+      setAgentToPayCommission(null)
       router.invalidate()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to pay commission")
+    } finally {
+      setPayingCommission(false)
     }
   }
 
@@ -433,7 +448,7 @@ function AgentsPage() {
                     <Button
                       size="sm"
                       className="flex-1 gap-1"
-                      onClick={() => handlePayCommission(agent.id)}
+                      onClick={() => setAgentToPayCommission(agent)}
                     >
                       <CurrencyCircleDollar className="h-4 w-4" />
                       Pay Commission
@@ -467,6 +482,65 @@ function AgentsPage() {
         </Card>
       )}
       </div>
+
+      {/* Pay Commission Confirmation Dialog */}
+      <Dialog open={!!agentToPayCommission} onOpenChange={(open) => !open && setAgentToPayCommission(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Commission Payment</DialogTitle>
+            <DialogDescription>
+              Review the commission details before proceeding with payment.
+            </DialogDescription>
+          </DialogHeader>
+          {agentToPayCommission && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 p-3 rounded bg-secondary">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">{agentToPayCommission.agentName}</p>
+                  <p className="text-sm text-muted-foreground">{agentToPayCommission.agentEmail}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Commission Rate</span>
+                  <span className="font-medium">{agentToPayCommission.commissionRate}%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Collected</span>
+                  <span className="font-medium">{formatCurrency(agentToPayCommission.totalCollected)}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="font-semibold">Amount to Pay</span>
+                  <span className="font-bold text-lg text-primary">
+                    {formatCurrency(agentToPayCommission.pendingCommission)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAgentToPayCommission(null)} disabled={payingCommission}>
+              Cancel
+            </Button>
+            <Button onClick={handlePayCommission} disabled={payingCommission}>
+              {payingCommission ? (
+                <>
+                  <Spinner className="h-4 w-4 animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CurrencyCircleDollar className="h-4 w-4 mr-2" />
+                  Confirm Payment
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

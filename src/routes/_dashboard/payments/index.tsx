@@ -29,6 +29,7 @@ import {
   CalendarCheck,
 } from "@phosphor-icons/react"
 import { subDays, startOfMonth, isAfter, format } from "date-fns"
+import { DatePicker } from "@/components/ui/date-picker"
 import { formatRelativeDate } from "@/lib/utils/date"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
@@ -125,6 +126,7 @@ function PaymentsPage() {
   }
 
   const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [paymentStep, setPaymentStep] = useState<"form" | "confirm">("form")
   const [selectedScheduleItem, setSelectedScheduleItem] = useState<(typeof upcoming)[0] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -132,6 +134,7 @@ function PaymentsPage() {
   // Payment form state
   const [amount, setAmount] = useState("")
   const [method, setMethod] = useState<"cash" | "gcash" | "maya" | "bank">("cash")
+  const [paidAt, setPaidAt] = useState<Date>(new Date())
   const [notes, setNotes] = useState("")
 
   // Date range filter
@@ -205,6 +208,8 @@ function PaymentsPage() {
     setSelectedScheduleItem(item)
     const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
     setAmount(remaining.toString())
+    setPaidAt(new Date())
+    setPaymentStep("form")
     setShowPaymentForm(true)
   }
 
@@ -212,12 +217,13 @@ function PaymentsPage() {
     setShowPaymentForm(false)
     setSelectedScheduleItem(null)
     setAmount("")
+    setPaidAt(new Date())
     setNotes("")
     setError("")
+    setPaymentStep("form")
   }
 
-  const handleRecordPayment = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleRecordPayment = async () => {
     if (!selectedScheduleItem) return
 
     setError("")
@@ -230,6 +236,7 @@ function PaymentsPage() {
           scheduleItemId: selectedScheduleItem.id,
           amount: parseFloat(amount),
           method,
+          paidAt: format(paidAt, "yyyy-MM-dd"),
           notes: notes || undefined,
         },
       })
@@ -320,102 +327,6 @@ function PaymentsPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Payment Form Modal */}
-        {showPaymentForm && selectedScheduleItem && (
-          <Card className="border-primary shadow-lg">
-            <CardHeader className="p-4 pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Record Payment</CardTitle>
-                  <CardDescription>
-                    {selectedScheduleItem.contactName} · Due {formatRelativeDate(selectedScheduleItem.dueDate)}
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" onClick={closePaymentForm}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <form onSubmit={handleRecordPayment} className="space-y-4">
-                {/* Schedule item info */}
-                <div className="p-3 rounded bg-muted/50 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Amount Due</span>
-                    <span className="font-medium">{formatCurrency(selectedScheduleItem.amount)}</span>
-                  </div>
-                  {parseFloat(selectedScheduleItem.paidAmount) > 0 && (
-                    <div className="flex justify-between mt-1">
-                      <span className="text-muted-foreground">Already Paid</span>
-                      <span className="font-medium text-primary">{formatCurrency(selectedScheduleItem.paidAmount)}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Payment Amount</Label>
-                    <CurrencyInput
-                      id="amount"
-                      value={amount}
-                      onValueChange={setAmount}
-                      placeholder="1,000"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="method">Payment Method</Label>
-                    <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
-                      <SelectTrigger>
-                        {{ cash: "Cash", gcash: "GCash", maya: "Maya", bank: "Bank Transfer" }[method]}
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="gcash">GCash</SelectItem>
-                        <SelectItem value="maya">Maya</SelectItem>
-                        <SelectItem value="bank">Bank Transfer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <div className="relative">
-                      <Notepad className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="notes"
-                        placeholder="Optional notes..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {error && <p className="text-sm text-destructive">{error}</p>}
-
-                <div className="flex gap-3">
-                  <Button type="button" variant="outline" onClick={closePaymentForm}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Spinner className="h-4 w-4 animate-spin mr-2" />
-                        Recording...
-                      </>
-                    ) : (
-                      "Record Payment"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Two Column Layout */}
         <div className="grid lg:grid-cols-2 gap-6">
@@ -578,8 +489,161 @@ function PaymentsPage() {
             </Card>
           </div>
 
-          {/* Right Column: Record History */}
-          <Card className="shadow-sm h-fit">
+          {/* Right Column: Payment Form + History */}
+          <div className="space-y-6">
+            {/* Payment Form */}
+            {showPaymentForm && selectedScheduleItem && (
+              <Card className="border-primary shadow-lg">
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>{paymentStep === "form" ? "Record Payment" : "Confirm Payment"}</CardTitle>
+                      <CardDescription>
+                        {selectedScheduleItem.contactName} · Due {formatRelativeDate(selectedScheduleItem.dueDate)}
+                      </CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={closePaymentForm}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  {paymentStep === "form" ? (
+                    <div className="space-y-4">
+                      {/* Schedule item info */}
+                      <div className="p-3 rounded bg-muted/50 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Amount Due</span>
+                          <span className="font-medium">{formatCurrency(selectedScheduleItem.amount)}</span>
+                        </div>
+                        {parseFloat(selectedScheduleItem.paidAmount) > 0 && (
+                          <div className="flex justify-between mt-1">
+                            <span className="text-muted-foreground">Already Paid</span>
+                            <span className="font-medium text-primary">{formatCurrency(selectedScheduleItem.paidAmount)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="amount">Payment Amount</Label>
+                          <CurrencyInput
+                            id="amount"
+                            value={amount}
+                            onValueChange={setAmount}
+                            placeholder="1,000"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="method">Payment Method</Label>
+                          <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
+                            <SelectTrigger>
+                              {{ cash: "Cash", gcash: "GCash", maya: "Maya", bank: "Bank Transfer" }[method]}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="gcash">GCash</SelectItem>
+                              <SelectItem value="maya">Maya</SelectItem>
+                              <SelectItem value="bank">Bank Transfer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label>Payment Date</Label>
+                          <DatePicker
+                            value={paidAt}
+                            onChange={(date) => date && setPaidAt(date)}
+                          />
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor="notes">Notes</Label>
+                          <div className="relative">
+                            <Notepad className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="notes"
+                              placeholder="Optional notes..."
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {error && <p className="text-sm text-destructive">{error}</p>}
+
+                      <div className="flex gap-3">
+                        <Button type="button" variant="outline" onClick={closePaymentForm}>
+                          Cancel
+                        </Button>
+                        <Button type="button" onClick={() => setPaymentStep("confirm")} disabled={!amount}>
+                          Review Payment
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                        <div className="text-center pb-3 border-b">
+                          <p className="text-2xl font-bold text-primary">{formatCurrency(amount)}</p>
+                          <p className="text-sm text-muted-foreground">Payment Amount</p>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Borrower</span>
+                            <span className="font-medium">{selectedScheduleItem.contactName}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Payment Date</span>
+                            <span className="font-medium">{format(paidAt, "MMMM d, yyyy")}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Method</span>
+                            <span className="font-medium">
+                              {{ cash: "Cash", gcash: "GCash", maya: "Maya", bank: "Bank Transfer" }[method]}
+                            </span>
+                          </div>
+                          {notes && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Notes</span>
+                              <span className="font-medium text-right max-w-[180px] truncate">{notes}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground text-center">
+                        Please review the details above before confirming.
+                      </p>
+
+                      {error && <p className="text-sm text-destructive">{error}</p>}
+
+                      <div className="flex gap-3">
+                        <Button type="button" variant="outline" onClick={() => setPaymentStep("form")}>
+                          Back
+                        </Button>
+                        <Button type="button" onClick={handleRecordPayment} disabled={loading}>
+                          {loading ? (
+                            <>
+                              <Spinner className="h-4 w-4 animate-spin mr-2" />
+                              Recording...
+                            </>
+                          ) : (
+                            "Confirm Payment"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* History */}
+            <Card className="shadow-sm h-fit">
             <CardHeader className="p-4 pb-2">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -676,6 +740,7 @@ function PaymentsPage() {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { auth } from "@/lib/auth"
+import { hasRole, ROLES } from "@/lib/constants/roles"
 
 /**
  * Get the current session from request headers
@@ -21,6 +22,17 @@ export const requireAuth = async () => {
   const session = await getServerSession()
   if (!session) {
     throw new Error("Unauthorized")
+  }
+  return session
+}
+
+/**
+ * Require admin role - throws if not admin
+ */
+export const requireAdmin = async () => {
+  const session = await requireAuth()
+  if (!hasRole(session.user.role, ROLES.ADMIN)) {
+    throw new Error("Forbidden: Admin access required")
   }
   return session
 }

@@ -19,6 +19,7 @@ const recordPaymentSchema = z.object({
   scheduleItemId: z.string().min(1, "Schedule item is required"),
   amount: z.number().positive(),
   method: z.enum(["cash", "gcash", "maya", "bank"]),
+  paidAt: z.string().optional().transform((s) => s ? new Date(s) : undefined),
   notes: z.string().optional(),
 })
 
@@ -136,6 +137,7 @@ export const recordPayment = createServerFn()
   }
 
   // Create payment record
+  const paymentDate = data.paidAt || new Date()
   const [payment] = await db
     .insert(payments)
     .values({
@@ -144,6 +146,7 @@ export const recordPayment = createServerFn()
       method: data.method,
       scheduleItemId: data.scheduleItemId || null,
       recordedByAgentId: agentId,
+      paidAt: paymentDate,
       notes: data.notes || null,
     })
     .returning()
@@ -186,7 +189,7 @@ export const recordPayment = createServerFn()
     .set({
       paidAmount: newPaidAmount.toFixed(2),
       status: isPaid ? "paid" : "partial",
-      paidAt: isPaid ? new Date() : null,
+      paidAt: isPaid ? paymentDate : null,
     })
     .where(eq(paymentSchedule.id, data.scheduleItemId))
 

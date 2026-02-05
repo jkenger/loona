@@ -25,6 +25,10 @@ type AuditAction =
   // Auth
   | "auth.login"
   | "auth.logout"
+  // Admin
+  | "admin.ban_user"
+  | "admin.unban_user"
+  | "admin.set_role"
 
 type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "user"
 

@@ -59,6 +59,7 @@ function NewLoanPage() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [step, setStep] = useState<"form" | "review">("form")
 
   // Form state
   const [contactId, setContactId] = useState(preselectedContactId || "")
@@ -136,8 +137,13 @@ function NewLoanPage() {
     }
   }, [principal, interestRate, termMonths, paymentFrequency])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleReview = (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
+    setStep("review")
+  }
+
+  const handleSubmit = async () => {
     setError("")
     setLoading(true)
 
@@ -186,7 +192,8 @@ function NewLoanPage() {
 
       {/* Form - overlaps header */}
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-6 pb-8">
-      <form onSubmit={handleSubmit}>
+      {step === "form" ? (
+      <form onSubmit={handleReview}>
         <div className="grid gap-6 lg:grid-cols-5">
           {/* Loan Details */}
           <Card className="lg:col-span-3 shadow-lg">
@@ -476,19 +483,134 @@ function NewLoanPage() {
           </Card>
         </div>
 
-        {error && (
-          <div className="mt-4 p-3 rounded bg-destructive/10 text-destructive text-sm">
-            {error}
-          </div>
-        )}
-
         <div className="flex gap-3 mt-6">
           <Link to="/loans">
             <Button type="button" variant="outline">
               Cancel
             </Button>
           </Link>
-          <Button type="submit" disabled={loading || !contactId}>
+          <Button type="submit" disabled={!contactId}>
+            Review Loan
+          </Button>
+        </div>
+      </form>
+      ) : (
+      /* Review Step */
+      <div className="space-y-6">
+        <Card className="shadow-lg">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle>Review Loan Details</CardTitle>
+            <CardDescription>Please confirm the loan details before creating</CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 space-y-6">
+            {/* Borrower Info */}
+            {selectedContact && (
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Borrower</h4>
+                <div className="flex items-center gap-3 p-3 rounded bg-secondary">
+                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-sm font-medium text-primary">
+                      {selectedContact.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium">{selectedContact.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedContact.phone || "No phone"}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Loan Terms */}
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Loan Terms</h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex justify-between p-2 rounded bg-muted/50">
+                  <span className="text-muted-foreground">Principal</span>
+                  <span className="font-medium">{formatCurrency(parseFloat(principal) || 0)}</span>
+                </div>
+                <div className="flex justify-between p-2 rounded bg-muted/50">
+                  <span className="text-muted-foreground">Interest Rate</span>
+                  <span className="font-medium">{interestRate}% / month</span>
+                </div>
+                <div className="flex justify-between p-2 rounded bg-muted/50">
+                  <span className="text-muted-foreground">Term</span>
+                  <span className="font-medium">{termMonths} months</span>
+                </div>
+                <div className="flex justify-between p-2 rounded bg-muted/50">
+                  <span className="text-muted-foreground">Frequency</span>
+                  <span className="font-medium capitalize">{paymentFrequency}</span>
+                </div>
+                <div className="flex justify-between p-2 rounded bg-muted/50">
+                  <span className="text-muted-foreground">Start Date</span>
+                  <span className="font-medium">{format(startDate, "MMMM d, yyyy")}</span>
+                </div>
+                {purpose && (
+                  <div className="flex justify-between p-2 rounded bg-muted/50">
+                    <span className="text-muted-foreground">Purpose</span>
+                    <span className="font-medium">{purpose}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Summary */}
+            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Interest</span>
+                  <span className="font-medium">{formatCurrency(calculations.totalInterest)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Number of Payments</span>
+                  <span className="font-medium">{calculations.paymentsCount}x</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Each Payment</span>
+                  <span className="font-medium">{formatCurrency(calculations.paymentAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">Total to Repay</span>
+                  <span className="font-bold text-primary">{formatCurrency(calculations.totalToRepay)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Collateral */}
+            {hasCollateral && collateralDescription && (
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Collateral</h4>
+                <p className="p-3 rounded bg-muted/50 text-sm">{collateralDescription}</p>
+              </div>
+            )}
+
+            {/* Co-maker */}
+            {hasCoMaker && coMakerName && (
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Co-maker / Guarantor</h4>
+                <div className="p-3 rounded bg-muted/50 text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Name:</span> {coMakerName}</p>
+                  {coMakerPhone && <p><span className="text-muted-foreground">Phone:</span> {coMakerPhone}</p>}
+                  {coMakerRelationship && <p><span className="text-muted-foreground">Relationship:</span> {coMakerRelationship}</p>}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {error && (
+          <div className="p-3 rounded bg-destructive/10 text-destructive text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={() => setStep("form")} disabled={loading}>
+            Back to Edit
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading}>
             {loading ? (
               <>
                 <Spinner className="h-4 w-4 animate-spin mr-2" />
@@ -502,7 +624,8 @@ function NewLoanPage() {
             )}
           </Button>
         </div>
-      </form>
+      </div>
+      )}
       </div>
     </div>
   )

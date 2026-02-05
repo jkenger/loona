@@ -40,6 +40,8 @@ import {
   Users,
   Tag,
 } from "@phosphor-icons/react"
+import { DatePicker } from "@/components/ui/date-picker"
+import { format } from "date-fns"
 
 export const Route = createFileRoute("/_dashboard/loans/$loanId")({
   loader: async ({ params, context }) => {
@@ -81,9 +83,11 @@ function LoanDetailPage() {
 
   // Payment form state
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [paymentStep, setPaymentStep] = useState<"form" | "confirm">("form")
   const [selectedScheduleItem, setSelectedScheduleItem] = useState<ScheduleItem | null>(null)
   const [paymentAmount, setPaymentAmount] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash" | "maya" | "bank">("cash")
+  const [paymentDate, setPaymentDate] = useState<Date>(new Date())
   const [paymentNotes, setPaymentNotes] = useState("")
   const [isRecordingPayment, setIsRecordingPayment] = useState(false)
 
@@ -147,7 +151,9 @@ function LoanDetailPage() {
     const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
     setPaymentAmount(remaining.toString())
     setPaymentMethod("cash")
+    setPaymentDate(new Date())
     setPaymentNotes("")
+    setPaymentStep("form")
     setShowPaymentDialog(true)
   }
 
@@ -155,7 +161,9 @@ function LoanDetailPage() {
     setShowPaymentDialog(false)
     setSelectedScheduleItem(null)
     setPaymentAmount("")
+    setPaymentDate(new Date())
     setPaymentNotes("")
+    setPaymentStep("form")
   }
 
   const handleRecordPayment = async () => {
@@ -169,6 +177,7 @@ function LoanDetailPage() {
           scheduleItemId: selectedScheduleItem.id,
           amount: parseFloat(paymentAmount),
           method: paymentMethod,
+          paidAt: format(paymentDate, "yyyy-MM-dd"),
           notes: paymentNotes || undefined,
         },
       })
@@ -599,7 +608,9 @@ function LoanDetailPage() {
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
+            <DialogTitle>
+              {paymentStep === "form" ? "Record Payment" : "Confirm Payment"}
+            </DialogTitle>
             <DialogDescription>
               {selectedScheduleItem && (
                 <>
@@ -610,7 +621,7 @@ function LoanDetailPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedScheduleItem && (
+          {selectedScheduleItem && paymentStep === "form" && (
             <div className="space-y-4">
               {/* Schedule item info */}
               <div className="p-3 rounded bg-muted/50 text-sm space-y-1">
@@ -657,34 +668,91 @@ function LoanDetailPage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="paymentNotes">Notes (optional)</Label>
-                <Input
-                  id="paymentNotes"
-                  placeholder="Any additional notes..."
-                  value={paymentNotes}
-                  onChange={(e) => setPaymentNotes(e.target.value)}
-                />
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Payment Date</Label>
+                  <DatePicker
+                    value={paymentDate}
+                    onChange={(date) => date && setPaymentDate(date)}
+                  />
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="paymentNotes">Notes (optional)</Label>
+                  <Input
+                    id="paymentNotes"
+                    placeholder="Any additional notes..."
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           )}
 
+          {selectedScheduleItem && paymentStep === "confirm" && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                <div className="text-center pb-3 border-b">
+                  <p className="text-2xl font-bold text-primary">{formatCurrency(paymentAmount)}</p>
+                  <p className="text-sm text-muted-foreground">Payment Amount</p>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Borrower</span>
+                    <span className="font-medium">{loan.contact.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment Date</span>
+                    <span className="font-medium">{format(paymentDate, "MMMM d, yyyy")}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Method</span>
+                    <span className="font-medium">
+                      {{ cash: "Cash", gcash: "GCash", maya: "Maya", bank: "Bank Transfer" }[paymentMethod]}
+                    </span>
+                  </div>
+                  {paymentNotes && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Notes</span>
+                      <span className="font-medium text-right max-w-[180px] truncate">{paymentNotes}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Please review the details above before confirming.
+              </p>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={closePaymentDialog}>
-              Cancel
-            </Button>
-            <Button onClick={handleRecordPayment} disabled={isRecordingPayment || !paymentAmount}>
-              {isRecordingPayment ? (
-                <>
-                  <Spinner className="h-4 w-4 animate-spin mr-2" />
-                  Recording...
-                </>
-              ) : (
-                "Record Payment"
-              )}
-            </Button>
+            {paymentStep === "form" ? (
+              <>
+                <Button variant="outline" onClick={closePaymentDialog}>
+                  Cancel
+                </Button>
+                <Button onClick={() => setPaymentStep("confirm")} disabled={!paymentAmount}>
+                  Review Payment
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setPaymentStep("form")}>
+                  Back
+                </Button>
+                <Button onClick={handleRecordPayment} disabled={isRecordingPayment}>
+                  {isRecordingPayment ? (
+                    <>
+                      <Spinner className="h-4 w-4 animate-spin mr-2" />
+                      Recording...
+                    </>
+                  ) : (
+                    "Confirm Payment"
+                  )}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
