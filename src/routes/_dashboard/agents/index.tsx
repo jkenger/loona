@@ -239,6 +239,21 @@ function AgentsPage() {
     }
   }
 
+  const handleToggleRecordPayments = async (agentId: string, canRecordPayments: boolean) => {
+    try {
+      await updateAgent({
+        data: {
+          id: agentId,
+          canRecordPayments,
+        },
+      })
+      toast.success(canRecordPayments ? "Payment recording enabled" : "Payment recording disabled")
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update agent")
+    }
+  }
+
   const handleResetPassword = async () => {
     if (!resetPasswordAgent) return
     setResettingPassword(true)
@@ -501,20 +516,36 @@ function AgentsPage() {
                   </div>
                 </div>
 
-                {/* Loan creation permission toggle */}
-                <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <NotePencil className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Create Loans</p>
-                      <p className="text-xs text-muted-foreground">Allow agent to create loans for approval</p>
+                {/* Permission toggles */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <CurrencyCircleDollar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Record Payments</p>
+                        <p className="text-xs text-muted-foreground">Allow agent to record collections</p>
+                      </div>
                     </div>
+                    <Switch
+                      checked={agent.canRecordPayments}
+                      onCheckedChange={(checked) => handleToggleRecordPayments(agent.id, checked)}
+                      disabled={agent.status !== "active"}
+                    />
                   </div>
-                  <Switch
-                    checked={agent.canCreateLoans}
-                    onCheckedChange={(checked) => handleToggleLoanCreation(agent.id, checked)}
-                    disabled={agent.status !== "active"}
-                  />
+                  <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <NotePencil className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Create Loans</p>
+                        <p className="text-xs text-muted-foreground">Allow agent to create loans for approval</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={agent.canCreateLoans}
+                      onCheckedChange={(checked) => handleToggleLoanCreation(agent.id, checked)}
+                      disabled={agent.status !== "active"}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-2 border-t">

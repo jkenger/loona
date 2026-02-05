@@ -17,6 +17,35 @@ import { z } from "zod"
 // All functions for the agent portal (accessed by agents)
 // ============================================================================
 
+// Get agent permissions (lightweight - for layout banner)
+export const getAgentPermissions = createServerFn().handler(async () => {
+  const session = await requireAuth()
+
+  // Get agent relationships
+  const agentRelationships = await db.query.agents.findMany({
+    where: and(
+      eq(agents.agentUserId, session.user.id),
+      eq(agents.status, "active")
+    ),
+  })
+
+  if (agentRelationships.length === 0) {
+    return {
+      canRecordPayments: false,
+      canCreateLoans: false,
+    }
+  }
+
+  // Check if any relationship allows these permissions
+  const canRecordPayments = agentRelationships.some((r) => r.canRecordPayments)
+  const canCreateLoans = agentRelationships.some((r) => r.canCreateLoans)
+
+  return {
+    canRecordPayments,
+    canCreateLoans,
+  }
+})
+
 // Get agent dashboard stats
 export const getAgentDashboard = createServerFn().handler(async () => {
   const session = await requireAuth()
@@ -74,6 +103,9 @@ export const getAgentDashboard = createServerFn().handler(async () => {
     .orderBy(desc(payments.paidAt))
     .limit(10)
 
+  // Check overall permission (if any relationship allows recording payments)
+  const canRecordPayments = agentRelationships.some((r) => r.canRecordPayments)
+
   return {
     relationships: agentRelationships.map((r) => ({
       id: r.id,
@@ -85,7 +117,9 @@ export const getAgentDashboard = createServerFn().handler(async () => {
       pendingCommission: (
         parseFloat(r.totalCommissionEarned) - parseFloat(r.totalCommissionPaid)
       ).toFixed(2),
+      canRecordPayments: r.canRecordPayments,
     })),
+    canRecordPayments,
     totalCollected: totalCollected.toFixed(2),
     totalCommissionEarned: totalCommissionEarned.toFixed(2),
     pendingCommission: (totalCommissionEarned - totalCommissionPaid).toFixed(2),
@@ -114,6 +148,11 @@ export const getAgentLoans = createServerFn().handler(async () => {
 
   const agentIds = agentRelationships.map((r) => r.id)
 
+  // Create a map of agentId -> canRecordPayments for lookup
+  const agentPermissions = new Map(
+    agentRelationships.map((r) => [r.id, r.canRecordPayments])
+  )
+
   // Get only loans assigned to this agent
   const { user } = await import("@/lib/db")
   const result = await db
@@ -130,6 +169,7 @@ export const getAgentLoans = createServerFn().handler(async () => {
       contactName: contacts.name,
       contactPhone: contacts.phone,
       lenderName: user.name,
+      assignedAgentId: loans.assignedAgentId,
     })
     .from(loans)
     .innerJoin(contacts, eq(loans.contactId, contacts.id))
@@ -140,6 +180,7 @@ export const getAgentLoans = createServerFn().handler(async () => {
   return result.map((l) => ({
     ...l,
     createdAt: l.createdAt.toISOString(),
+    canRecordPayments: l.assignedAgentId ? agentPermissions.get(l.assignedAgentId) ?? false : false,
   }))
 })
 

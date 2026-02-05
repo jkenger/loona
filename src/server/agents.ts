@@ -41,6 +41,7 @@ const updateAgentSchema = z.object({
   commissionRate: z.number().min(0).max(100).optional(),
   status: z.enum(['active', 'suspended', 'terminated']).optional(),
   canCreateLoans: z.boolean().optional(),
+  canRecordPayments: z.boolean().optional(),
 })
 
 // Get all agents for current lender
@@ -53,6 +54,7 @@ export const getAgents = createServerFn().handler(async () => {
       commissionRate: agents.commissionRate,
       status: agents.status,
       canCreateLoans: agents.canCreateLoans,
+      canRecordPayments: agents.canRecordPayments,
       totalCollected: agents.totalCollected,
       totalCommissionEarned: agents.totalCommissionEarned,
       totalCommissionPaid: agents.totalCommissionPaid,
@@ -236,6 +238,9 @@ export const updateAgent = createServerFn()
     }
     if (updates.canCreateLoans !== undefined) {
       updateData.canCreateLoans = updates.canCreateLoans
+    }
+    if (updates.canRecordPayments !== undefined) {
+      updateData.canRecordPayments = updates.canRecordPayments
     }
 
     const [updated] = await db
@@ -473,6 +478,7 @@ export const resetAgentPassword = createServerFn()
 
 // Re-export agent portal functions from dedicated module for backwards compatibility
 export {
+  getAgentPermissions,
   getAgentDashboard,
   getAgentLoans,
   getAgentContacts,

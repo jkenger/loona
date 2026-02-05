@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, loans, contacts, paymentSchedule } from "@/lib/db"
+import { db, loans, contacts, paymentSchedule, agents, commissions } from "@/lib/db"
 import { eq, and, sql, gte, lte, or } from "drizzle-orm"
 import { requireAuth } from "./session"
 import {
@@ -59,6 +59,17 @@ export const getDashboardStats = createServerFn()
     })
     .from(contacts)
     .where(eq(contacts.lenderId, userId))
+
+  // Get commission stats (for lender's agents)
+  const commissionStats = await db
+    .select({
+      totalCommissions: sql<string>`coalesce(sum(${commissions.commissionAmount}), 0)`,
+      paidCommissions: sql<string>`coalesce(sum(case when ${commissions.status} = 'paid' then ${commissions.commissionAmount} else 0 end), 0)`,
+      pendingCommissions: sql<string>`coalesce(sum(case when ${commissions.status} = 'pending' then ${commissions.commissionAmount} else 0 end), 0)`,
+    })
+    .from(commissions)
+    .innerJoin(agents, eq(commissions.agentId, agents.id))
+    .where(eq(agents.lenderId, userId))
 
   // Get overdue payments
   const now = new Date()
@@ -243,6 +254,11 @@ export const getDashboardStats = createServerFn()
     .orderBy(paymentSchedule.dueDate)
     .limit(5)
 
+  // Calculate net collected (collected - commissions paid)
+  const totalCollectedNum = parseFloat(loanStats[0]?.totalCollected ?? "0")
+  const paidCommissionsNum = parseFloat(commissionStats[0]?.paidCommissions ?? "0")
+  const netCollected = (totalCollectedNum - paidCommissionsNum).toFixed(2)
+
   return {
     // Portfolio stats
     totalLoans: loanStats[0]?.totalLoans ?? 0,
@@ -251,6 +267,12 @@ export const getDashboardStats = createServerFn()
     totalCollected: loanStats[0]?.totalCollected ?? "0",
     outstandingBalance: loanStats[0]?.outstandingBalance ?? "0",
     totalContacts: contactStats[0]?.totalContacts ?? 0,
+
+    // Commission stats
+    totalCommissions: commissionStats[0]?.totalCommissions ?? "0",
+    paidCommissions: commissionStats[0]?.paidCommissions ?? "0",
+    pendingCommissions: commissionStats[0]?.pendingCommissions ?? "0",
+    netCollected,
 
     // Monthly summary
     expectedThisMonth: monthlyExpected[0]?.amount ?? "0",

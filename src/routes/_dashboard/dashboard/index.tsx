@@ -397,8 +397,8 @@ function DashboardPage() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="grid gap-6 sm:grid-cols-3">
+            <CardContent className="p-4 pt-0 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1 p-4 rounded bg-secondary">
                   <p className="text-sm text-muted-foreground">
                     Total Disbursed
@@ -422,6 +422,36 @@ function DashboardPage() {
                   </p>
                 </div>
               </div>
+
+              {/* Commission Impact */}
+              {parseFloat(stats.totalCommissions) > 0 && (
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium text-muted-foreground mb-3">Commission Impact</p>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-1 p-4 rounded bg-secondary">
+                      <p className="text-sm text-muted-foreground">Gross Collected</p>
+                      <p className="text-2xl font-bold">{formatCurrency(stats.totalCollected)}</p>
+                    </div>
+                    <div className="space-y-1 p-4 rounded bg-secondary">
+                      <p className="text-sm text-muted-foreground">Commissions Paid</p>
+                      <p className="text-2xl font-bold text-orange-500">
+                        -{formatCurrency(stats.paidCommissions)}
+                      </p>
+                      {parseFloat(stats.pendingCommissions) > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          +{formatCurrency(stats.pendingCommissions)} pending
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-1 p-4 rounded bg-primary/10 border border-primary/20">
+                      <p className="text-sm text-muted-foreground">Net Collected</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {formatCurrency(stats.netCollected)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

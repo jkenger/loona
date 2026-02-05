@@ -91,6 +91,16 @@ export const getLoan = createServerFn()
       throw new Error("Loan not found")
     }
 
+    // Check if agent can record payments
+    let canRecordPayments = isLender // Lenders can always record payments
+    if (isAssignedAgent && result.assignedAgent) {
+      // Get full agent record to check permission
+      const agentRecord = await db.query.agents.findFirst({
+        where: eq(agents.id, result.assignedAgent.id),
+      })
+      canRecordPayments = agentRecord?.canRecordPayments ?? false
+    }
+
     return {
       ...result,
       startDate: result.startDate?.toISOString() ?? null,
@@ -123,6 +133,7 @@ export const getLoan = createServerFn()
         : null,
       // Include viewer context for UI permissions
       isLender,
+      canRecordPayments,
     }
   }
 )
