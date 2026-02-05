@@ -36,6 +36,13 @@
       "when": 1770256450494,
       "tag": "0004_sharp_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1770299754366,
+      "tag": "0005_pale_starfox",
+      "breakpoints": true
     }
   ]
 }
