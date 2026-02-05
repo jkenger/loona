@@ -24,7 +24,6 @@ import {
   TrendUp,
   CaretLeft,
   CaretRight,
-  Plus,
   Receipt,
   CheckCircle,
   Bell,
@@ -135,20 +134,15 @@ function DashboardPage() {
                 Track your collections and portfolio
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Link to="/contacts/new">
-                <Button variant="outline" className="gap-2">
-                  <Users className="h-4 w-4" weight="bold" />
-                  Add Contact
-                </Button>
-              </Link>
-              <Link to="/loans/new">
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" weight="bold" />
-                  New Loan
-                </Button>
-              </Link>
-            </div>
+            <Link to="/loans/new-wizard">
+              <Button
+                size="lg"
+                className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-200 hover:scale-[1.02] font-semibold px-6"
+              >
+                <CurrencyCircleDollar className="h-5 w-5" weight="bold" />
+                Issue a Loan
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -340,7 +334,7 @@ function DashboardPage() {
               <CardDescription>Common tasks</CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-0 space-y-2">
-              <Link to="/loans/new" className="block">
+              <Link to="/loans/new-wizard" className="block">
                 <div className="flex items-center gap-3 p-3 rounded hover:bg-accent transition-colors">
                   <IconButton variant="secondary" size="sm">
                     <CurrencyCircleDollar weight="bold" />

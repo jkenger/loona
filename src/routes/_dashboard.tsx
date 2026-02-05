@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect, Link, useRouter, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect, Link, useRouter, useNavigate, useLocation } from "@tanstack/react-router"
 import { getServerSession } from "@/server/session"
 import { signOut } from "@/lib/auth-client"
 import { RouteProgress } from "@/components/ui/route-progress"
@@ -16,6 +16,9 @@ import {
   Sun,
   Moon,
   Flask,
+  ShieldStar,
+  UserList,
+  ClipboardText,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -45,6 +48,13 @@ const lenderNavigation = [
   { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
 ]
 
+// Navigation items for admin portal (shown in top nav when on /admin routes)
+const adminNavigation = [
+  { name: "Overview", href: "/admin", icon: ShieldStar, exact: true },
+  { name: "Users", href: "/admin/users", icon: UserList, exact: false },
+  { name: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardText, exact: false },
+]
+
 // Agent menu items (shown in user dropdown)
 const agentMenuItems = [
   { name: "My Contacts", href: "/agent/contacts", icon: Users },
@@ -57,15 +67,26 @@ function DashboardLayout() {
   const { session } = Route.useRouteContext()
   const router = useRouter()
   const navigate = useNavigate()
+  const location = useLocation()
   const { resolvedTheme, setTheme } = useTheme()
 
   // Determine user roles
   const isAgent = hasRole(session.user.role, ROLES.AGENT)
   const isLender = hasRole(session.user.role, ROLES.LENDER)
+  const isAdmin = hasRole(session.user.role, ROLES.ADMIN)
 
-  // Lenders see lender navigation, agent-only users see no top nav
-  const navigation = isLender ? lenderNavigation : []
-  const homeLink = isLender ? "/dashboard" : isAgent ? "/agent" : "/dashboard"
+  // Detect if we're in the admin portal
+  const isOnAdminPortal = location.pathname.startsWith("/admin")
+
+  // Show admin nav when on admin routes, lender nav otherwise
+  const navigation = isOnAdminPortal && isAdmin
+    ? adminNavigation
+    : isLender
+      ? lenderNavigation
+      : []
+  const homeLink = isOnAdminPortal && isAdmin
+    ? "/admin"
+    : isLender ? "/dashboard" : isAgent ? "/agent" : isAdmin ? "/admin" : "/dashboard"
 
   const handleSignOut = async () => {
     await signOut()
@@ -130,6 +151,30 @@ function DashboardLayout() {
                     <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
+                  {isAdmin && !isOnAdminPortal && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => navigate({ to: "/admin" })}
+                        className="flex items-center cursor-pointer"
+                      >
+                        <ShieldStar className="h-4 w-4 mr-2" />
+                        <span>Admin Portal</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {isOnAdminPortal && isLender && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => navigate({ to: "/dashboard" })}
+                        className="flex items-center cursor-pointer"
+                      >
+                        <House className="h-4 w-4 mr-2" />
+                        <span>Back to Dashboard</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   {isAgent && (
                     <>
                       <div className="px-2 py-1.5">

@@ -15,20 +15,17 @@ function DatePicker({
   disabled,
 }: DatePickerProps) {
   return (
-    <div
+    <Calendar
+      mode="single"
+      selected={value}
+      onSelect={onChange}
+      disabled={disabled}
       className={cn(
-        "rounded border border-input bg-background p-2 w-fit",
+        "rounded border border-input bg-background",
         disabled && "opacity-50 pointer-events-none",
         className
       )}
-    >
-      <Calendar
-        mode="single"
-        selected={value}
-        onSelect={onChange}
-        disabled={disabled}
-      />
-    </div>
+    />
   )
 }
 

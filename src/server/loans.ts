@@ -306,6 +306,155 @@ function generatePaymentSchedule(
   return schedule
 }
 
+// Combined contact + loan creation for the new wizard
+const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
+  z.object({
+    isNewContact: z.literal(true),
+    // Contact fields
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    phone: z.string().optional(),
+    email: z.string().email().optional().or(z.literal("")).or(z.literal(undefined)),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    facebookProfile: z.string().optional(),
+    notes: z.string().optional(),
+    // Loan fields
+    principal: z.number().positive("Principal must be positive"),
+    interestRate: z.number().min(0).max(100),
+    termMonths: z.number().int().positive(),
+    paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
+    startDate: z.string().transform((s) => new Date(s)),
+    purpose: z.string().optional(),
+    collateralDescription: z.string().optional(),
+    coMakerName: z.string().optional(),
+    coMakerPhone: z.string().optional(),
+    coMakerRelationship: z.string().optional(),
+  }),
+  z.object({
+    isNewContact: z.literal(false),
+    contactId: z.string().min(1, "Contact is required"),
+    // Loan fields
+    principal: z.number().positive("Principal must be positive"),
+    interestRate: z.number().min(0).max(100),
+    termMonths: z.number().int().positive(),
+    paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
+    startDate: z.string().transform((s) => new Date(s)),
+    purpose: z.string().optional(),
+    collateralDescription: z.string().optional(),
+    coMakerName: z.string().optional(),
+    coMakerPhone: z.string().optional(),
+    coMakerRelationship: z.string().optional(),
+  }),
+])
+
+export const createContactAndLoan = createServerFn()
+  .inputValidator(createContactAndLoanSchema)
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    let contactId: string
+    let contactName: string
+
+    if (data.isNewContact) {
+      // Create the contact first
+      const [contact] = await db
+        .insert(contacts)
+        .values({
+          name: data.name,
+          phone: data.phone || null,
+          email: data.email || null,
+          address: data.address || null,
+          city: data.city || null,
+          facebookProfile: data.facebookProfile || null,
+          notes: data.notes || null,
+          lenderId: session.user.id,
+        })
+        .returning()
+
+      contactId = contact.id
+      contactName = contact.name
+
+      log("contact.create", "contact", contact.id, { name: contact.name })
+    } else {
+      // Verify ownership of existing contact
+      const contact = await db.query.contacts.findFirst({
+        where: eq(contacts.id, data.contactId),
+      })
+
+      if (!contact || contact.lenderId !== session.user.id) {
+        throw new Error("Contact not found")
+      }
+
+      contactId = contact.id
+      contactName = contact.name
+    }
+
+    // Calculate loan terms
+    const principal = data.principal
+    const interestRate = data.interestRate
+    const termMonths = data.termMonths
+    const totalInterest = principal * (interestRate / 100) * termMonths
+    const totalToRepay = principal + totalInterest
+
+    const paymentsCount = calculatePaymentsCount(termMonths, data.paymentFrequency)
+    const paymentAmount = totalToRepay / paymentsCount
+
+    const maturityDate = new Date(data.startDate)
+    maturityDate.setMonth(maturityDate.getMonth() + termMonths)
+
+    // Create loan
+    const [loan] = await db
+      .insert(loans)
+      .values({
+        lenderId: session.user.id,
+        contactId,
+        principal: principal.toString(),
+        interestRate: interestRate.toString(),
+        termMonths,
+        paymentFrequency: data.paymentFrequency,
+        paymentAmount: paymentAmount.toFixed(2),
+        totalToRepay: totalToRepay.toFixed(2),
+        remainingBalance: totalToRepay.toFixed(2),
+        status: "active",
+        startDate: data.startDate,
+        maturityDate,
+        purpose: data.purpose || null,
+        collateralDescription: data.collateralDescription || null,
+        coMakerName: data.coMakerName || null,
+        coMakerPhone: data.coMakerPhone || null,
+        coMakerRelationship: data.coMakerRelationship || null,
+      })
+      .returning()
+
+    // Generate payment schedule
+    const scheduleItems = generatePaymentSchedule(
+      loan.id,
+      data.startDate,
+      paymentsCount,
+      paymentAmount,
+      data.paymentFrequency
+    )
+
+    await db.insert(paymentSchedule).values(scheduleItems)
+
+    log("loan.create", "loan", loan.id, {
+      contactId,
+      contactName,
+      principal,
+      termMonths,
+      isNewContact: data.isNewContact,
+    })
+
+    return {
+      ...loan,
+      startDate: loan.startDate?.toISOString() ?? null,
+      maturityDate: loan.maturityDate?.toISOString() ?? null,
+      createdAt: loan.createdAt.toISOString(),
+      updatedAt: loan.updatedAt.toISOString(),
+    }
+  })
+
 export const deleteLoan = createServerFn()
   .inputValidator(z.string())
   .handler(async ({ data: id }) => {
