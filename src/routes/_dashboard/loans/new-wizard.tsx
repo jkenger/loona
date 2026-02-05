@@ -44,6 +44,7 @@ import {
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
+import { InterestRateWarning } from "@/components/interest-rate-warning"
 
 const PURPOSE_TEMPLATES = [
   { label: "Bill Payment", icon: "\u{1F4B3}" },
@@ -609,6 +610,9 @@ function NewLoanWizard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Interest Rate Warning */}
+                <InterestRateWarning rate={interestRate} />
 
                 {/* Term & Frequency */}
                 <div className="grid gap-4 sm:grid-cols-2">

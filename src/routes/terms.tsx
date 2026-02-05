@@ -52,7 +52,18 @@ function TermsPage() {
             </p>
           </div>
 
-          <h2>4. User Responsibilities</h2>
+          <h2>4. Agent Relationships</h2>
+          <p>
+            Loona allows lenders to designate "agents" who may record payments and manage loans on their behalf. It is important to understand:
+          </p>
+          <ul>
+            <li><strong>Independent relationship:</strong> Agents are independent contractors of the lender, not employees or representatives of Loona</li>
+            <li><strong>Lender responsibility:</strong> Lenders are solely responsible for selecting, managing, and compensating their agents</li>
+            <li><strong>No platform liability:</strong> Loona does not supervise, control, or guarantee the actions of any agent</li>
+            <li><strong>Commission handling:</strong> Commission calculations are provided as a convenience; actual payments between lenders and agents occur outside the platform</li>
+          </ul>
+
+          <h2>5. User Responsibilities</h2>
           <p>As a user of Loona, you agree to:</p>
           <ul>
             <li><strong>Provide accurate information:</strong> All data you enter must be truthful and accurate</li>
@@ -62,7 +73,7 @@ function TermsPage() {
             <li><strong>Not misuse the Service:</strong> Not use Loona for illegal activities, harassment, or any unlawful purpose</li>
           </ul>
 
-          <h2>5. Legal Compliance</h2>
+          <h2>6. Legal Compliance</h2>
           <p>
             Users who engage in lending activities are responsible for ensuring compliance with applicable Philippine laws, including but not limited to:
           </p>
@@ -76,7 +87,7 @@ function TermsPage() {
             Loona does not provide legal or financial advice. We recommend consulting with appropriate legal and financial professionals regarding your lending activities.
           </p>
 
-          <h2>6. Account Terms</h2>
+          <h2>7. Account Terms</h2>
           <ul>
             <li>You must be at least 18 years old to use this Service</li>
             <li>You are responsible for all activities that occur under your account</li>
@@ -84,17 +95,17 @@ function TermsPage() {
             <li>We reserve the right to suspend or terminate accounts that violate these Terms</li>
           </ul>
 
-          <h2>7. Data and Privacy</h2>
+          <h2>8. Data and Privacy</h2>
           <p>
             Your use of Loona is also governed by our <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>, which describes how we collect, use, and protect your information.
           </p>
 
-          <h2>8. Intellectual Property</h2>
+          <h2>9. Intellectual Property</h2>
           <p>
             The Service and its original content, features, and functionality are owned by Loona and are protected by international copyright, trademark, and other intellectual property laws.
           </p>
 
-          <h2>9. Limitation of Liability</h2>
+          <h2>10. Limitation of Liability</h2>
           <p>
             To the maximum extent permitted by law:
           </p>
@@ -105,17 +116,17 @@ function TermsPage() {
             <li>We are not liable for data loss, though we take reasonable measures to prevent it</li>
           </ul>
 
-          <h2>10. Indemnification</h2>
+          <h2>11. Indemnification</h2>
           <p>
             You agree to indemnify and hold harmless Loona and its officers, directors, employees, and agents from any claims, damages, or expenses arising from your use of the Service or violation of these Terms.
           </p>
 
-          <h2>11. Service Modifications</h2>
+          <h2>12. Service Modifications</h2>
           <p>
             We reserve the right to modify, suspend, or discontinue the Service at any time without notice. We may also modify these Terms at any time. Continued use of the Service after changes constitutes acceptance of the modified Terms.
           </p>
 
-          <h2>12. Beta Service</h2>
+          <h2>13. Beta Service</h2>
           <p>
             Loona is currently in beta. This means:
           </p>
@@ -126,17 +137,17 @@ function TermsPage() {
             <li>Data backup is recommended as an additional precaution</li>
           </ul>
 
-          <h2>13. Termination</h2>
+          <h2>14. Termination</h2>
           <p>
             You may terminate your account at any time by contacting us. We may terminate or suspend your account immediately, without prior notice, for conduct that we believe violates these Terms or is harmful to other users, us, or third parties.
           </p>
 
-          <h2>14. Governing Law</h2>
+          <h2>15. Governing Law</h2>
           <p>
             These Terms shall be governed by and construed in accordance with the laws of the Republic of the Philippines, without regard to its conflict of law provisions.
           </p>
 
-          <h2>15. Contact Us</h2>
+          <h2>16. Contact Us</h2>
           <p>
             If you have any questions about these Terms, please contact us at:
           </p>

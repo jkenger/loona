@@ -24,6 +24,7 @@ import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Spinner, Calculator, User, CurrencyCircleDollar, ShieldCheck, Users } from "@phosphor-icons/react"
 import { z } from "zod"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
+import { InterestRateWarning } from "@/components/interest-rate-warning"
 
 const PURPOSE_TEMPLATES = [
   { label: "Bill Payment", icon: "💳" },
@@ -286,6 +287,9 @@ function NewLoanPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Interest Rate Warning */}
+              <InterestRateWarning rate={interestRate} />
 
               {/* Term & Frequency */}
               <div className="grid gap-4 sm:grid-cols-2">
