@@ -236,6 +236,7 @@ export const agents = pgTable(
     commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull().default("5.00"), // 5%
     status: agentStatusEnum("status").notNull().default("active"),
     canCreateLoans: boolean("can_create_loans").notNull().default(false),
+    canRecordPayments: boolean("can_record_payments").notNull().default(true),
 
     // Denormalized totals
     totalCollected: decimal("total_collected", { precision: 12, scale: 2 }).notNull().default("0"),

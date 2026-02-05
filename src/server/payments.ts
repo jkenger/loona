@@ -110,6 +110,17 @@ export const recordPayment = createServerFn()
     throw new Error("Loan not found")
   }
 
+  // Check if agent has permission to record payments
+  if (isAssignedAgent && loan.assignedAgent) {
+    // Need to check canRecordPayments from the full agent record
+    const agentRecord = await db.query.agents.findFirst({
+      where: eq(agents.id, loan.assignedAgent.id),
+    })
+    if (agentRecord && !agentRecord.canRecordPayments) {
+      throw new Error("You do not have permission to record payments")
+    }
+  }
+
   if (loan.status !== "active") {
     throw new Error("Loan is not active")
   }

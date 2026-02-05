@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { format } from 'date-fns'
-import { getAgentPayments, getAgentUpcomingPayments } from '@/server/agents'
+import { format, subDays, startOfMonth, isAfter } from 'date-fns'
+import { getAgentPayments, getAgentUpcomingPayments, getAgentDashboard } from '@/server/agents'
 import { recordPayment } from '@/server/payments'
 import { toast } from 'sonner'
 import {
@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,9 +21,9 @@ import {
   SelectItem,
   SelectTrigger,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
-import { formatCurrencyCompact } from '@/lib/utils'
 import { useState } from 'react'
 import {
   Receipt,
@@ -31,8 +32,14 @@ import {
   Check,
   Spinner,
   X,
+  Notepad,
+  Funnel,
+  TrendUp,
+  CalendarCheck,
+  CurrencyCircleDollar,
 } from '@phosphor-icons/react'
 import { formatRelativeDate } from '@/lib/utils/date'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export const Route = createFileRoute('/_dashboard/agent/payments')({
   loader: async ({ context }) => {
@@ -40,27 +47,80 @@ export const Route = createFileRoute('/_dashboard/agent/payments')({
       session: { user: { role: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.AGENT)) {
-      return { payments: [], upcoming: [], unauthorized: true }
+      return { payments: [], upcoming: [], canRecordPayments: false, unauthorized: true }
     }
-    const [payments, upcoming] = await Promise.all([
+    const [payments, upcoming, dashboard] = await Promise.all([
       getAgentPayments(),
       getAgentUpcomingPayments(),
+      getAgentDashboard(),
     ])
-    return { payments, upcoming, unauthorized: false }
+    return { payments, upcoming, canRecordPayments: dashboard.canRecordPayments, unauthorized: false }
   },
+  pendingComponent: PaymentsPageSkeleton,
   component: AgentPaymentsPage,
 })
 
-function AgentPaymentsPage() {
-  const { payments, upcoming, unauthorized } = Route.useLoaderData()
-  const router = useRouter()
+function PaymentsPageSkeleton() {
+  return (
+    <div>
+      {/* Header skeleton */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
+          <Skeleton className="h-5 w-64 bg-white/10" />
+          <div className="border-l-4 border-primary pl-4 space-y-2">
+            <Skeleton className="h-10 w-40 bg-white/10" />
+            <Skeleton className="h-4 w-52 bg-white/10" />
+          </div>
+        </div>
+      </div>
 
-  const [showPaymentForm, setShowPaymentForm] = useState(false)
-  const [selectedScheduleItem, setSelectedScheduleItem] = useState<
-    (typeof upcoming)[0] | null
-  >(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+      {/* Content skeleton */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+        {/* Stats skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="shadow-sm">
+              <CardContent className="p-4">
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-8 w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Two column skeleton */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            <Card className="shadow-lg">
+              <CardHeader className="p-4 pb-2">
+                <Skeleton className="h-6 w-32" />
+              </CardHeader>
+              <CardContent className="p-4 pt-0 space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+          <Card className="shadow-sm">
+            <CardHeader className="p-4 pb-2">
+              <Skeleton className="h-6 w-36" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-14 w-full" />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AgentPaymentsPage() {
+  const { payments, upcoming, canRecordPayments, unauthorized } = Route.useLoaderData()
+  const router = useRouter()
 
   if (unauthorized) {
     return (
@@ -73,18 +133,75 @@ function AgentPaymentsPage() {
     )
   }
 
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [paymentStep, setPaymentStep] = useState<'form' | 'confirm'>('form')
+  const [selectedScheduleItem, setSelectedScheduleItem] = useState<
+    (typeof upcoming)[0] | null
+  >(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
   // Form state
   const [amount, setAmount] = useState('')
-  const [method, setMethod] = useState<'cash' | 'gcash' | 'maya' | 'bank'>(
-    'cash',
-  )
+  const [method, setMethod] = useState<'cash' | 'gcash' | 'maya' | 'bank'>('cash')
+  const [paidAt, setPaidAt] = useState<Date>(new Date())
   const [notes, setNotes] = useState('')
 
-  const overduePayments = upcoming.filter((p) => p.status === 'overdue')
-  const upcomingPayments = upcoming.filter((p) => p.status !== 'overdue')
+  // Date range filter
+  const [dateFilter, setDateFilter] = useState<'all' | 'month' | '30days' | '90days'>('month')
 
-  const handleRecordPayment = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Upcoming pagination
+  const [upcomingPage, setUpcomingPage] = useState(1)
+  const UPCOMING_PAGE_SIZE = 5
+
+  // Separate overdue from upcoming
+  const overdueItems = upcoming.filter((item) => item.status === 'overdue')
+  const upcomingItems = upcoming.filter((item) => item.status !== 'overdue')
+
+  // Calculate stats
+  const now = new Date()
+  const thisMonthPayments = payments.filter((p) => isAfter(new Date(p.paidAt), startOfMonth(now)))
+  const collectedThisMonth = thisMonthPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0)
+  const overdueAmount = overdueItems.reduce((sum, item) => sum + parseFloat(item.amount) - parseFloat(item.paidAmount), 0)
+  const upcomingAmount = upcomingItems.reduce((sum, item) => sum + parseFloat(item.amount) - parseFloat(item.paidAmount), 0)
+
+  // Filter history by date range
+  const filteredHistory = payments.filter((payment) => {
+    if (dateFilter === 'all') return true
+    const paymentDate = new Date(payment.paidAt)
+
+    switch (dateFilter) {
+      case 'month':
+        return isAfter(paymentDate, startOfMonth(now))
+      case '30days':
+        return isAfter(paymentDate, subDays(now, 30))
+      case '90days':
+        return isAfter(paymentDate, subDays(now, 90))
+      default:
+        return true
+    }
+  })
+
+  const openPaymentForm = (item: (typeof upcoming)[0]) => {
+    setSelectedScheduleItem(item)
+    const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
+    setAmount(remaining.toString())
+    setPaidAt(new Date())
+    setPaymentStep('form')
+    setShowPaymentForm(true)
+  }
+
+  const closePaymentForm = () => {
+    setShowPaymentForm(false)
+    setSelectedScheduleItem(null)
+    setAmount('')
+    setPaidAt(new Date())
+    setNotes('')
+    setError('')
+    setPaymentStep('form')
+  }
+
+  const handleRecordPayment = async () => {
     if (!selectedScheduleItem) return
 
     setError('')
@@ -94,43 +211,23 @@ function AgentPaymentsPage() {
       await recordPayment({
         data: {
           loanId: selectedScheduleItem.loanId,
+          scheduleItemId: selectedScheduleItem.id,
           amount: parseFloat(amount),
           method,
-          scheduleItemId: selectedScheduleItem.id,
+          paidAt: format(paidAt, 'yyyy-MM-dd'),
           notes: notes || undefined,
         },
       })
 
-      setShowPaymentForm(false)
-      setSelectedScheduleItem(null)
-      setAmount('')
-      setMethod('cash')
-      setNotes('')
-
+      closePaymentForm()
       toast.success('Payment recorded successfully')
       router.invalidate()
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to record payment',
-      )
+      toast.error(err instanceof Error ? err.message : 'Failed to record payment')
       setError(err instanceof Error ? err.message : 'Failed to record payment')
     } finally {
       setLoading(false)
     }
-  }
-
-  const openPaymentForm = (item: (typeof upcoming)[0]) => {
-    setSelectedScheduleItem(item)
-    setAmount(item.amount)
-    setShowPaymentForm(true)
-  }
-
-  const closePaymentForm = () => {
-    setShowPaymentForm(false)
-    setSelectedScheduleItem(null)
-    setAmount('')
-    setNotes('')
-    setError('')
   }
 
   return (
@@ -160,304 +257,461 @@ function AgentPaymentsPage() {
       {/* Content - overlaps header */}
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
-      {/* Stats - 3 column on mobile */}
-      <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1 md:pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">
-              Overdue
-            </CardTitle>
-            <Warning className="h-3.5 w-3.5 md:h-4 md:w-4 text-destructive" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-lg md:text-2xl font-bold text-destructive">
-              {overduePayments.length}
-            </div>
-            <p className="text-xs text-muted-foreground hidden sm:block">
-              {formatCurrencyCompact(
-                overduePayments.reduce((s, p) => s + parseFloat(p.amount), 0),
-              )}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1 md:pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">
-              Due Soon
-            </CardTitle>
-            <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-lg md:text-2xl font-bold">
-              {upcomingPayments.length}
-            </div>
-            <p className="text-xs text-muted-foreground hidden sm:block">
-              {formatCurrencyCompact(
-                upcomingPayments.reduce((s, p) => s + parseFloat(p.amount), 0),
-              )}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1 md:pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">
-              Collected
-            </CardTitle>
-            <Receipt className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-lg md:text-2xl font-bold">
-              {payments.length}
-            </div>
-            <p className="text-xs text-muted-foreground hidden sm:block">
-              {formatCurrencyCompact(
-                payments.reduce((s, p) => s + parseFloat(p.amount), 0),
-              )}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <Card className="shadow-sm">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs md:text-sm text-muted-foreground">Collected</p>
+                <TrendUp className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-lg md:text-2xl font-bold mt-1">{formatCurrency(collectedThisMonth)}</p>
+              <p className="text-xs text-muted-foreground">This month</p>
+            </CardContent>
+          </Card>
 
-      {/* Payment Form Modal */}
-      {showPaymentForm && selectedScheduleItem && (
-        <Card className="border-primary">
-          <CardHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base md:text-lg">
-                  Record Payment
+          <Card className="shadow-sm border-destructive/50">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs md:text-sm text-muted-foreground">Overdue</p>
+                <Warning className="h-4 w-4 text-destructive" />
+              </div>
+              <p className="text-lg md:text-2xl font-bold mt-1 text-destructive">{formatCurrency(overdueAmount)}</p>
+              <p className="text-xs text-muted-foreground">{overdueItems.length} payment{overdueItems.length !== 1 ? 's' : ''}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs md:text-sm text-muted-foreground">Upcoming</p>
+                <CalendarCheck className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-lg md:text-2xl font-bold mt-1">{formatCurrency(upcomingAmount)}</p>
+              <p className="text-xs text-muted-foreground">Next 30 days</p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs md:text-sm text-muted-foreground">Recorded</p>
+                <Receipt className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-lg md:text-2xl font-bold mt-1">{thisMonthPayments.length}</p>
+              <p className="text-xs text-muted-foreground">This month</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Two Column Layout */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Left Column: Track - Overdue & Upcoming */}
+          <div className="space-y-6">
+            {/* Overdue Section */}
+            <Card className={`shadow-lg ${overdueItems.length > 0 ? 'border-destructive/50' : ''}`}>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <Warning className="h-5 w-5" weight="bold" />
+                  Overdue
                 </CardTitle>
-                <CardDescription className="text-xs md:text-sm">
-                  {selectedScheduleItem.contactName} · Due{' '}
-                  {formatRelativeDate(selectedScheduleItem.dueDate)}
+                <CardDescription>
+                  {overdueItems.length > 0
+                    ? `${overdueItems.length} payment${overdueItems.length !== 1 ? 's' : ''} need attention`
+                    : 'No overdue payments'
+                  }
                 </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" onClick={closePaymentForm}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <form onSubmit={handleRecordPayment} className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="amount" className="text-sm">
-                    Amount
-                  </Label>
-                  <CurrencyInput
-                    id="amount"
-                    value={amount}
-                    onValueChange={setAmount}
-                    placeholder="1,000"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="method" className="text-sm">
-                    Method
-                  </Label>
-                  <Select
-                    value={method}
-                    onValueChange={(v) => setMethod(v as any)}
-                  >
-                    <SelectTrigger>
-                      {
-                        {
-                          cash: 'Cash',
-                          gcash: 'GCash',
-                          maya: 'Maya',
-                          bank: 'Bank',
-                        }[method]
-                      }
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="gcash">GCash</SelectItem>
-                      <SelectItem value="maya">Maya</SelectItem>
-                      <SelectItem value="bank">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="notes" className="text-sm">
-                  Notes (optional)
-                </Label>
-                <Input
-                  id="notes"
-                  type="text"
-                  placeholder="Any additional notes..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {overdueItems.length > 0 ? (
+                  <div className="space-y-2">
+                    {overdueItems.map((item) => {
+                      const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate">
+                              {item.contactName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Due {formatRelativeDate(item.dueDate)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            <div className="text-right">
+                              <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
+                            </div>
+                            {canRecordPayments && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => openPaymentForm(item)}
+                                className="h-8"
+                              >
+                                Collect
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <Check className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <p className="text-sm">All caught up!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+            {/* Upcoming Section */}
+            <Card className="shadow-sm">
+              <CardHeader className="p-4 pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      Upcoming
+                    </CardTitle>
+                    <CardDescription>Next 30 days · {upcomingItems.length} total</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {upcomingItems.length > 0 ? (
+                  <>
+                    <div className="space-y-2">
+                      {upcomingItems
+                        .slice((upcomingPage - 1) * UPCOMING_PAGE_SIZE, upcomingPage * UPCOMING_PAGE_SIZE)
+                        .map((item) => {
+                          const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
+                          const isPartial = item.status === 'partial'
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between p-3 rounded border"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm truncate">
+                                  {item.contactName}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Due {formatRelativeDate(item.dueDate)}
+                                  {isPartial && <Badge variant="secondary" className="ml-2 text-[10px]">Partial</Badge>}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 ml-2">
+                                <div className="text-right">
+                                  <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
+                                </div>
+                                {canRecordPayments && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openPaymentForm(item)}
+                                    className="h-8"
+                                  >
+                                    Collect
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                    </div>
+                    {/* Pagination */}
+                    {upcomingItems.length > UPCOMING_PAGE_SIZE && (
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                        <p className="text-xs text-muted-foreground">
+                          {(upcomingPage - 1) * UPCOMING_PAGE_SIZE + 1}-{Math.min(upcomingPage * UPCOMING_PAGE_SIZE, upcomingItems.length)} of {upcomingItems.length}
+                        </p>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setUpcomingPage((p) => Math.max(1, p - 1))}
+                            disabled={upcomingPage === 1}
+                          >
+                            Prev
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setUpcomingPage((p) => Math.min(Math.ceil(upcomingItems.length / UPCOMING_PAGE_SIZE), p + 1))}
+                            disabled={upcomingPage >= Math.ceil(upcomingItems.length / UPCOMING_PAGE_SIZE)}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-muted-foreground text-center py-6 text-sm">
+                    No upcoming payments
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={closePaymentForm}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Spinner className="h-4 w-4 animate-spin mr-1" />
-                      Recording...
-                    </>
+          {/* Right Column: Payment Form + History */}
+          <div className="space-y-6">
+            {/* Payment Form */}
+            {showPaymentForm && selectedScheduleItem && (
+              <Card className="border-primary shadow-lg">
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>{paymentStep === 'form' ? 'Record Payment' : 'Confirm Payment'}</CardTitle>
+                      <CardDescription>
+                        {selectedScheduleItem.contactName} · Due {formatRelativeDate(selectedScheduleItem.dueDate)}
+                      </CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={closePaymentForm}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  {paymentStep === 'form' ? (
+                    <div className="space-y-4">
+                      {/* Schedule item info */}
+                      <div className="p-3 rounded bg-muted/50 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Amount Due</span>
+                          <span className="font-medium">{formatCurrency(selectedScheduleItem.amount)}</span>
+                        </div>
+                        {parseFloat(selectedScheduleItem.paidAmount) > 0 && (
+                          <div className="flex justify-between mt-1">
+                            <span className="text-muted-foreground">Already Paid</span>
+                            <span className="font-medium text-primary">{formatCurrency(selectedScheduleItem.paidAmount)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="amount">Payment Amount</Label>
+                          <CurrencyInput
+                            id="amount"
+                            value={amount}
+                            onValueChange={setAmount}
+                            placeholder="1,000"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="method">Payment Method</Label>
+                          <Select value={method} onValueChange={(v) => v && setMethod(v as typeof method)}>
+                            <SelectTrigger>
+                              {{ cash: 'Cash', gcash: 'GCash', maya: 'Maya', bank: 'Bank Transfer' }[method]}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="gcash">GCash</SelectItem>
+                              <SelectItem value="maya">Maya</SelectItem>
+                              <SelectItem value="bank">Bank Transfer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label>Payment Date</Label>
+                          <DatePicker
+                            value={paidAt}
+                            onChange={(date) => date && setPaidAt(date)}
+                          />
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor="notes">Notes</Label>
+                          <div className="relative">
+                            <Notepad className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="notes"
+                              placeholder="Optional notes..."
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {error && <p className="text-sm text-destructive">{error}</p>}
+
+                      <div className="flex gap-3">
+                        <Button type="button" variant="outline" onClick={closePaymentForm}>
+                          Cancel
+                        </Button>
+                        <Button type="button" onClick={() => setPaymentStep('confirm')} disabled={!amount}>
+                          Review Payment
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
-                    <>
-                      <Check className="h-4 w-4 mr-1" />
-                      Record
-                    </>
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                        <div className="text-center pb-3 border-b">
+                          <p className="text-2xl font-bold text-primary">{formatCurrency(amount)}</p>
+                          <p className="text-sm text-muted-foreground">Payment Amount</p>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Borrower</span>
+                            <span className="font-medium">{selectedScheduleItem.contactName}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Payment Date</span>
+                            <span className="font-medium">{format(paidAt, 'MMMM d, yyyy')}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Method</span>
+                            <span className="font-medium">
+                              {{ cash: 'Cash', gcash: 'GCash', maya: 'Maya', bank: 'Bank Transfer' }[method]}
+                            </span>
+                          </div>
+                          {notes && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Notes</span>
+                              <span className="font-medium text-right max-w-[180px] truncate">{notes}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground text-center">
+                        Please review the details above before confirming.
+                      </p>
+
+                      {error && <p className="text-sm text-destructive">{error}</p>}
+
+                      <div className="flex gap-3">
+                        <Button type="button" variant="outline" onClick={() => setPaymentStep('form')}>
+                          Back
+                        </Button>
+                        <Button type="button" onClick={handleRecordPayment} disabled={loading}>
+                          {loading ? (
+                            <>
+                              <Spinner className="h-4 w-4 animate-spin mr-2" />
+                              Recording...
+                            </>
+                          ) : (
+                            'Confirm Payment'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+                </CardContent>
+              </Card>
+            )}
 
-      {/* Overdue Payments */}
-      {overduePayments.length > 0 && (
-        <Card className="border-destructive/50 shadow-lg">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="flex items-center gap-2 text-destructive text-base md:text-lg">
-              <Warning className="h-4 w-4 md:h-5 md:w-5" />
-              Overdue
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-2">
-              {overduePayments.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-2 md:p-3 rounded border border-destructive/30 bg-destructive/5"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">
-                      {item.contactName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatRelativeDate(item.dueDate)}
-                    </p>
+            {/* History */}
+            <Card className="shadow-sm h-fit">
+              <CardHeader className="p-4 pb-2">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Receipt className="h-5 w-5 text-primary" />
+                        History
+                      </CardTitle>
+                      <CardDescription>
+                        {filteredHistory.length} recorded
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <span className="font-semibold text-sm">
-                      {formatCurrencyCompact(item.amount)}
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={() => openPaymentForm(item)}
-                      className="h-7 text-xs"
-                    >
-                      Collect
-                    </Button>
+                  <div className="flex items-center gap-1">
+                    <Funnel className="h-4 w-4 text-muted-foreground mr-1" />
+                    {[
+                      { key: 'month', label: 'Month' },
+                      { key: '30days', label: '30d' },
+                      { key: '90days', label: '90d' },
+                      { key: 'all', label: 'All' },
+                    ].map((filter) => (
+                      <Button
+                        key={filter.key}
+                        variant={dateFilter === filter.key ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => setDateFilter(filter.key as typeof dateFilter)}
+                        className="text-xs h-7 px-2"
+                      >
+                        {filter.label}
+                      </Button>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Upcoming Payments */}
-      {upcomingPayments.length > 0 && (
-        <Card className="shadow-lg">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <Clock className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-              Upcoming
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-2">
-              {upcomingPayments.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-2 md:p-3 rounded border"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">
-                      {item.contactName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatRelativeDate(item.dueDate)}
-                    </p>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {filteredHistory.length > 0 ? (
+                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                    {filteredHistory.map((payment) => (
+                      <div
+                        key={payment.id}
+                        className="flex items-center justify-between p-3 rounded border"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <Check className="h-4 w-4 text-primary" weight="bold" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate">
+                              {payment.contactName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(payment.paidAt), 'MMM d')} · {payment.method.toUpperCase()}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="font-semibold text-sm text-primary shrink-0 ml-2">
+                          +{formatCurrency(payment.amount)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <span className="font-semibold text-sm">
-                      {formatCurrencyCompact(item.amount)}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openPaymentForm(item)}
-                      className="h-7 text-xs"
-                    >
-                      Collect
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* No upcoming payments */}
-      {upcoming.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <Clock className="h-10 w-10 text-muted-foreground/50 mb-3" />
-            <h3 className="text-base font-semibold mb-1">
-              No upcoming payments
-            </h3>
-            <p className="text-muted-foreground text-xs text-center max-w-md">
-              No payments due in the next 30 days.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Payment History */}
-      {payments.length > 0 && (
-        <Card className="shadow-sm">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base md:text-lg">History</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-2">
-              {payments.slice(0, 10).map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between py-2 border-b last:border-0"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">
-                      {payment.contactName}
+                ) : (
+                  <div className="text-center py-8">
+                    <CurrencyCircleDollar className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">
+                      {payments.length > 0
+                        ? 'No payments in selected period'
+                        : 'No payments recorded yet'}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(payment.paidAt).toLocaleDateString()} ·{' '}
-                      {payment.method.toUpperCase()}
-                    </p>
+                    {payments.length > 0 && dateFilter !== 'all' && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => setDateFilter('all')}
+                        className="mt-2"
+                      >
+                        Show all payments
+                      </Button>
+                    )}
                   </div>
-                  <div className="text-right shrink-0 ml-2">
-                    <p className="font-semibold text-sm">
-                      {formatCurrencyCompact(payment.amount)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   )
+}
+
+function formatCurrency(amount: string | number): string {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num)
 }
