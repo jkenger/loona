@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { format } from "date-fns"
 import { getAgentDashboard, getAgentUpcomingPayments } from "@/server/agents"
+import { getAgentLoanCreationPermission } from "@/server/loans"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,25 +16,27 @@ import {
   ArrowRight,
   Bell,
   Warning,
+  Plus,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/agent/")({
   loader: async ({ context }) => {
     const { session } = context as { session: { user: { role: string | null } } }
     if (!hasRole(session.user.role, ROLES.AGENT)) {
-      return { dashboard: null, upcoming: [], unauthorized: true }
+      return { dashboard: null, upcoming: [], canCreateLoans: false, unauthorized: true }
     }
-    const [dashboard, upcoming] = await Promise.all([
+    const [dashboard, upcoming, loanPermissions] = await Promise.all([
       getAgentDashboard(),
       getAgentUpcomingPayments(),
+      getAgentLoanCreationPermission(),
     ])
-    return { dashboard, upcoming, unauthorized: false }
+    return { dashboard, upcoming, canCreateLoans: loanPermissions.length > 0, unauthorized: false }
   },
   component: AgentDashboardPage,
 })
 
 function AgentDashboardPage() {
-  const { dashboard, upcoming, unauthorized } = Route.useLoaderData()
+  const { dashboard, upcoming, canCreateLoans, unauthorized } = Route.useLoaderData()
 
   if (unauthorized || !dashboard) {
     return (
@@ -56,7 +59,7 @@ function AgentDashboardPage() {
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
           {/* Meta Bar */}
           <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
               Agent Portal
             </span>
             <span className="text-blue-300/40">·</span>
@@ -67,16 +70,26 @@ function AgentDashboardPage() {
 
           {/* Title Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-amber-500 pl-4">
+            <div className="border-l-4 border-primary pl-4">
               <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
               <p className="text-blue-200/70">Track your collections and earnings</p>
             </div>
-            <Link to="/agent/payments">
-              <Button className="gap-2">
-                <Receipt className="h-4 w-4" weight="bold" />
-                Collect Payment
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              {canCreateLoans && (
+                <Link to="/agent/loans/new">
+                  <Button variant="outline" className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20">
+                    <Plus className="h-4 w-4" weight="bold" />
+                    Create Loan
+                  </Button>
+                </Link>
+              )}
+              <Link to="/agent/payments">
+                <Button className="gap-2">
+                  <Receipt className="h-4 w-4" weight="bold" />
+                  Collect Payment
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

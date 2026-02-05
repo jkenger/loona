@@ -19,6 +19,7 @@ import {
   ShieldStar,
   UserList,
   ClipboardText,
+  Gear,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -193,6 +194,13 @@ function DashboardLayout() {
                       <DropdownMenuSeparator />
                     </>
                   )}
+                  <DropdownMenuItem
+                    onClick={() => navigate({ to: "/settings" })}
+                    className="cursor-pointer"
+                  >
+                    <Gear className="h-4 w-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                     className="cursor-pointer"

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { getLoan, deleteLoan } from "@/server/loans"
+import { getLoan, deleteLoan, approveLoan, rejectLoan } from "@/server/loans"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
 import { recordPayment } from "@/server/payments"
 import { toast } from "sonner"
@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AccessDenied } from "@/components/access-denied"
+import { Checkbox } from "@/components/ui/checkbox"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { useState } from "react"
 import {
@@ -39,11 +40,16 @@ import {
   ShieldCheck,
   Users,
   Tag,
+  FileText,
+  CheckCircle,
+  X,
 } from "@phosphor-icons/react"
+import { Textarea } from "@/components/ui/textarea"
 import { DatePicker } from "@/components/ui/date-picker"
 import { format } from "date-fns"
+import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 
-export const Route = createFileRoute("/_dashboard/loans/$loanId")({
+export const Route = createFileRoute("/_dashboard/loans/$loanId/")({
   loader: async ({ params, context }) => {
     const { session } = context as { session: { user: { role: string | null } } }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
@@ -80,6 +86,14 @@ function LoanDetailPage() {
   const [assigning, setAssigning] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Approval state
+  const [showApproveDialog, setShowApproveDialog] = useState(false)
+  const [showRejectDialog, setShowRejectDialog] = useState(false)
+  const [isApproving, setIsApproving] = useState(false)
+  const [isRejecting, setIsRejecting] = useState(false)
+  const [updateStartDate, setUpdateStartDate] = useState(true)
+  const [rejectionReason, setRejectionReason] = useState("")
 
   // Payment form state
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
@@ -146,6 +160,38 @@ function LoanDetailPage() {
     }
   }
 
+  const handleApprove = async () => {
+    setIsApproving(true)
+    try {
+      await approveLoan({ data: { loanId: loan.id, updateStartDate } })
+      toast.success("Loan approved and activated")
+      setShowApproveDialog(false)
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to approve loan")
+    } finally {
+      setIsApproving(false)
+    }
+  }
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error("Please provide a rejection reason")
+      return
+    }
+    setIsRejecting(true)
+    try {
+      await rejectLoan({ data: { loanId: loan.id, reason: rejectionReason } })
+      toast.success("Loan rejected")
+      setShowRejectDialog(false)
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reject loan")
+    } finally {
+      setIsRejecting(false)
+    }
+  }
+
   const openPaymentDialog = (item: ScheduleItem) => {
     setSelectedScheduleItem(item)
     const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
@@ -192,11 +238,13 @@ function LoanDetailPage() {
   }
 
 
-  const statusConfig: Record<string, { variant: any; label: string }> = {
+  const statusConfig: Record<string, { variant: any; label: string; className?: string }> = {
     pending_disbursement: { variant: "outline", label: "Pending Disbursement" },
     active: { variant: "secondary", label: "Active" },
     completed: { variant: "default", label: "Completed" },
     defaulted: { variant: "destructive", label: "Defaulted" },
+    pending_approval: { variant: "outline", label: "Pending Approval", className: "bg-amber-100 text-amber-700 border-amber-300" },
+    rejected: { variant: "outline", label: "Rejected", className: "bg-gray-100 text-gray-500 line-through" },
   }
 
   const scheduleStatusConfig: Record<string, { icon: typeof Check; className: string }> = {
@@ -224,7 +272,7 @@ function LoanDetailPage() {
                 <h1 className="text-3xl font-bold tracking-tight">
                   {formatCurrency(loan.principal)}
                 </h1>
-                <Badge variant={statusConfig[loan.status].variant} className={loan.status === "active" ? "bg-primary/20 text-primary-foreground border-0" : ""}>
+                <Badge variant={statusConfig[loan.status].variant} className={loan.status === "active" ? "bg-primary/20 text-primary-foreground border-0" : statusConfig[loan.status].className || ""}>
                   {statusConfig[loan.status].label}
                 </Badge>
               </div>
@@ -234,6 +282,15 @@ function LoanDetailPage() {
             </div>
             {loan.isLender && (
               <div className="flex gap-2">
+                <Link
+                  to="/loans/$loanId/disclosure"
+                  params={{ loanId: loan.id }}
+                >
+                  <Button variant="outline" className="gap-2">
+                    <FileText className="h-4 w-4" weight="bold" />
+                    Disclosure Statement
+                  </Button>
+                </Link>
                 <Button
                   variant="outline"
                   onClick={() => setShowDeleteDialog(true)}
@@ -250,6 +307,65 @@ function LoanDetailPage() {
 
       {/* Content - overlaps header */}
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+      {/* Pending Approval Banner */}
+      {loan.status === "pending_approval" && loan.isLender && (
+        <Card className="border-amber-300 bg-amber-50 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <Clock className="h-5 w-5 text-amber-600" weight="bold" />
+                </div>
+                <div>
+                  <p className="font-semibold text-amber-800">Awaiting Your Approval</p>
+                  <p className="text-sm text-amber-700">
+                    This loan was created by an agent and needs your approval to become active.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 sm:shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRejectDialog(true)}
+                  className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4" weight="bold" />
+                  Reject
+                </Button>
+                <Button
+                  onClick={() => setShowApproveDialog(true)}
+                  className="gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4" weight="bold" />
+                  Approve
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rejected Notice */}
+      {loan.status === "rejected" && (
+        <Card className="border-gray-300 bg-gray-50 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                <X className="h-5 w-5 text-gray-500" weight="bold" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-700">Loan Rejected</p>
+                {loan.rejectionReason && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    <span className="font-medium">Reason:</span> {loan.rejectionReason}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Loan Summary */}
         <Card className="shadow-lg">
@@ -266,10 +382,28 @@ function LoanDetailPage() {
               <span className="font-medium">{formatCurrency(loan.totalToRepay)}</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-muted-foreground">Interest Rate</span>
+              <span className="font-medium">{loan.interestRate}% / mo</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Effective Rate</span>
+              <span className="font-medium text-primary">
+                {formatEIR(
+                  calculateEIR({
+                    principal: parseFloat(loan.principal),
+                    totalInterest:
+                      parseFloat(loan.totalToRepay) - parseFloat(loan.principal),
+                    termMonths: loan.termMonths,
+                    paymentFrequency: loan.paymentFrequency as any,
+                  })
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between border-t pt-4">
               <span className="text-muted-foreground">Amount Paid</span>
               <span className="font-medium text-primary">{formatCurrency(loan.amountPaid)}</span>
             </div>
-            <div className="flex justify-between border-t pt-4">
+            <div className="flex justify-between">
               <span className="font-semibold">Remaining</span>
               <span className="font-bold">{formatCurrency(loan.remainingBalance)}</span>
             </div>
@@ -753,6 +887,161 @@ function LoanDetailPage() {
                 </Button>
               </>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Loan Dialog */}
+      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Approve Loan</DialogTitle>
+            <DialogDescription>
+              Review and approve this loan application from your agent.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Loan summary */}
+            <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+              <div className="text-center pb-3 border-b">
+                <p className="text-2xl font-bold text-primary">{formatCurrency(loan.principal)}</p>
+                <p className="text-sm text-muted-foreground">Principal Amount</p>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Borrower</span>
+                  <span className="font-medium">{loan.contact.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Interest Rate</span>
+                  <span className="font-medium">{loan.interestRate}% / mo</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Term</span>
+                  <span className="font-medium">{loan.termMonths} months</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total to Repay</span>
+                  <span className="font-medium">{formatCurrency(loan.totalToRepay)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Start date option */}
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="updateStartDate"
+                checked={updateStartDate}
+                onCheckedChange={(checked) => setUpdateStartDate(!!checked)}
+              />
+              <div>
+                <Label htmlFor="updateStartDate" className="font-medium">
+                  Start loan today
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {updateStartDate
+                    ? "Payment schedule will begin from today"
+                    : loan.startDate
+                      ? `Will use original start date: ${format(new Date(loan.startDate), "MMM d, yyyy")}`
+                      : "Will use today as start date"
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Warning when using original start date that's in the past */}
+            {!updateStartDate && loan.startDate && new Date(loan.startDate) < new Date(new Date().setHours(0, 0, 0, 0)) && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                <Warning className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-600">Past start date</p>
+                  <p className="text-muted-foreground">
+                    The original start date ({format(new Date(loan.startDate), "MMM d, yyyy")}) is in the past.
+                    Some payments may immediately show as overdue.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApproveDialog(false)} disabled={isApproving}>
+              Cancel
+            </Button>
+            <Button onClick={handleApprove} disabled={isApproving} className="bg-green-600 hover:bg-green-700">
+              {isApproving ? (
+                <>
+                  <Spinner className="h-4 w-4 animate-spin mr-2" />
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve Loan
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Loan Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Loan</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting this loan application.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Loan summary */}
+            <div className="p-3 rounded-lg border bg-muted/30 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">{loan.contact.name}</p>
+                <p className="text-sm text-muted-foreground">{formatCurrency(loan.principal)} loan</p>
+              </div>
+            </div>
+
+            {/* Rejection reason */}
+            <div className="space-y-2">
+              <Label htmlFor="rejectionReason">Rejection Reason</Label>
+              <Textarea
+                id="rejectionReason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Please explain why this loan is being rejected..."
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)} disabled={isRejecting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={isRejecting || !rejectionReason.trim()}
+            >
+              {isRejecting ? (
+                <>
+                  <Spinner className="h-4 w-4 animate-spin mr-2" />
+                  Rejecting...
+                </>
+              ) : (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Reject Loan
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

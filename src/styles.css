@@ -334,3 +334,193 @@
 .prose strong {
   font-weight: 600;
 }
+
+/* Print Styles for Disclosure Statement */
+@media print {
+  /* Reset page margins */
+  @page {
+    margin: 15mm;
+    size: A4;
+  }
+
+  /* Hide non-printable elements */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset backgrounds and colors */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html, body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Reset all containers */
+  .min-h-screen {
+    min-height: auto !important;
+  }
+
+  /* Document wrapper */
+  .bg-card,
+  [class*="bg-card"] {
+    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Container resets */
+  .mx-auto {
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .px-4, .px-6, .px-8,
+  .py-8, .p-8 {
+    padding: 0 !important;
+  }
+
+  /* Typography for print */
+  h1 {
+    font-size: 16pt !important;
+    margin-bottom: 8pt !important;
+  }
+
+  h2 {
+    font-size: 12pt !important;
+    margin-bottom: 6pt !important;
+    margin-top: 12pt !important;
+  }
+
+  p, td, th {
+    font-size: 10pt !important;
+  }
+
+  /* Table styling for print */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    margin-bottom: 12pt !important;
+  }
+
+  table th,
+  table td {
+    border: 0.5pt solid #333 !important;
+    padding: 6pt 8pt !important;
+    text-align: left !important;
+  }
+
+  thead tr {
+    background-color: #e5e5e5 !important;
+  }
+
+  tbody tr:nth-child(even) td.bg-muted\/50,
+  .bg-muted\/50 {
+    background-color: #f5f5f5 !important;
+  }
+
+  tfoot tr {
+    background-color: #e5e5e5 !important;
+  }
+
+  /* EIR highlight row */
+  .bg-primary\/5 {
+    background-color: #e8f4fc !important;
+  }
+
+  /* Text colors */
+  .text-primary {
+    color: #000 !important;
+    font-weight: 600 !important;
+  }
+
+  .text-muted-foreground {
+    color: #555 !important;
+  }
+
+  /* Border styling */
+  .border,
+  .border-b,
+  .border-t {
+    border-color: #ccc !important;
+  }
+
+  .rounded-lg {
+    border-radius: 0 !important;
+  }
+
+  /* Signature lines */
+  .border-foreground\/30 {
+    border-color: #000 !important;
+    border-bottom-width: 1pt !important;
+  }
+
+  /* Grid layouts for print */
+  .grid {
+    display: block !important;
+  }
+
+  .md\:grid-cols-2 > * {
+    display: inline-block !important;
+    width: 48% !important;
+    vertical-align: top !important;
+  }
+
+  /* Page break controls */
+  .page-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .page-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Prevent breaking inside elements */
+  tr, .border, section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Links should not show underlines */
+  a {
+    color: black !important;
+    text-decoration: none !important;
+  }
+
+  /* Hide scrollbars */
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Spacing adjustments */
+  .mb-8 { margin-bottom: 16pt !important; }
+  .mb-6 { margin-bottom: 12pt !important; }
+  .mb-4 { margin-bottom: 8pt !important; }
+  .mt-12 { margin-top: 24pt !important; }
+  .mt-8 { margin-top: 16pt !important; }
+  .pt-8 { padding-top: 16pt !important; }
+  .pt-6 { padding-top: 12pt !important; }
+  .pb-6 { padding-bottom: 12pt !important; }
+
+  /* Gap adjustments */
+  .gap-8 { gap: 16pt !important; }
+  .gap-6 { gap: 12pt !important; }
+}

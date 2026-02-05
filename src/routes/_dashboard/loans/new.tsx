@@ -23,6 +23,7 @@ import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Spinner, Calculator, User, CurrencyCircleDollar, ShieldCheck, Users } from "@phosphor-icons/react"
 import { z } from "zod"
+import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 
 const PURPOSE_TEMPLATES = [
   { label: "Bill Payment", icon: "💳" },
@@ -94,6 +95,7 @@ function NewLoanPage() {
     totalToRepay: 0,
     paymentAmount: 0,
     paymentsCount: 0,
+    eir: 0,
   })
 
   useEffect(() => {
@@ -121,11 +123,19 @@ function NewLoanPage() {
           break
       }
 
+      const eir = calculateEIR({
+        principal: p,
+        totalInterest,
+        termMonths: t,
+        paymentFrequency,
+      })
+
       setCalculations({
         totalInterest,
         totalToRepay,
         paymentAmount: totalToRepay / paymentsCount,
         paymentsCount,
+        eir,
       })
     } else {
       setCalculations({
@@ -133,6 +143,7 @@ function NewLoanPage() {
         totalToRepay: 0,
         paymentAmount: 0,
         paymentsCount: 0,
+        eir: 0,
       })
     }
   }, [principal, interestRate, termMonths, paymentFrequency])
@@ -455,6 +466,14 @@ function NewLoanPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Interest</span>
                   <span className="font-medium">{formatCurrency(calculations.totalInterest)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Interest Rate</span>
+                  <span className="font-medium">{interestRate || 0}% / mo</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Effective Rate</span>
+                  <span className="font-medium text-primary">{formatEIR(calculations.eir)}</span>
                 </div>
               </div>
 

@@ -26,7 +26,9 @@ import {
   Check,
   Warning,
   Envelope,
+  NotePencil,
 } from "@phosphor-icons/react"
+import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
@@ -209,6 +211,21 @@ function AgentsPage() {
         },
       })
       toast.success(`Agent ${newStatus === "active" ? "activated" : "suspended"}`)
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update agent")
+    }
+  }
+
+  const handleToggleLoanCreation = async (agentId: string, canCreateLoans: boolean) => {
+    try {
+      await updateAgent({
+        data: {
+          id: agentId,
+          canCreateLoans,
+        },
+      })
+      toast.success(canCreateLoans ? "Loan creation enabled" : "Loan creation disabled")
       router.invalidate()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update agent")
@@ -441,6 +458,22 @@ function AgentsPage() {
                       {formatCurrency(agent.pendingCommission)}
                     </p>
                   </div>
+                </div>
+
+                {/* Loan creation permission toggle */}
+                <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <NotePencil className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Create Loans</p>
+                      <p className="text-xs text-muted-foreground">Allow agent to create loans for approval</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={agent.canCreateLoans}
+                    onCheckedChange={(checked) => handleToggleLoanCreation(agent.id, checked)}
+                    disabled={agent.status !== "active"}
+                  />
                 </div>
 
                 <div className="flex gap-2 pt-2 border-t">
