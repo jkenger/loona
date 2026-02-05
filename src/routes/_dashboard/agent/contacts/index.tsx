@@ -47,7 +47,7 @@ function AgentContactsPage() {
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
           {/* Meta Bar */}
           <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
               Agent Portal
             </span>
             <span className="text-blue-300/40">·</span>
@@ -57,7 +57,7 @@ function AgentContactsPage() {
           </div>
 
           {/* Title Row */}
-          <div className="border-l-4 border-amber-500 pl-4">
+          <div className="border-l-4 border-primary pl-4">
             <h1 className="text-4xl font-bold tracking-tight">Contacts</h1>
             <p className="text-blue-200/70">Borrowers with loans assigned to you</p>
           </div>

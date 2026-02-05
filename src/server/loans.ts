@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, loans, paymentSchedule, contacts, payments } from "@/lib/db"
-import { eq, desc } from "drizzle-orm"
+import { db, loans, paymentSchedule, contacts, agents } from "@/lib/db"
+import { eq, desc, and, sql } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
@@ -495,3 +495,377 @@ export const deleteLoan = createServerFn()
     return { success: true }
   }
 )
+
+// ============================================================================
+// Agent Loan Creation Functions
+// ============================================================================
+
+// Get agent's contacts (those assigned to their loans + contacts they created)
+export const getAgentAssignedContacts = createServerFn().handler(async () => {
+  const session = await requireAuth()
+
+  // Get agent's relationships
+  const agentRelationships = await db.query.agents.findMany({
+    where: and(
+      eq(agents.agentUserId, session.user.id),
+      eq(agents.status, "active")
+    ),
+  })
+
+  if (agentRelationships.length === 0) {
+    return []
+  }
+
+  const agentIds = agentRelationships.map((r) => r.id)
+  const lenderIds = agentRelationships.map((r) => r.lenderId)
+
+  // Get unique contacts that are either:
+  // 1. Have loans assigned to this agent
+  // 2. Were created by this agent
+  const result = await db
+    .selectDistinct({
+      id: contacts.id,
+      name: contacts.name,
+      phone: contacts.phone,
+      email: contacts.email,
+      city: contacts.city,
+      lenderId: contacts.lenderId,
+    })
+    .from(contacts)
+    .leftJoin(loans, eq(contacts.id, loans.contactId))
+    .where(
+      sql`(${loans.assignedAgentId} IN ${agentIds} OR ${contacts.createdByAgentId} IN ${agentIds}) AND ${contacts.lenderId} IN ${lenderIds}`
+    )
+    .orderBy(contacts.name)
+
+  return result
+})
+
+// Get agent's permission to create loans for a specific lender
+export const getAgentLoanCreationPermission = createServerFn().handler(async () => {
+  const session = await requireAuth()
+
+  // Get active agent relationships with loan creation permission
+  const agentRelationships = await db.query.agents.findMany({
+    where: and(
+      eq(agents.agentUserId, session.user.id),
+      eq(agents.status, "active"),
+      eq(agents.canCreateLoans, true)
+    ),
+    with: {
+      lender: true,
+    },
+  })
+
+  return agentRelationships.map((r) => ({
+    agentId: r.id,
+    lenderId: r.lenderId,
+    lenderName: r.lender.name,
+  }))
+})
+
+// Schema for agent creating a loan with agentId
+const agentLoanSchema = z.discriminatedUnion("isNewContact", [
+  z.object({
+    agentId: z.string(),
+    isNewContact: z.literal(true),
+    name: z.string().min(2),
+    phone: z.string().optional(),
+    email: z.string().email().optional().or(z.literal("")).or(z.literal(undefined)),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    facebookProfile: z.string().optional(),
+    notes: z.string().optional(),
+    principal: z.number().positive(),
+    interestRate: z.number().min(0).max(100),
+    termMonths: z.number().int().positive(),
+    paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
+    startDate: z.string().transform((s) => new Date(s)),
+    purpose: z.string().optional(),
+    collateralDescription: z.string().optional(),
+    coMakerName: z.string().optional(),
+    coMakerPhone: z.string().optional(),
+    coMakerRelationship: z.string().optional(),
+  }),
+  z.object({
+    agentId: z.string(),
+    isNewContact: z.literal(false),
+    contactId: z.string().min(1),
+    principal: z.number().positive(),
+    interestRate: z.number().min(0).max(100),
+    termMonths: z.number().int().positive(),
+    paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
+    startDate: z.string().transform((s) => new Date(s)),
+    purpose: z.string().optional(),
+    collateralDescription: z.string().optional(),
+    coMakerName: z.string().optional(),
+    coMakerPhone: z.string().optional(),
+    coMakerRelationship: z.string().optional(),
+  }),
+])
+
+// Agent creates a loan (pending approval)
+export const createLoanAsAgent = createServerFn()
+  .inputValidator(agentLoanSchema)
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    // Verify agent relationship and permission
+    const agent = await db.query.agents.findFirst({
+      where: and(
+        eq(agents.id, data.agentId),
+        eq(agents.agentUserId, session.user.id),
+        eq(agents.status, "active"),
+        eq(agents.canCreateLoans, true)
+      ),
+    })
+
+    if (!agent) {
+      throw new Error("You do not have permission to create loans")
+    }
+
+    let contactId: string
+    let contactName: string
+
+    if (data.isNewContact) {
+      // Create the contact with agent tracking
+      const [contact] = await db
+        .insert(contacts)
+        .values({
+          name: data.name,
+          phone: data.phone || null,
+          email: data.email || null,
+          address: data.address || null,
+          city: data.city || null,
+          facebookProfile: data.facebookProfile || null,
+          notes: data.notes || null,
+          lenderId: agent.lenderId,
+          createdByAgentId: agent.id,
+        })
+        .returning()
+
+      contactId = contact.id
+      contactName = contact.name
+
+      log("contact.create", "contact", contact.id, {
+        name: contact.name,
+        createdByAgentId: agent.id,
+      })
+    } else {
+      // Verify contact belongs to this lender
+      const contact = await db.query.contacts.findFirst({
+        where: eq(contacts.id, data.contactId),
+      })
+
+      if (!contact || contact.lenderId !== agent.lenderId) {
+        throw new Error("Contact not found")
+      }
+
+      contactId = contact.id
+      contactName = contact.name
+    }
+
+    // Calculate loan terms
+    const principal = data.principal
+    const interestRate = data.interestRate
+    const termMonths = data.termMonths
+    const totalInterest = principal * (interestRate / 100) * termMonths
+    const totalToRepay = principal + totalInterest
+
+    const paymentsCount = calculatePaymentsCount(termMonths, data.paymentFrequency)
+    const paymentAmount = totalToRepay / paymentsCount
+
+    const maturityDate = new Date(data.startDate)
+    maturityDate.setMonth(maturityDate.getMonth() + termMonths)
+
+    // Create loan with pending_approval status
+    const [loan] = await db
+      .insert(loans)
+      .values({
+        lenderId: agent.lenderId,
+        contactId,
+        principal: principal.toString(),
+        interestRate: interestRate.toString(),
+        termMonths,
+        paymentFrequency: data.paymentFrequency,
+        paymentAmount: paymentAmount.toFixed(2),
+        totalToRepay: totalToRepay.toFixed(2),
+        remainingBalance: totalToRepay.toFixed(2),
+        status: "pending_approval",
+        startDate: data.startDate,
+        maturityDate,
+        purpose: data.purpose || null,
+        collateralDescription: data.collateralDescription || null,
+        coMakerName: data.coMakerName || null,
+        coMakerPhone: data.coMakerPhone || null,
+        coMakerRelationship: data.coMakerRelationship || null,
+        createdByAgentId: agent.id,
+        assignedAgentId: agent.id,
+      })
+      .returning()
+
+    // Note: Payment schedule will be generated when loan is approved
+
+    log("loan.create", "loan", loan.id, {
+      contactId,
+      contactName,
+      principal,
+      termMonths,
+      createdByAgentId: agent.id,
+      status: "pending_approval",
+    })
+
+    return {
+      ...loan,
+      startDate: loan.startDate?.toISOString() ?? null,
+      maturityDate: loan.maturityDate?.toISOString() ?? null,
+      createdAt: loan.createdAt.toISOString(),
+      updatedAt: loan.updatedAt.toISOString(),
+    }
+  })
+
+// Get pending approval loans count for lender dashboard
+export const getPendingApprovalCount = createServerFn().handler(async () => {
+  const session = await requireAuth()
+
+  const result = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(loans)
+    .where(
+      and(
+        eq(loans.lenderId, session.user.id),
+        eq(loans.status, "pending_approval")
+      )
+    )
+
+  return result[0]?.count || 0
+})
+
+// Approve a pending loan
+export const approveLoan = createServerFn()
+  .inputValidator(z.object({
+    loanId: z.string(),
+    updateStartDate: z.boolean().optional(),
+  }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+      with: { contact: true },
+    })
+
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    if (loan.status !== "pending_approval") {
+      throw new Error("This loan is not pending approval")
+    }
+
+    const now = new Date()
+    const updateFields: Record<string, unknown> = {
+      status: "active",
+      updatedAt: now,
+    }
+
+    // Determine the start date for schedule generation
+    let scheduleStartDate: Date
+
+    if (data.updateStartDate) {
+      // Use today's date as the new start date
+      scheduleStartDate = now
+      updateFields.startDate = now
+      // Recalculate maturity date
+      const maturityDate = new Date(now)
+      maturityDate.setMonth(maturityDate.getMonth() + loan.termMonths)
+      updateFields.maturityDate = maturityDate
+    } else {
+      // Use the original start date
+      scheduleStartDate = loan.startDate || now
+    }
+
+    // Generate payment schedule (always done on approval)
+    const paymentsCount = calculatePaymentsCount(loan.termMonths, loan.paymentFrequency as any)
+    const scheduleItems = generatePaymentSchedule(
+      loan.id,
+      scheduleStartDate,
+      paymentsCount,
+      parseFloat(loan.paymentAmount),
+      loan.paymentFrequency as any
+    )
+
+    await db.insert(paymentSchedule).values(scheduleItems)
+
+    const [updated] = await db
+      .update(loans)
+      .set(updateFields)
+      .where(eq(loans.id, data.loanId))
+      .returning()
+
+    log("loan.approve", "loan", data.loanId, {
+      contactName: loan.contact.name,
+      principal: loan.principal,
+      approvedBy: session.user.id,
+      startDateUpdated: data.updateStartDate,
+    })
+
+    return {
+      ...updated,
+      startDate: updated.startDate?.toISOString() ?? null,
+      maturityDate: updated.maturityDate?.toISOString() ?? null,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    }
+  })
+
+// Reject a pending loan
+export const rejectLoan = createServerFn()
+  .inputValidator(z.object({
+    loanId: z.string(),
+    reason: z.string().min(1, "Rejection reason is required"),
+  }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+      with: { contact: true },
+    })
+
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    if (loan.status !== "pending_approval") {
+      throw new Error("This loan is not pending approval")
+    }
+
+    const [updated] = await db
+      .update(loans)
+      .set({
+        status: "rejected",
+        rejectionReason: data.reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(loans.id, data.loanId))
+      .returning()
+
+    log("loan.reject", "loan", data.loanId, {
+      contactName: loan.contact.name,
+      principal: loan.principal,
+      rejectedBy: session.user.id,
+      reason: data.reason,
+    })
+
+    return {
+      ...updated,
+      startDate: updated.startDate?.toISOString() ?? null,
+      maturityDate: updated.maturityDate?.toISOString() ?? null,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    }
+  })

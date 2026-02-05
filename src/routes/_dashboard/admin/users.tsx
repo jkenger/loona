@@ -131,7 +131,8 @@ function UsersPage() {
     fetchUsers(0, search, roleFilter)
   }
 
-  const handleRoleFilterChange = (value: string) => {
+  const handleRoleFilterChange = (value: string | null) => {
+    if (!value) return
     const newFilter = value === "all" ? "" : value
     setRoleFilter(newFilter)
     fetchUsers(0, search, newFilter)

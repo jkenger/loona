@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { format } from 'date-fns'
 import { getAgentLoans } from '@/server/agents'
+import { getAgentLoanCreationPermission } from '@/server/loans'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
 import { formatCurrencyCompact } from '@/lib/utils'
-import { CurrencyCircleDollar, Phone, ArrowRight } from '@phosphor-icons/react'
+import { CurrencyCircleDollar, Phone, ArrowRight, Plus, Clock, X } from '@phosphor-icons/react'
 
 export const Route = createFileRoute('/_dashboard/agent/loans/')({
   loader: async ({ context }) => {
@@ -15,16 +17,19 @@ export const Route = createFileRoute('/_dashboard/agent/loans/')({
       session: { user: { role: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.AGENT)) {
-      return { loans: [], unauthorized: true }
+      return { loans: [], canCreateLoans: false, unauthorized: true }
     }
-    const loans = await getAgentLoans()
-    return { loans, unauthorized: false }
+    const [loans, loanPermissions] = await Promise.all([
+      getAgentLoans(),
+      getAgentLoanCreationPermission(),
+    ])
+    return { loans, canCreateLoans: loanPermissions.length > 0, unauthorized: false }
   },
   component: AgentLoansPage,
 })
 
 function AgentLoansPage() {
-  const { loans, unauthorized } = Route.useLoaderData()
+  const { loans, canCreateLoans, unauthorized } = Route.useLoaderData()
 
   if (unauthorized) {
     return (
@@ -42,6 +47,8 @@ function AgentLoansPage() {
     active: 'secondary',
     completed: 'default',
     defaulted: 'destructive',
+    pending_approval: 'outline',
+    rejected: 'destructive',
   }
 
   const statusLabels: Record<string, string> = {
@@ -49,6 +56,8 @@ function AgentLoansPage() {
     active: 'Active',
     completed: 'Done',
     defaulted: 'Default',
+    pending_approval: 'Awaiting Approval',
+    rejected: 'Rejected',
   }
 
   return (
@@ -58,7 +67,7 @@ function AgentLoansPage() {
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
           {/* Meta Bar */}
           <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
               Agent Portal
             </span>
             <span className="text-blue-300/40">·</span>
@@ -68,9 +77,19 @@ function AgentLoansPage() {
           </div>
 
           {/* Title Row */}
-          <div className="border-l-4 border-amber-500 pl-4">
-            <h1 className="text-4xl font-bold tracking-tight">Loans</h1>
-            <p className="text-blue-200/70">Loans assigned to you for collection</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="border-l-4 border-primary pl-4">
+              <h1 className="text-4xl font-bold tracking-tight">Loans</h1>
+              <p className="text-blue-200/70">Loans assigned to you for collection</p>
+            </div>
+            {canCreateLoans && (
+              <Link to="/agent/loans/new">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" weight="bold" />
+                  Create Loan
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -112,8 +131,16 @@ function AgentLoansPage() {
                       </div>
                       <Badge
                         variant={statusColors[loan.status] as any}
-                        className="text-xs shrink-0"
+                        className={`text-xs shrink-0 ${
+                          loan.status === 'pending_approval'
+                            ? 'bg-amber-100 text-amber-700 border-amber-300'
+                            : loan.status === 'rejected'
+                            ? 'bg-gray-100 text-gray-500 line-through'
+                            : ''
+                        }`}
                       >
+                        {loan.status === 'pending_approval' && <Clock className="h-3 w-3 mr-1" />}
+                        {loan.status === 'rejected' && <X className="h-3 w-3 mr-1" />}
                         {statusLabels[loan.status]}
                       </Badge>
                     </div>

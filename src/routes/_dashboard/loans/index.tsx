@@ -72,7 +72,7 @@ function LoansPageSkeleton() {
   )
 }
 
-type StatusFilter = "all" | "active" | "pending_disbursement" | "completed" | "defaulted"
+type StatusFilter = "all" | "active" | "pending_disbursement" | "completed" | "defaulted" | "pending_approval" | "rejected"
 
 function LoansPage() {
   const { loans, unauthorized } = Route.useLoaderData()
@@ -156,6 +156,8 @@ function LoansPage() {
     pending_disbursement: loans.filter((l) => l.status === "pending_disbursement").length,
     completed: loans.filter((l) => l.status === "completed").length,
     defaulted: loans.filter((l) => l.status === "defaulted").length,
+    pending_approval: loans.filter((l) => l.status === "pending_approval").length,
+    rejected: loans.filter((l) => l.status === "rejected").length,
   }), [loans])
 
   const statusColors: Record<string, string> = {
@@ -163,6 +165,8 @@ function LoansPage() {
     active: "secondary",
     completed: "default",
     defaulted: "destructive",
+    pending_approval: "outline",
+    rejected: "outline",
   }
 
   const statusLabels: Record<string, string> = {
@@ -171,6 +175,8 @@ function LoansPage() {
     pending_disbursement: "Pending",
     completed: "Completed",
     defaulted: "Defaulted",
+    pending_approval: "Needs Approval",
+    rejected: "Rejected",
   }
 
   return (
@@ -224,6 +230,18 @@ function LoansPage() {
             {/* Status Filters */}
             <div className="flex items-center gap-1 flex-wrap">
               <Funnel className="h-4 w-4 text-muted-foreground mr-1" />
+              {/* Show pending_approval first if there are any */}
+              {statusCounts.pending_approval > 0 && (
+                <Button
+                  variant={statusFilter === "pending_approval" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => handleFilterChange("pending_approval")}
+                  className="text-xs h-8 gap-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700"
+                >
+                  {statusLabels.pending_approval}
+                  <span className="bg-amber-500 text-white rounded-full px-1.5 text-[10px] font-bold">{statusCounts.pending_approval}</span>
+                </Button>
+              )}
               {(["all", "active", "pending_disbursement", "completed", "defaulted"] as StatusFilter[]).map((status) => (
                 <Button
                   key={status}
@@ -236,6 +254,17 @@ function LoansPage() {
                   <span className="text-muted-foreground">({statusCounts[status]})</span>
                 </Button>
               ))}
+              {statusCounts.rejected > 0 && (
+                <Button
+                  variant={statusFilter === "rejected" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => handleFilterChange("rejected")}
+                  className="text-xs h-8 gap-1.5 text-muted-foreground"
+                >
+                  {statusLabels.rejected}
+                  <span className="text-muted-foreground">({statusCounts.rejected})</span>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -261,20 +290,33 @@ function LoansPage() {
                 const isDefaulted = loan.status === "defaulted"
                 const isActive = loan.status === "active"
                 const isPending = loan.status === "pending_disbursement"
+                const isPendingApproval = loan.status === "pending_approval"
+                const isRejected = loan.status === "rejected"
 
                 return (
                   <Link key={loan.id} to="/loans/$loanId" params={{ loanId: loan.id }} className="block">
-                    <Card className={`hover:border-primary/50 transition-colors cursor-pointer shadow-sm ${isDefaulted ? "border-destructive/50" : ""}`}>
+                    <Card className={`hover:border-primary/50 transition-colors cursor-pointer shadow-sm ${
+                      isDefaulted ? "border-destructive/50" :
+                      isPendingApproval ? "border-amber-300 bg-amber-50/50" :
+                      isRejected ? "border-gray-300 opacity-60" :
+                      ""
+                    }`}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
                               isDefaulted ? "bg-destructive/10" :
+                              isPendingApproval ? "bg-amber-100" :
+                              isRejected ? "bg-gray-100" :
                               isPending ? "bg-muted" :
                               "bg-primary/10"
                             }`}>
                               {isDefaulted ? (
                                 <Warning className="h-5 w-5 text-destructive" weight="bold" />
+                              ) : isPendingApproval ? (
+                                <Clock className="h-5 w-5 text-amber-600" weight="bold" />
+                              ) : isRejected ? (
+                                <Warning className="h-5 w-5 text-gray-400" />
                               ) : isPending ? (
                                 <Clock className="h-5 w-5 text-muted-foreground" />
                               ) : progress >= 100 ? (
@@ -284,7 +326,7 @@ function LoansPage() {
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-semibold truncate">{loan.contactName}</p>
+                              <p className={`font-semibold truncate ${isRejected ? "line-through text-gray-500" : ""}`}>{loan.contactName}</p>
                               <p className="text-sm text-muted-foreground">
                                 {formatCurrency(loan.principal)} · {loan.interestRate}% · {loan.termMonths}mo
                               </p>
@@ -298,7 +340,14 @@ function LoansPage() {
                               </p>
                               <p className="text-xs text-muted-foreground">remaining</p>
                             </div>
-                            <Badge variant={statusColors[loan.status] as any}>
+                            <Badge
+                              variant={statusColors[loan.status] as any}
+                              className={
+                                isPendingApproval ? "bg-amber-100 text-amber-700 border-amber-300" :
+                                isRejected ? "bg-gray-100 text-gray-500" :
+                                ""
+                              }
+                            >
                               {loan.status.replace("_", " ")}
                             </Badge>
                             <ArrowRight className="h-4 w-4 text-muted-foreground hidden sm:block" />
@@ -323,11 +372,21 @@ function LoansPage() {
                           </div>
                         )}
 
+                        {/* Pending approval notice */}
+                        {isPendingApproval && (
+                          <div className="mt-3 pt-3 border-t flex items-center gap-2 text-amber-700 text-sm">
+                            <Clock className="h-4 w-4" />
+                            <span>Submitted by agent - awaiting your approval</span>
+                          </div>
+                        )}
+
                         {/* Mobile: show remaining balance */}
-                        <div className="sm:hidden mt-3 pt-3 border-t flex justify-between text-sm">
-                          <span className="text-muted-foreground">Remaining</span>
-                          <span className="font-semibold">{formatCurrency(loan.remainingBalance)}</span>
-                        </div>
+                        {!isPendingApproval && (
+                          <div className="sm:hidden mt-3 pt-3 border-t flex justify-between text-sm">
+                            <span className="text-muted-foreground">Remaining</span>
+                            <span className="font-semibold">{formatCurrency(loan.remainingBalance)}</span>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </Link>

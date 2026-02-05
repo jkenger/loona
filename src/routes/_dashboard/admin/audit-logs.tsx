@@ -111,7 +111,8 @@ function AuditLogsPage() {
     fetchLogs(0, entityType, actionSearch)
   }
 
-  const handleEntityTypeChange = (value: string) => {
+  const handleEntityTypeChange = (value: string | null) => {
+    if (!value) return
     const newType = value === "all" ? "" : value
     setEntityType(newType)
     fetchLogs(0, newType, actionSearch)

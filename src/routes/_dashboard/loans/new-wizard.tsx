@@ -43,6 +43,7 @@ import {
   Check,
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
+import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 
 const PURPOSE_TEMPLATES = [
   { label: "Bill Payment", icon: "\u{1F4B3}" },
@@ -124,6 +125,7 @@ function NewLoanWizard() {
     totalToRepay: 0,
     paymentAmount: 0,
     paymentsCount: 0,
+    eir: 0,
   })
 
   useEffect(() => {
@@ -151,11 +153,19 @@ function NewLoanWizard() {
           break
       }
 
+      const eir = calculateEIR({
+        principal: p,
+        totalInterest,
+        termMonths: t,
+        paymentFrequency,
+      })
+
       setCalculations({
         totalInterest,
         totalToRepay,
         paymentAmount: totalToRepay / paymentsCount,
         paymentsCount,
+        eir,
       })
     } else {
       setCalculations({
@@ -163,6 +173,7 @@ function NewLoanWizard() {
         totalToRepay: 0,
         paymentAmount: 0,
         paymentsCount: 0,
+        eir: 0,
       })
     }
   }, [principal, interestRate, termMonths, paymentFrequency])
@@ -842,6 +853,16 @@ function NewLoanWizard() {
                     </span>
                     <span className="font-medium">
                       {formatCurrency(calculations.totalInterest)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Interest Rate</span>
+                    <span className="font-medium">{interestRate || 0}% / mo</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Effective Rate</span>
+                    <span className="font-medium text-primary">
+                      {formatEIR(calculations.eir)}
                     </span>
                   </div>
                 </div>

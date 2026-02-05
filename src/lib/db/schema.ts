@@ -21,6 +21,8 @@ export const loanStatusEnum = pgEnum("loan_status", [
   "active",
   "completed",
   "defaulted",
+  "pending_approval",
+  "rejected",
 ])
 
 export const paymentFrequencyEnum = pgEnum("payment_frequency", [
@@ -171,6 +173,7 @@ export const loans = pgTable("loans", {
 
   // Status and dates
   status: loanStatusEnum("status").notNull().default("pending_disbursement"),
+  rejectionReason: text("rejection_reason"),
   startDate: timestamp("start_date"),
   maturityDate: timestamp("maturity_date"),
   completedAt: timestamp("completed_at"),
@@ -232,6 +235,7 @@ export const agents = pgTable(
 
     commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull().default("5.00"), // 5%
     status: agentStatusEnum("status").notNull().default("active"),
+    canCreateLoans: boolean("can_create_loans").notNull().default(false),
 
     // Denormalized totals
     totalCollected: decimal("total_collected", { precision: 12, scale: 2 }).notNull().default("0"),

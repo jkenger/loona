@@ -11,6 +11,8 @@ type AuditAction =
   | "loan.delete"
   | "loan.assign_agent"
   | "loan.view"
+  | "loan.approve"
+  | "loan.reject"
   // Payments
   | "payment.record"
   | "payment.view"

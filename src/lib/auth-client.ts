@@ -40,3 +40,29 @@ export async function resetPassword({ newPassword, token }: { newPassword: strin
   }
   return { data }
 }
+
+export async function changePassword({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) {
+  const res = await fetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+  const data = await res.json()
+  if (!res.ok) {
+    return { error: { message: data.message || 'Failed to change password' } }
+  }
+  return { data }
+}
+
+export async function updateUserName({ name }: { name: string }) {
+  const res = await fetch('/api/auth/update-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  const data = await res.json()
+  if (!res.ok) {
+    return { error: { message: data.message || 'Failed to update profile' } }
+  }
+  return { data }
+}

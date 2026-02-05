@@ -164,14 +164,14 @@ function AgentLoanDetailPage() {
           {/* Title Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <CurrencyCircleDollar className="h-7 w-7 text-amber-300" weight="bold" />
+              <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center">
+                <CurrencyCircleDollar className="h-7 w-7 text-primary-foreground" weight="bold" />
               </div>
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-3xl font-bold tracking-tight">{loan.contact.name}</h1>
                   <Badge className={`text-xs ${
-                    loan.status === 'active' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                    loan.status === 'active' ? 'bg-primary/20 text-primary-foreground border-primary/30' :
                     loan.status === 'completed' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
                     loan.status === 'defaulted' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
                     'bg-white/10 text-white border-white/20'

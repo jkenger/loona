@@ -6,6 +6,11 @@ import { logAudit } from "./audit"
 import { z } from "zod"
 import { ROLES } from "@/lib/constants/roles"
 
+// ============================================================================
+// Admin Portal Service
+// All functions for the admin portal (system-wide administration)
+// ============================================================================
+
 const KNOWN_ROLES = [ROLES.LENDER, ROLES.AGENT, ROLES.ADMIN]
 
 // ============================================================================

@@ -88,14 +88,14 @@ function AgentContactDetailPage() {
           {/* Title Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <User className="h-7 w-7 text-amber-300" weight="bold" />
+              <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center">
+                <User className="h-7 w-7 text-primary-foreground" weight="bold" />
               </div>
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
                   {activeLoans.length > 0 && (
-                    <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">
+                    <Badge className="bg-primary/20 text-primary-foreground border-primary/30 text-xs">
                       {activeLoans.length} loan{activeLoans.length !== 1 ? "s" : ""}
                     </Badge>
                   )}
