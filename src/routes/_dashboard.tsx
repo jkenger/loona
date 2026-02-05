@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useNavigate, useLocation } from "@tanstack/react-router"
 import { getServerSession } from "@/server/session"
+import { getAgentPermissions } from "@/server/agent-portal"
 import { signOut } from "@/lib/auth-client"
 import { RouteProgress } from "@/components/ui/route-progress"
 import { hasRole, ROLES } from "@/lib/constants/roles"
@@ -20,6 +21,8 @@ import {
   UserList,
   ClipboardText,
   Gear,
+  Warning,
+  ShieldCheck,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -35,7 +38,18 @@ export const Route = createFileRoute("/_dashboard")({
     if (!session) {
       throw redirect({ to: "/login" })
     }
-    return { session }
+
+    // Fetch agent permissions if user is an agent
+    let agentPermissions = null
+    if (hasRole(session.user.role, ROLES.AGENT)) {
+      try {
+        agentPermissions = await getAgentPermissions()
+      } catch {
+        // Ignore errors - permissions will be null
+      }
+    }
+
+    return { session, agentPermissions }
   },
   component: DashboardLayout,
 })
@@ -53,6 +67,7 @@ const lenderNavigation = [
 const adminNavigation = [
   { name: "Overview", href: "/admin", icon: ShieldStar, exact: true },
   { name: "Users", href: "/admin/users", icon: UserList, exact: false },
+  { name: "Compliance", href: "/admin/compliance", icon: ShieldCheck, exact: false },
   { name: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardText, exact: false },
 ]
 
@@ -65,7 +80,7 @@ const agentMenuItems = [
 ]
 
 function DashboardLayout() {
-  const { session } = Route.useRouteContext()
+  const { session, agentPermissions } = Route.useRouteContext()
   const router = useRouter()
   const navigate = useNavigate()
   const location = useLocation()
@@ -76,8 +91,14 @@ function DashboardLayout() {
   const isLender = hasRole(session.user.role, ROLES.LENDER)
   const isAdmin = hasRole(session.user.role, ROLES.ADMIN)
 
-  // Detect if we're in the admin portal
+  // Detect if we're in the admin portal or agent portal
   const isOnAdminPortal = location.pathname.startsWith("/admin")
+  const isOnAgentPortal = location.pathname.startsWith("/agent")
+
+  // Check for agent permission restrictions
+  const hasAgentRestrictions = agentPermissions && (
+    !agentPermissions.canRecordPayments || !agentPermissions.canCreateLoans
+  )
 
   // Show admin nav when on admin routes, lender nav otherwise
   const navigation = isOnAdminPortal && isAdmin
@@ -244,6 +265,27 @@ function DashboardLayout() {
           </div>
         </div>
       </div>
+
+      {/* Agent Permissions Banner */}
+      {isOnAgentPortal && hasAgentRestrictions && (
+        <div className="bg-red-600 text-white">
+          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center gap-2 py-2 text-sm font-medium">
+              <Warning className="h-4 w-4" weight="fill" />
+              <span>
+                Restricted access:{" "}
+                {!agentPermissions?.canRecordPayments && !agentPermissions?.canCreateLoans
+                  ? "Payment recording and loan creation disabled"
+                  : !agentPermissions?.canRecordPayments
+                    ? "Payment recording disabled"
+                    : "Loan creation disabled"
+                }
+                {" "}by your lender.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Page content - full width, pages control their own constraints */}
       <main className="relative">

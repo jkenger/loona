@@ -1,10 +1,14 @@
 import { createServerFn } from "@tanstack/react-start"
 import { db, user, session, contacts, loans, auditLogs } from "@/lib/db"
-import { eq, sql, ilike, or, and, gte, desc, count } from "drizzle-orm"
+import { eq, sql, ilike, or, and, gte, gt, desc, count } from "drizzle-orm"
 import { requireAdmin } from "./session"
 import { logAudit } from "./audit"
 import { z } from "zod"
 import { ROLES } from "@/lib/constants/roles"
+
+// Compliance thresholds (Philippine regulations)
+const SEC_MONTHLY_RATE_CAP = 6 // SEC MC 19-2019: 6% monthly nominal cap
+const COURT_CONCERN_THRESHOLD = 3 // Courts often scrutinize rates above 3% monthly
 
 // ============================================================================
 // Admin Portal Service
@@ -335,3 +339,204 @@ export const getAuditLogs = createServerFn()
       offset: data.offset,
     }
   })
+
+// ============================================================================
+// Compliance Dashboard
+// ============================================================================
+
+export const getComplianceStats = createServerFn().handler(async () => {
+  await requireAdmin()
+
+  // Interest rate compliance stats
+  const [interestRateStats] = await db
+    .select({
+      totalLoans: count(),
+      loansAboveSECCap: sql<number>`count(*) filter (where ${loans.interestRate} > ${SEC_MONTHLY_RATE_CAP})::int`,
+      loansAboveCourtConcern: sql<number>`count(*) filter (where ${loans.interestRate} > ${COURT_CONCERN_THRESHOLD} and ${loans.interestRate} <= ${SEC_MONTHLY_RATE_CAP})::int`,
+      loansCompliant: sql<number>`count(*) filter (where ${loans.interestRate} <= ${COURT_CONCERN_THRESHOLD})::int`,
+      avgInterestRate: sql<string>`coalesce(avg(${loans.interestRate}), 0)`,
+      maxInterestRate: sql<string>`coalesce(max(${loans.interestRate}), 0)`,
+      minInterestRate: sql<string>`coalesce(min(${loans.interestRate}), 0)`,
+    })
+    .from(loans)
+
+  // Active loans breakdown
+  const [activeLoansStats] = await db
+    .select({
+      totalActive: sql<number>`count(*) filter (where ${loans.status} = 'active')::int`,
+      activeAboveSECCap: sql<number>`count(*) filter (where ${loans.status} = 'active' and ${loans.interestRate} > ${SEC_MONTHLY_RATE_CAP})::int`,
+      activeAboveCourtConcern: sql<number>`count(*) filter (where ${loans.status} = 'active' and ${loans.interestRate} > ${COURT_CONCERN_THRESHOLD} and ${loans.interestRate} <= ${SEC_MONTHLY_RATE_CAP})::int`,
+    })
+    .from(loans)
+
+  // Privacy compliance - users with potential data concerns
+  const [privacyStats] = await db
+    .select({
+      totalContacts: count(),
+      contactsWithEmail: sql<number>`count(*) filter (where ${contacts.email} is not null and ${contacts.email} != '')::int`,
+      contactsWithPhone: sql<number>`count(*) filter (where ${contacts.phone} is not null and ${contacts.phone} != '')::int`,
+      contactsWithAddress: sql<number>`count(*) filter (where ${contacts.address} is not null and ${contacts.address} != '')::int`,
+    })
+    .from(contacts)
+
+  // Audit stats for app compliance
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const [auditStats] = await db
+    .select({
+      last7d: sql<number>`count(*) filter (where ${auditLogs.createdAt} >= ${oneWeekAgo})::int`,
+    })
+    .from(auditLogs)
+
+  // Recent high-rate loans (last 30 days)
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  const recentHighRateLoans = await db
+    .select({
+      id: loans.id,
+      principal: loans.principal,
+      interestRate: loans.interestRate,
+      status: loans.status,
+      createdAt: loans.createdAt,
+      contactName: contacts.name,
+      lenderEmail: user.email,
+    })
+    .from(loans)
+    .leftJoin(contacts, eq(loans.contactId, contacts.id))
+    .leftJoin(user, eq(loans.lenderId, user.id))
+    .where(
+      and(
+        gt(loans.interestRate, sql`${SEC_MONTHLY_RATE_CAP}`),
+        gte(loans.createdAt, thirtyDaysAgo)
+      )
+    )
+    .orderBy(desc(loans.createdAt))
+    .limit(10)
+
+  // Interest rate distribution - fetch and compute in JS for reliability
+  const allLoansForDistribution = await db
+    .select({
+      interestRate: loans.interestRate,
+      principal: loans.principal,
+    })
+    .from(loans)
+
+  // Compute distribution buckets
+  const distributionMap: Record<string, { count: number; totalPrincipal: number; order: number }> = {
+    "0-3%": { count: 0, totalPrincipal: 0, order: 1 },
+    "3-6%": { count: 0, totalPrincipal: 0, order: 2 },
+    "6-10%": { count: 0, totalPrincipal: 0, order: 3 },
+    "10%+": { count: 0, totalPrincipal: 0, order: 4 },
+  }
+
+  for (const loan of allLoansForDistribution) {
+    const rate = parseFloat(loan.interestRate)
+    const principal = parseFloat(loan.principal)
+    let bucket: string
+    if (rate <= 3) bucket = "0-3%"
+    else if (rate <= 6) bucket = "3-6%"
+    else if (rate <= 10) bucket = "6-10%"
+    else bucket = "10%+"
+
+    distributionMap[bucket].count++
+    distributionMap[bucket].totalPrincipal += principal
+  }
+
+  const rateDistribution = Object.entries(distributionMap)
+    .map(([bucket, data]) => ({
+      bucket,
+      count: data.count,
+      totalPrincipal: data.totalPrincipal.toString(),
+      order: data.order,
+    }))
+    .sort((a, b) => a.order - b.order)
+
+  return {
+    interestRates: {
+      totalLoans: interestRateStats.totalLoans,
+      aboveSECCap: interestRateStats.loansAboveSECCap,
+      aboveCourtConcern: interestRateStats.loansAboveCourtConcern,
+      compliant: interestRateStats.loansCompliant,
+      average: parseFloat(interestRateStats.avgInterestRate).toFixed(2),
+      max: parseFloat(interestRateStats.maxInterestRate).toFixed(2),
+      min: parseFloat(interestRateStats.minInterestRate).toFixed(2),
+    },
+    activeLoans: {
+      total: activeLoansStats.totalActive,
+      aboveSECCap: activeLoansStats.activeAboveSECCap,
+      aboveCourtConcern: activeLoansStats.activeAboveCourtConcern,
+    },
+    privacy: {
+      totalContacts: privacyStats.totalContacts,
+      withEmail: privacyStats.contactsWithEmail,
+      withPhone: privacyStats.contactsWithPhone,
+      withAddress: privacyStats.contactsWithAddress,
+    },
+    recentHighRateLoans: recentHighRateLoans.map((loan) => ({
+      id: loan.id,
+      principal: loan.principal,
+      interestRate: loan.interestRate,
+      status: loan.status,
+      createdAt: loan.createdAt.toISOString(),
+      contactName: loan.contactName,
+      lenderEmail: loan.lenderEmail,
+    })),
+    rateDistribution: rateDistribution.map((r) => ({
+      bucket: r.bucket,
+      count: r.count,
+      totalPrincipal: r.totalPrincipal,
+    })),
+    thresholds: {
+      secMonthlyCap: SEC_MONTHLY_RATE_CAP,
+      courtConcern: COURT_CONCERN_THRESHOLD,
+    },
+    // App compliance checks
+    appCompliance: {
+      privacyPolicy: {
+        status: "configured" as const,
+        label: "Privacy Policy",
+        description: "RA 10173 compliant privacy policy",
+        path: "/privacy",
+      },
+      termsOfService: {
+        status: "configured" as const,
+        label: "Terms of Service",
+        description: "User agreement and disclaimers",
+        path: "/terms",
+      },
+      npcRegistration: {
+        status: "manual" as const,
+        label: "NPC Registration",
+        description: "National Privacy Commission registration",
+        href: "https://www.privacy.gov.ph/data-protection-registration/",
+      },
+      auditLogging: {
+        status: auditStats.last7d > 0 ? "configured" as const : "attention" as const,
+        label: "Audit Logging",
+        description: "Activity tracking for accountability",
+        detail: `${auditStats.last7d} events logged in last 7 days`,
+      },
+      passwordSecurity: {
+        status: "configured" as const,
+        label: "Password Security",
+        description: "Passwords hashed with secure algorithm",
+      },
+      sessionManagement: {
+        status: "configured" as const,
+        label: "Session Management",
+        description: "Secure session handling with expiry",
+      },
+      dataEncryption: {
+        status: "configured" as const,
+        label: "Database Encryption",
+        description: "Data encrypted in transit (SSL/TLS)",
+      },
+      contactEmail: {
+        status: "configured" as const,
+        label: "Contact Information",
+        description: "Support email configured",
+        detail: "support@loona.app",
+      },
+    },
+  }
+})

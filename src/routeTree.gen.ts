@@ -34,6 +34,7 @@ import { Route as DashboardContactsContactIdRouteImport } from './routes/_dashbo
 import { Route as DashboardAgentPaymentsRouteImport } from './routes/_dashboard/agent/payments'
 import { Route as DashboardAgentCommissionsRouteImport } from './routes/_dashboard/agent/commissions'
 import { Route as DashboardAdminUsersRouteImport } from './routes/_dashboard/admin/users'
+import { Route as DashboardAdminComplianceRouteImport } from './routes/_dashboard/admin/compliance'
 import { Route as DashboardAdminAuditLogsRouteImport } from './routes/_dashboard/admin/audit-logs'
 import { Route as DashboardLoansLoanIdIndexRouteImport } from './routes/_dashboard/loans/$loanId/index'
 import { Route as DashboardAgentLoansIndexRouteImport } from './routes/_dashboard/agent/loans/index'
@@ -168,6 +169,12 @@ const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAdminComplianceRoute =
+  DashboardAdminComplianceRouteImport.update({
+    id: '/admin/compliance',
+    path: '/admin/compliance',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAdminAuditLogsRoute = DashboardAdminAuditLogsRouteImport.update({
   id: '/admin/audit-logs',
   path: '/admin/audit-logs',
@@ -224,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
+  '/admin/compliance': typeof DashboardAdminComplianceRoute
   '/admin/users': typeof DashboardAdminUsersRoute
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/agent/payments': typeof DashboardAgentPaymentsRoute
@@ -257,6 +265,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
+  '/admin/compliance': typeof DashboardAdminComplianceRoute
   '/admin/users': typeof DashboardAdminUsersRoute
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/agent/payments': typeof DashboardAgentPaymentsRoute
@@ -293,6 +302,7 @@ export interface FileRoutesById {
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/signup': typeof AuthSignupRoute
   '/_dashboard/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
+  '/_dashboard/admin/compliance': typeof DashboardAdminComplianceRoute
   '/_dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/_dashboard/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/_dashboard/agent/payments': typeof DashboardAgentPaymentsRoute
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin/audit-logs'
+    | '/admin/compliance'
     | '/admin/users'
     | '/agent/commissions'
     | '/agent/payments'
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin/audit-logs'
+    | '/admin/compliance'
     | '/admin/users'
     | '/agent/commissions'
     | '/agent/payments'
@@ -396,6 +408,7 @@ export interface FileRouteTypes {
     | '/_auth/reset-password'
     | '/_auth/signup'
     | '/_dashboard/admin/audit-logs'
+    | '/_dashboard/admin/compliance'
     | '/_dashboard/admin/users'
     | '/_dashboard/agent/commissions'
     | '/_dashboard/agent/payments'
@@ -607,6 +620,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminUsersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/admin/compliance': {
+      id: '/_dashboard/admin/compliance'
+      path: '/admin/compliance'
+      fullPath: '/admin/compliance'
+      preLoaderRoute: typeof DashboardAdminComplianceRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/admin/audit-logs': {
       id: '/_dashboard/admin/audit-logs'
       path: '/admin/audit-logs'
@@ -684,6 +704,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface DashboardRouteChildren {
   DashboardAdminAuditLogsRoute: typeof DashboardAdminAuditLogsRoute
+  DashboardAdminComplianceRoute: typeof DashboardAdminComplianceRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardAgentCommissionsRoute: typeof DashboardAgentCommissionsRoute
   DashboardAgentPaymentsRoute: typeof DashboardAgentPaymentsRoute
@@ -710,6 +731,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminAuditLogsRoute: DashboardAdminAuditLogsRoute,
+  DashboardAdminComplianceRoute: DashboardAdminComplianceRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardAgentCommissionsRoute: DashboardAgentCommissionsRoute,
   DashboardAgentPaymentsRoute: DashboardAgentPaymentsRoute,
