@@ -22,6 +22,7 @@ type AuditAction =
   | "agent.suspend"
   | "agent.activate"
   | "agent.terminate"
+  | "agent.reset_password"
   // Commissions
   | "commission.pay"
   // Auth

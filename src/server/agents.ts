@@ -422,6 +422,55 @@ export const getLoansWithAssignments = createServerFn().handler(async () => {
   return result
 })
 
+// Reset agent password
+export const resetAgentPassword = createServerFn()
+  .inputValidator(z.string())
+  .handler(async ({ data: agentId }) => {
+    const session = await requireAuth()
+
+    // Verify ownership
+    const agent = await db.query.agents.findFirst({
+      where: eq(agents.id, agentId),
+      with: { agentUser: true },
+    })
+
+    if (!agent || agent.lenderId !== session.user.id) {
+      throw new Error('Agent not found')
+    }
+
+    // Generate new password
+    const newPassword = generatePassword()
+
+    // Hash and update the password
+    const { account } = await import('@/lib/db/schema')
+    const { hashPassword } = await import('better-auth/crypto')
+    const hashedPassword = await hashPassword(newPassword)
+
+    // Update the account password
+    await db
+      .update(account)
+      .set({ password: hashedPassword })
+      .where(
+        and(
+          eq(account.userId, agent.agentUserId),
+          eq(account.providerId, 'credential'),
+        ),
+      )
+
+    // Audit log
+    const log = createAuditLogger(session.user)
+    log('agent.reset_password', 'agent', agentId, {
+      agentEmail: agent.agentUser.email,
+    })
+
+    return {
+      success: true,
+      agentName: agent.agentUser.name,
+      agentEmail: agent.agentUser.email,
+      newPassword,
+    }
+  })
+
 // Re-export agent portal functions from dedicated module for backwards compatibility
 export {
   getAgentDashboard,

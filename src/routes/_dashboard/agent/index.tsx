@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
-import { formatRelativeDate } from "@/lib/utils/date"
+import { formatRelativeDate, formatRelativeDateLower } from "@/lib/utils/date"
 import {
   CurrencyCircleDollar,
   Receipt,
@@ -97,54 +97,68 @@ function AgentDashboardPage() {
       {/* Content - overlaps header */}
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
-      {/* Overdue Payments Banner - Compact */}
+      {/* Overdue Payments Banner */}
       {overduePayments.length > 0 && (
-        <div className="rounded-lg border bg-destructive/5 border-destructive/20 p-3 md:p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                <Warning className="h-4 w-4 md:h-5 md:w-5 text-destructive" weight="fill" />
+        <div className="rounded-lg border border-destructive/20 bg-card shadow-lg p-4 relative overflow-hidden">
+          <div className="absolute inset-0 bg-destructive/5 pointer-events-none" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                <Warning className="h-5 w-5 text-destructive" weight="fill" />
               </div>
               <div>
                 <p className="font-semibold text-sm text-destructive">
-                  {overduePayments.length} overdue
+                  {overduePayments.length} overdue payment
+                  {overduePayments.length !== 1 ? 's' : ''}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatCurrency(overduePayments.reduce((s, p) => s + parseFloat(p.amount), 0))}
+                <p className="text-sm text-muted-foreground">
+                  Total overdue: {formatCurrency(overduePayments.reduce((s, p) => s + parseFloat(p.amount), 0))}
                 </p>
               </div>
             </div>
             <Link to="/agent/payments">
-              <Button size="sm" variant="destructive" className="gap-1 text-xs md:text-sm">
-                Collect
-                <ArrowRight className="h-3 w-3 md:h-4 md:w-4" />
+              <Button size="sm" variant="destructive" className="gap-1.5">
+                Collect Now
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
         </div>
       )}
 
-      {/* Upcoming Payments Banner - Compact */}
+      {/* Upcoming Payments Banner */}
       {upcomingPayments.length > 0 && overduePayments.length === 0 && (
-        <div className="rounded-lg border bg-primary/5 border-primary/20 p-3 md:p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Bell className="h-4 w-4 md:h-5 md:w-5 text-primary" weight="fill" />
+        <div className="rounded-lg border border-primary/20 bg-card shadow-lg p-4 relative overflow-hidden">
+          <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Bell className="h-5 w-5 text-primary" weight="fill" />
               </div>
               <div>
                 <p className="font-semibold text-sm">
-                  {upcomingPayments.length} due soon
+                  {upcomingPayments.length} payment
+                  {upcomingPayments.length !== 1 ? 's' : ''} due this week
                 </p>
-                <p className="text-xs text-muted-foreground line-clamp-1">
-                  {upcomingPayments[0]?.contactName} {upcomingPayments.length > 1 && `+${upcomingPayments.length - 1} more`}
+                <p className="text-sm text-muted-foreground">
+                  {upcomingPayments.slice(0, 3).map((p, i) => (
+                    <span key={p.id}>
+                      {i > 0 && ', '}
+                      {p.contactName} (
+                      {formatCurrency(parseFloat(p.amount) - parseFloat(p.paidAmount))}{' '}
+                      {formatRelativeDateLower(p.dueDate)})
+                    </span>
+                  ))}
+                  {upcomingPayments.length > 3 && (
+                    <span> and {upcomingPayments.length - 3} more</span>
+                  )}
                 </p>
               </div>
             </div>
             <Link to="/agent/payments">
-              <Button size="sm" className="gap-1 text-xs md:text-sm">
-                View
-                <ArrowRight className="h-3 w-3 md:h-4 md:w-4" />
+              <Button size="sm" className="gap-1.5">
+                View Payments
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
