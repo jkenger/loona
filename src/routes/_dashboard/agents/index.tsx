@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { getAgents, createAgent, updateAgent, payCommission } from "@/server/agents"
+import { getAgents, createAgent, updateAgent, payCommission, resetAgentPassword } from "@/server/agents"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -27,6 +27,7 @@ import {
   Warning,
   Envelope,
   NotePencil,
+  Key,
 } from "@phosphor-icons/react"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -114,6 +115,12 @@ function AgentsPage() {
   const [copied, setCopied] = useState(false)
   const [payingCommission, setPayingCommission] = useState(false)
   const [agentToPayCommission, setAgentToPayCommission] = useState<typeof agents[number] | null>(null)
+
+  // Reset password state
+  const [resetPasswordAgent, setResetPasswordAgent] = useState<typeof agents[number] | null>(null)
+  const [resettingPassword, setResettingPassword] = useState(false)
+  const [newPassword, setNewPassword] = useState<{ name: string; email: string; password: string } | null>(null)
+  const [passwordCopied, setPasswordCopied] = useState(false)
 
   // Form state
   const [name, setName] = useState("")
@@ -230,6 +237,40 @@ function AgentsPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update agent")
     }
+  }
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordAgent) return
+    setResettingPassword(true)
+    try {
+      const result = await resetAgentPassword({ data: resetPasswordAgent.id })
+      setResetPasswordAgent(null)
+      setNewPassword({
+        name: result.agentName,
+        email: result.agentEmail,
+        password: result.newPassword,
+      })
+      toast.success("Password reset successfully")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reset password")
+    } finally {
+      setResettingPassword(false)
+    }
+  }
+
+  const handleCopyNewPassword = () => {
+    if (newPassword) {
+      const text = `Email: ${newPassword.email}\nNew Password: ${newPassword.password}`
+      navigator.clipboard.writeText(text)
+      setPasswordCopied(true)
+      toast.success("Credentials copied to clipboard")
+      setTimeout(() => setPasswordCopied(false), 2000)
+    }
+  }
+
+  const handleCloseNewPassword = () => {
+    setNewPassword(null)
+    setPasswordCopied(false)
   }
 
   const statusColors: Record<string, string> = {
@@ -490,6 +531,14 @@ function AgentsPage() {
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => setResetPasswordAgent(agent)}
+                    title="Reset Password"
+                  >
+                    <Key className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleToggleStatus(agent.id, agent.status)}
                   >
                     {agent.status === "active" ? "Suspend" : "Activate"}
@@ -570,6 +619,94 @@ function AgentsPage() {
                   Confirm Payment
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Confirmation Dialog */}
+      <Dialog open={!!resetPasswordAgent} onOpenChange={(open) => !open && setResetPasswordAgent(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Agent Password</DialogTitle>
+            <DialogDescription>
+              This will generate a new password for the agent. You will need to share the new credentials with them.
+            </DialogDescription>
+          </DialogHeader>
+          {resetPasswordAgent && (
+            <div className="flex items-center gap-3 p-3 rounded bg-secondary">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">{resetPasswordAgent.agentName}</p>
+                <p className="text-sm text-muted-foreground">{resetPasswordAgent.agentEmail}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetPasswordAgent(null)} disabled={resettingPassword}>
+              Cancel
+            </Button>
+            <Button onClick={handleResetPassword} disabled={resettingPassword}>
+              {resettingPassword ? (
+                <>
+                  <Spinner className="h-4 w-4 animate-spin mr-2" />
+                  Resetting...
+                </>
+              ) : (
+                <>
+                  <Key className="h-4 w-4 mr-2" />
+                  Reset Password
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Password Display Dialog */}
+      <Dialog open={!!newPassword} onOpenChange={(open) => !open && handleCloseNewPassword()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Warning className="h-5 w-5 text-primary" />
+              Password Reset Complete
+            </DialogTitle>
+            <DialogDescription>
+              Share these credentials with {newPassword?.name}. The password cannot be recovered later.
+            </DialogDescription>
+          </DialogHeader>
+          {newPassword && (
+            <div className="space-y-4">
+              <div className="bg-muted rounded-lg p-4 font-mono text-sm space-y-2">
+                <div>
+                  <span className="text-muted-foreground">Email: </span>
+                  <span className="font-semibold">{newPassword.email}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">New Password: </span>
+                  <span className="font-semibold">{newPassword.password}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={handleCopyNewPassword} className="gap-2">
+              {passwordCopied ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copy Credentials
+                </>
+              )}
+            </Button>
+            <Button variant="outline" onClick={handleCloseNewPassword}>
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
