@@ -86,12 +86,12 @@ const adminNavigation = [
   { name: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardText, exact: false },
 ]
 
-// Agent menu items (shown in user dropdown)
-const agentMenuItems = [
-  { name: "My Contacts", href: "/agent/contacts", icon: Users },
-  { name: "My Loans", href: "/agent/loans", icon: CurrencyCircleDollar },
-  { name: "My Payments", href: "/agent/payments", icon: Receipt },
-  { name: "My Commissions", href: "/agent/commissions", icon: Wallet },
+// Navigation items for agent portal
+const agentNavigation = [
+  { name: "My Contacts", href: "/agent/contacts", icon: Users, exact: false },
+  { name: "My Loans", href: "/agent/loans", icon: CurrencyCircleDollar, exact: false },
+  { name: "My Payments", href: "/agent/payments", icon: Receipt, exact: false },
+  { name: "My Commissions", href: "/agent/commissions", icon: Wallet, exact: false },
 ]
 
 function DashboardLayout() {
@@ -115,15 +115,19 @@ function DashboardLayout() {
     !agentPermissions.canRecordPayments || !agentPermissions.canCreateLoans
   )
 
-  // Show admin nav when on admin routes, lender nav otherwise
+  // Show portal-specific nav based on current route
   const navigation = isOnAdminPortal && isAdmin
     ? adminNavigation
-    : isLender
-      ? lenderNavigation
-      : []
+    : isOnAgentPortal && isAgent
+      ? agentNavigation
+      : isLender
+        ? lenderNavigation
+        : []
   const homeLink = isOnAdminPortal && isAdmin
     ? "/admin"
-    : isLender ? "/dashboard" : isAgent ? "/agent" : isAdmin ? "/admin" : "/dashboard"
+    : isOnAgentPortal && isAgent
+      ? "/agent"
+      : isLender ? "/dashboard" : isAgent ? "/agent" : isAdmin ? "/admin" : "/dashboard"
 
   const handleSignOut = async () => {
     await signOut()
@@ -212,25 +216,31 @@ function DashboardLayout() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  {isAgent && (
+                  {isAgent && !isOnAgentPortal && (
                     <>
-                      <div className="px-2 py-1.5">
-                        <p className="text-xs font-medium text-muted-foreground">Agent Portal</p>
-                      </div>
-                      {agentMenuItems.map((item) => (
-                        <DropdownMenuItem
-                          key={item.href}
-                          onClick={() => navigate({ to: item.href })}
-                          className="flex items-center cursor-pointer"
-                        >
-                          <item.icon className="h-4 w-4 mr-2" />
-                          <span>{item.name}</span>
-                        </DropdownMenuItem>
-                      ))}
+                      <DropdownMenuItem
+                        onClick={() => navigate({ to: "/agent" })}
+                        className="flex items-center cursor-pointer"
+                      >
+                        <UsersThree className="h-4 w-4 mr-2" />
+                        <span>Agent Portal</span>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  {isLender && !isOnAdminPortal && (
+                  {isAgent && isOnAgentPortal && (isLender || isAdmin) && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => navigate({ to: isLender ? "/dashboard" : "/admin" })}
+                        className="flex items-center cursor-pointer"
+                      >
+                        <House className="h-4 w-4 mr-2" />
+                        <span>{isLender ? "Back to Dashboard" : "Back to Admin"}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {isLender && !isOnAdminPortal && !isOnAgentPortal && (
                     <div className="md:hidden">
                       <div className="px-2 py-1.5">
                         <p className="text-xs font-medium text-muted-foreground">Navigation</p>
@@ -254,6 +264,24 @@ function DashboardLayout() {
                         <p className="text-xs font-medium text-muted-foreground">Navigation</p>
                       </div>
                       {adminNavigation.map((item) => (
+                        <DropdownMenuItem
+                          key={item.href}
+                          onClick={() => navigate({ to: item.href })}
+                          className="flex items-center cursor-pointer"
+                        >
+                          <item.icon className="h-4 w-4 mr-2" />
+                          <span>{item.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                    </div>
+                  )}
+                  {isAgent && isOnAgentPortal && (
+                    <div className="md:hidden">
+                      <div className="px-2 py-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Navigation</p>
+                      </div>
+                      {agentNavigation.map((item) => (
                         <DropdownMenuItem
                           key={item.href}
                           onClick={() => navigate({ to: item.href })}
