@@ -5,6 +5,8 @@ import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
 
+import { type CustomClauses, DEFAULT_CLAUSES, type ClauseKey } from "@/lib/constants/promissory-clauses"
+
 // Validation schemas
 const createLoanSchema = z.object({
   contactId: z.string().min(1, "Contact is required"),
@@ -134,6 +136,7 @@ export const getLoan = createServerFn()
       // Include viewer context for UI permissions
       isLender,
       canRecordPayments,
+      customClauses: result.customClauses,
     }
   }
 )
@@ -506,6 +509,63 @@ export const deleteLoan = createServerFn()
     return { success: true }
   }
 )
+
+// ============================================================================
+// Custom Clauses
+// ============================================================================
+
+const customClausesSchema = z.object({
+  loanId: z.string(),
+  customClauses: z.record(
+    z.enum(["default", "acceleration", "attorneysFees", "waiver", "venue"]),
+    z.object({ en: z.string(), fil: z.string() })
+  ),
+})
+
+export const updateLoanClauses = createServerFn()
+  .inputValidator(customClausesSchema)
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+    })
+
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    // Strip clauses that match default text
+    const cleaned: CustomClauses = {}
+    for (const [key, value] of Object.entries(data.customClauses)) {
+      const clauseKey = key as ClauseKey
+      const defaultText = DEFAULT_CLAUSES[clauseKey]
+      if (
+        value &&
+        (value.en.trim() !== defaultText.en.trim() ||
+          value.fil.trim() !== defaultText.fil.trim())
+      ) {
+        cleaned[clauseKey] = value
+      }
+    }
+
+    const jsonValue = Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : null
+
+    await db
+      .update(loans)
+      .set({
+        customClauses: jsonValue,
+        updatedAt: new Date(),
+      })
+      .where(eq(loans.id, data.loanId))
+
+    log("loan.updateClauses", "loan", data.loanId, {
+      clausesCustomized: Object.keys(cleaned),
+    })
+
+    return { success: true }
+  })
 
 // ============================================================================
 // Agent Loan Creation Functions
