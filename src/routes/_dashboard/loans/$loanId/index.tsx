@@ -44,6 +44,8 @@ import {
   FileText,
   CheckCircle,
   X,
+  Scroll,
+  ArrowSquareOut,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -284,15 +286,6 @@ function LoanDetailPage() {
             </div>
             {loan.isLender && (
               <div className="flex gap-2">
-                <Link
-                  to="/loans/$loanId/disclosure"
-                  params={{ loanId: loan.id }}
-                >
-                  <Button variant="outline" className="gap-2">
-                    <FileText className="h-4 w-4" weight="bold" />
-                    Disclosure Statement
-                  </Button>
-                </Link>
                 <Button
                   variant="outline"
                   onClick={() => setShowDeleteDialog(true)}
@@ -696,6 +689,55 @@ function LoanDetailPage() {
                   )}
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Documents */}
+      {loan.isLender && (
+        <Card className="shadow-sm">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle>Documents</CardTitle>
+            <CardDescription>
+              Generate and download loan documents
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Link
+                to="/loans/$loanId/disclosure"
+                params={{ loanId: loan.id }}
+                className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                  <FileText className="h-5 w-5 text-blue-600" weight="bold" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">Disclosure Statement</p>
+                  <p className="text-sm text-muted-foreground">
+                    Truth in Lending disclosure
+                  </p>
+                </div>
+                <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </Link>
+
+              <Link
+                to="/loans/$loanId/promissory-note"
+                params={{ loanId: loan.id }}
+                className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                  <Scroll className="h-5 w-5 text-amber-600" weight="bold" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">Promissory Note</p>
+                  <p className="text-sm text-muted-foreground">
+                    Borrower's promise to pay
+                  </p>
+                </div>
+                <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </Link>
             </div>
           </CardContent>
         </Card>

@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run check-types:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm view:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(npm ls:*)",
+      "Bash(node -e:*)",
+      "WebFetch(domain:base-ui.com)",
+      "Bash(grep:*)",
+      "Bash(npm run checktypes:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "WebSearch",
+      "Bash(wc:*)",
+      "Bash(npx drizzle-kit:*)",
+      "WebFetch(domain:www.answeroverflow.com)",
+      "Bash(gh search issues:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:vite.dev)",
+      "Bash(yes:*)",
+      "WebFetch(domain:orm.drizzle.team)",
+      "WebFetch(domain:budivoogt.com)",
+      "WebFetch(domain:gist.github.com)",
+      "Bash(npx tsx:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
