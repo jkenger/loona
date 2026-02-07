@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { SkeletonStatsPage } from '@/components/ui/skeleton'
 import { format } from 'date-fns'
 import { getAgentDashboard } from '@/server/agents'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,6 +25,7 @@ export const Route = createFileRoute('/_dashboard/agent/commissions')({
     const dashboard = await getAgentDashboard()
     return { dashboard, unauthorized: false }
   },
+  pendingComponent: SkeletonStatsPage,
   component: AgentCommissionsPage,
 })
 

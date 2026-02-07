@@ -1,10 +1,12 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, user, session, contacts, loans, auditLogs } from "@/lib/db"
+import { db, user, account, session, contacts, loans, auditLogs } from "@/lib/db"
 import { eq, sql, ilike, or, and, gte, gt, desc, count } from "drizzle-orm"
 import { requireAdmin } from "./session"
 import { logAudit } from "./audit"
 import { z } from "zod"
 import { ROLES } from "@/lib/constants/roles"
+import { randomBytes } from "crypto"
+import { hashPassword } from "better-auth/crypto"
 
 // Compliance thresholds (Philippine regulations)
 const SEC_MONTHLY_RATE_CAP = 6 // SEC MC 19-2019: 6% monthly nominal cap
@@ -266,6 +268,80 @@ export const adminSetRole = createServerFn()
     })
 
     return { success: true }
+  })
+
+// ============================================================================
+// Create User
+// ============================================================================
+
+function generatePassword(): string {
+  return randomBytes(12).toString("base64url")
+}
+
+export const adminCreateUser = createServerFn()
+  .inputValidator(
+    z.object({
+      name: z.string().min(1, "Name is required"),
+      email: z.string().email("Invalid email"),
+      role: z.string().min(1, "At least one role is required"),
+    })
+  )
+  .handler(async ({ data }) => {
+    const adminSession = await requireAdmin()
+
+    // Validate role segments
+    const roleSegments = data.role.split(",").map((r) => r.trim())
+    for (const segment of roleSegments) {
+      if (!KNOWN_ROLES.includes(segment as any)) {
+        throw new Error(`Unknown role: ${segment}`)
+      }
+    }
+
+    // Check if email already exists
+    const [existing] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, data.email))
+      .limit(1)
+    if (existing) {
+      throw new Error("A user with this email already exists")
+    }
+
+    const password = generatePassword()
+    const hashedPassword = await hashPassword(password)
+    const userId = randomBytes(16).toString("hex")
+
+    // Insert user and account directly to avoid session creation
+    await db.insert(user).values({
+      id: userId,
+      name: data.name,
+      email: data.email,
+      emailVerified: true,
+      role: data.role,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    await db.insert(account).values({
+      id: randomBytes(16).toString("hex"),
+      accountId: userId,
+      providerId: "credential",
+      userId,
+      password: hashedPassword,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    await logAudit({
+      userId: adminSession.user.id,
+      userEmail: adminSession.user.email,
+      action: "admin.create_user",
+      entityType: "user",
+      entityId: userId,
+      metadata: { name: data.name, email: data.email, role: data.role },
+    })
+
+    return { password }
   })
 
 // ============================================================================

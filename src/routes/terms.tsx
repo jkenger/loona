@@ -10,12 +10,10 @@ function TermsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <Link to="/login">
-          <Button variant="ghost" size="sm" className="mb-6 -ml-2 gap-1">
-            <CaretLeft className="h-4 w-4" />
-            Back
-          </Button>
-        </Link>
+        <Button variant="ghost" size="sm" className="mb-6 -ml-2 gap-1" onClick={() => window.history.back()}>
+          <CaretLeft className="h-4 w-4" />
+          Back
+        </Button>
 
         <article className="prose prose-neutral dark:prose-invert max-w-none">
           <h1>Terms of Service</h1>

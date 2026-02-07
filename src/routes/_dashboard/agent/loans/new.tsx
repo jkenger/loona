@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter, Link } from "@tanstack/react-router"
+import { SkeletonFormPage } from "@/components/ui/skeleton"
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
@@ -79,6 +80,7 @@ export const Route = createFileRoute("/_dashboard/agent/loans/new")({
 
     return { contacts, permissions, unauthorized: false }
   },
+  pendingComponent: SkeletonFormPage,
   component: AgentNewLoanWizard,
 })
 

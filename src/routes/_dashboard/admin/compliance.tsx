@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { SkeletonStatsPage } from "@/components/ui/skeleton"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { StatCard } from "@/components/ui/stat-card"
 import { PageHeader, PageContent } from "@/components/ui/page-header"
@@ -138,6 +139,7 @@ export const Route = createFileRoute("/_dashboard/admin/compliance")({
     const stats = await getComplianceStats()
     return { stats, unauthorized: false }
   },
+  pendingComponent: SkeletonStatsPage,
   component: ComplianceDashboard,
 })
 
@@ -184,14 +186,13 @@ function ComplianceDashboard() {
             value={`${complianceRate}%`}
             icon={<ShieldCheck className="h-5 w-5" weight="bold" />}
             description="Loans within safe interest rates"
-            trend={parseFloat(complianceRate) >= 80 ? "up" : "down"}
           />
           <StatCard
             label="Above SEC Cap"
             value={stats.interestRates.aboveSECCap}
             icon={<ShieldWarning className="h-5 w-5" weight="bold" />}
             description={`>${stats.thresholds.secMonthlyCap}% monthly rate`}
-            trend={stats.interestRates.aboveSECCap === 0 ? "up" : "down"}
+            destructive={stats.interestRates.aboveSECCap > 0}
           />
           <StatCard
             label="Court Concern Zone"
@@ -204,7 +205,6 @@ function ComplianceDashboard() {
             value={stats.interestRates.compliant}
             icon={<CheckCircle className="h-5 w-5" weight="bold" />}
             description={`≤${stats.thresholds.courtConcern}% monthly rate`}
-            trend="up"
           />
         </div>
 

@@ -5,6 +5,7 @@ import { signOut } from "@/lib/auth-client"
 import { RouteProgress } from "@/components/ui/route-progress"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { useTheme } from "@/lib/theme"
+import { LoonaBrand } from "@/components/ui/loona-brand"
 import {
   House,
   Users,
@@ -133,7 +134,7 @@ function DashboardLayout() {
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link to={homeLink} className="flex items-center">
-              <span className="text-xl font-bold text-white">Loona</span>
+              <LoonaBrand size="sm" variant="white" animated={false} />
             </Link>
 
             {/* Desktop Navigation */}
@@ -214,6 +215,42 @@ function DashboardLayout() {
                       ))}
                       <DropdownMenuSeparator />
                     </>
+                  )}
+                  {isLender && !isOnAdminPortal && (
+                    <div className="md:hidden">
+                      <div className="px-2 py-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Navigation</p>
+                      </div>
+                      {lenderNavigation.map((item) => (
+                        <DropdownMenuItem
+                          key={item.href}
+                          onClick={() => navigate({ to: item.href })}
+                          className="flex items-center cursor-pointer"
+                        >
+                          <item.icon className="h-4 w-4 mr-2" />
+                          <span>{item.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                    </div>
+                  )}
+                  {isAdmin && isOnAdminPortal && (
+                    <div className="md:hidden">
+                      <div className="px-2 py-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Navigation</p>
+                      </div>
+                      {adminNavigation.map((item) => (
+                        <DropdownMenuItem
+                          key={item.href}
+                          onClick={() => navigate({ to: item.href })}
+                          className="flex items-center cursor-pointer"
+                        >
+                          <item.icon className="h-4 w-4 mr-2" />
+                          <span>{item.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                    </div>
                   )}
                   <DropdownMenuItem
                     onClick={() => navigate({ to: "/settings" })}

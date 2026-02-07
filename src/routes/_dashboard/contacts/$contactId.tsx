@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import {
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
       return { contact: null, unauthorized: false }
     }
   },
+  pendingComponent: SkeletonDetailPage,
   component: ContactDetailPage,
 })
 

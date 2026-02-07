@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { useRef, useState } from "react"
 import { getLoan } from "@/server/loans"
 import { Button } from "@/components/ui/button"
+import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/_dashboard/loans/$loanId/disclosure")({
       return { loan: null, unauthorized: false, lenderName: null }
     }
   },
+  pendingComponent: SkeletonDetailPage,
   component: DisclosurePage,
 })
 

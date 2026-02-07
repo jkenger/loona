@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { SkeletonStatsPage } from "@/components/ui/skeleton"
 import { format } from "date-fns"
 import { getAgentDashboard, getAgentUpcomingPayments } from "@/server/agents"
 import { getAgentLoanCreationPermission } from "@/server/loans"
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/_dashboard/agent/")({
     ])
     return { dashboard, upcoming, canCreateLoans: loanPermissions.length > 0, unauthorized: false }
   },
+  pendingComponent: SkeletonStatsPage,
   component: AgentDashboardPage,
 })
 

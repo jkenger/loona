@@ -13,6 +13,7 @@ import { createAuditLogger } from './audit'
 import { z } from 'zod'
 import { ROLES } from '@/lib/constants/roles'
 import { sendEmail, agentInviteEmail } from '@/lib/email'
+import { randomBytes } from 'crypto'
 
 // ============================================================================
 // Agent Management Service (Lender-facing)
@@ -26,14 +27,9 @@ const createAgentSchema = z.object({
   commissionRate: z.number().min(0).max(100).default(5),
 })
 
-// Generate a random password
-function generatePassword(length = 12): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let password = ''
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return password
+// Generate a cryptographically secure random password
+function generatePassword(): string {
+  return randomBytes(12).toString('base64url')
 }
 
 const updateAgentSchema = z.object({

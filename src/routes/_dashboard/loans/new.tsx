@@ -19,6 +19,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select"
+import { SkeletonFormPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Spinner, Calculator, User, CurrencyCircleDollar, ShieldCheck, Users } from "@phosphor-icons/react"
@@ -51,6 +52,7 @@ export const Route = createFileRoute("/_dashboard/loans/new")({
     const contacts = await getContacts()
     return { contacts, unauthorized: false }
   },
+  pendingComponent: SkeletonFormPage,
   component: NewLoanPage,
 })
 
