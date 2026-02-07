@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { getAgentContact } from "@/server/agents"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_dashboard/agent/contacts/$contactId")({
       return { contact: null, unauthorized: false }
     }
   },
+  pendingComponent: SkeletonDetailPage,
   component: AgentContactDetailPage,
 })
 

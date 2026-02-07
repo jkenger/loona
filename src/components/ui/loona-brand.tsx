@@ -6,7 +6,6 @@ interface LoonaBrandProps {
   size?: "sm" | "md" | "lg" | "xl"
   variant?: "default" | "white" | "dark" | "gradient"
   animated?: boolean
-  showMoon?: boolean
   className?: string
 }
 
@@ -15,13 +14,6 @@ const sizeClasses = {
   md: "text-2xl",
   lg: "text-3xl",
   xl: "text-4xl",
-}
-
-const moonSizeClasses = {
-  sm: "h-2 w-2",
-  md: "h-2.5 w-2.5",
-  lg: "h-3 w-3",
-  xl: "h-4 w-4",
 }
 
 const variantClasses = {
@@ -79,49 +71,17 @@ export function LoonaBrand({
   size = "lg",
   variant = "default",
   animated = true,
-  showMoon = true,
   className = ""
 }: LoonaBrandProps) {
   const letters = "Loona".split("")
 
-  // Non-animated version with moon accent
   if (!animated) {
     return (
-      <span className={`font-bold ${sizeClasses[size]} relative inline-flex items-center ${className}`}>
-        {variant === "white" ? (
-          <>
-            <span className="text-white">L</span>
-            <span className="relative">
-              {showMoon && (
-                <span className={`absolute -top-0.5 -right-1 ${moonSizeClasses[size]} rounded-full bg-primary`} />
-              )}
-              <span className="text-primary">oo</span>
-            </span>
-            <span className="text-white">na</span>
-          </>
-        ) : variant === "dark" ? (
-          <>
-            <span className="text-slate-900">L</span>
-            <span className="relative">
-              {showMoon && (
-                <span className={`absolute -top-0.5 -right-1 ${moonSizeClasses[size]} rounded-full bg-primary`} />
-              )}
-              <span className="text-primary">oo</span>
-            </span>
-            <span className="text-slate-900">na</span>
-          </>
-        ) : (
-          <span className={variantClasses[variant]}>
-            L
-            <span className="relative">
-              {showMoon && (
-                <span className={`absolute -top-0.5 -right-1 ${moonSizeClasses[size]} rounded-full bg-primary`} />
-              )}
-              oo
-            </span>
-            na
-          </span>
-        )}
+      <span
+        className={`font-bold ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+        style={{ fontFamily: "var(--font-brand)" }}
+      >
+        Loona
       </span>
     )
   }
@@ -143,37 +103,20 @@ export function LoonaBrand({
         />
       )}
 
-      {/* Animated letters with special treatment */}
-      <span className={`font-bold ${sizeClasses[size]} relative flex items-center`}>
-        {letters.map((letter, index) => {
-          // "oo" gets primary color treatment
-          const isOo = index === 1 || index === 2
-          const colorClass = variant === "white"
-            ? (isOo ? "text-primary" : "text-white")
-            : variant === "dark"
-            ? (isOo ? "text-primary" : "text-slate-900")
-            : variantClasses[variant]
-
-          return (
-            <motion.span
-              key={index}
-              variants={letterVariants}
-              className={`inline-block ${colorClass}`}
-              style={{ transformOrigin: "bottom" }}
-            >
-              {letter}
-              {/* Moon dot after second "o" */}
-              {index === 2 && showMoon && (
-                <motion.span
-                  className={`absolute -top-0.5 -right-1 ${moonSizeClasses[size]} rounded-full bg-primary`}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
-                />
-              )}
-            </motion.span>
-          )
-        })}
+      <span
+        className={`font-bold ${sizeClasses[size]} ${variantClasses[variant]} relative flex items-center`}
+        style={{ fontFamily: "var(--font-brand)" }}
+      >
+        {letters.map((letter, index) => (
+          <motion.span
+            key={index}
+            variants={letterVariants}
+            className="inline-block"
+            style={{ transformOrigin: "bottom" }}
+          >
+            {letter}
+          </motion.span>
+        ))}
       </span>
     </motion.div>
   )

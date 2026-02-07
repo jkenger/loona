@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { SkeletonDetailPage } from '@/components/ui/skeleton'
 import { getLoan } from '@/server/loans'
 import { recordPayment } from '@/server/payments'
 import { toast } from 'sonner'
@@ -66,6 +67,7 @@ export const Route = createFileRoute('/_dashboard/agent/loans/$loanId')({
       return { loan: null, unauthorized: false }
     }
   },
+  pendingComponent: SkeletonDetailPage,
   component: AgentLoanDetailPage,
 })
 

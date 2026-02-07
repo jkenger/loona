@@ -244,8 +244,9 @@ export const recordPayment = createServerFn()
   }
 })
 
-// Update overdue payments (can be called by cron)
+// Update overdue payments (can be called by cron or dashboard load)
 export const updateOverduePayments = createServerFn().handler(async () => {
+  await requireAuth()
   const now = new Date()
 
   await db

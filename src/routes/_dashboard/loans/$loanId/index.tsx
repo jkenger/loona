@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { Checkbox } from "@/components/ui/checkbox"
 import { hasRole, ROLES } from "@/lib/constants/roles"
@@ -75,6 +76,7 @@ export const Route = createFileRoute("/_dashboard/loans/$loanId/")({
       return { loan: null, agents: [], unauthorized: false }
     }
   },
+  pendingComponent: SkeletonDetailPage,
   component: LoanDetailPage,
 })
 

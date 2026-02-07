@@ -31,8 +31,10 @@ import {
   EyeSlash,
   PencilSimple,
 } from "@phosphor-icons/react"
+import { SkeletonFormPage } from "@/components/ui/skeleton"
 
 export const Route = createFileRoute("/_dashboard/settings/")({
+  pendingComponent: SkeletonFormPage,
   component: SettingsPage,
 })
 

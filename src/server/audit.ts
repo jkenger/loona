@@ -32,6 +32,7 @@ type AuditAction =
   | "admin.ban_user"
   | "admin.unban_user"
   | "admin.set_role"
+  | "admin.create_user"
 
 type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "user"
 

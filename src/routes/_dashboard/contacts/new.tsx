@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PhoneInput } from "@/components/ui/phone-input"
+import { SkeletonFormPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Spinner, User, Envelope, MapPin, FacebookLogo } from "@phosphor-icons/react"
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/_dashboard/contacts/new")({
     const { session } = context as { session: { user: { role: string | null } } }
     return { unauthorized: !hasRole(session.user.role, ROLES.LENDER) }
   },
+  pendingComponent: SkeletonFormPage,
   component: NewContactPage,
 })
 

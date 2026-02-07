@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { SkeletonStatsPage } from "@/components/ui/skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatCard } from "@/components/ui/stat-card"
 import { PageHeader, PageContent } from "@/components/ui/page-header"
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/_dashboard/admin/")({
     const stats = await getAdminStats()
     return { stats, unauthorized: false }
   },
+  pendingComponent: SkeletonStatsPage,
   component: AdminDashboard,
 })
 

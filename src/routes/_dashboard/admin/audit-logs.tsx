@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { SkeletonTablePage } from "@/components/ui/skeleton"
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/_dashboard/admin/audit-logs")({
     const data = await getAuditLogs({ data: { limit: 20, offset: 0 } })
     return { data, unauthorized: false }
   },
+  pendingComponent: SkeletonTablePage,
   component: AuditLogsPage,
 })
 

@@ -43,6 +43,13 @@
       "when": 1770299754366,
       "tag": "0005_pale_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770420818272,
+      "tag": "0006_wooden_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }

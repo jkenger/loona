@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { SkeletonTablePage } from "@/components/ui/skeleton"
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -42,13 +43,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { hasRole, ROLES } from "@/lib/constants/roles"
-import { listUsers, adminBanUser, adminUnbanUser, adminSetRole } from "@/server/admin"
+import { listUsers, adminBanUser, adminUnbanUser, adminSetRole, adminCreateUser } from "@/server/admin"
 import {
   MagnifyingGlass,
   DotsThree,
   Prohibit,
   CheckCircle,
   UserGear,
+  UserPlus,
   CaretLeft,
   CaretRight,
 } from "@phosphor-icons/react"
@@ -65,6 +67,7 @@ export const Route = createFileRoute("/_dashboard/admin/users")({
     const data = await listUsers({ data: { limit: 20, offset: 0 } })
     return { data, unauthorized: false, currentUserId: session.user.id }
   },
+  pendingComponent: SkeletonTablePage,
   component: UsersPage,
 })
 
@@ -97,6 +100,20 @@ function UsersPage() {
     agent: false,
     admin: false,
   })
+
+  // Create user dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [createName, setCreateName] = useState("")
+  const [createEmail, setCreateEmail] = useState("")
+  const [createRoles, setCreateRoles] = useState<Record<string, boolean>>({
+    lender: false,
+    agent: false,
+    admin: false,
+  })
+  const [createError, setCreateError] = useState("")
+  const [createLoading, setCreateLoading] = useState(false)
+  const [generatedPassword, setGeneratedPassword] = useState("")
+  const [copied, setCopied] = useState(false)
 
   if (unauthorized) {
     return (
@@ -179,6 +196,29 @@ function UsersPage() {
     router.invalidate()
   }
 
+  const handleCreateUser = async () => {
+    setCreateError("")
+    setCreateLoading(true)
+    try {
+      const role = Object.entries(createRoles)
+        .filter(([, v]) => v)
+        .map(([k]) => k)
+        .join(",")
+
+      const result = await adminCreateUser({
+        data: { name: createName, email: createEmail, role },
+      })
+
+      setGeneratedPassword(result.password)
+      fetchUsers(0)
+      router.invalidate()
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create user")
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
   const showingFrom = total === 0 ? 0 : offset + 1
   const showingTo = Math.min(offset + limit, total)
 
@@ -217,6 +257,20 @@ function UsersPage() {
                 </SelectContent>
               </Select>
               <Button onClick={handleSearch}>Search</Button>
+              <Button
+                onClick={() => {
+                  setCreateName("")
+                  setCreateEmail("")
+                  setCreateRoles({ lender: false, agent: false, admin: false })
+                  setCreateError("")
+                  setGeneratedPassword("")
+                  setCopied(false)
+                  setCreateDialogOpen(true)
+                }}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Create User
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -421,6 +475,126 @@ function UsersPage() {
               Save Roles
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          {generatedPassword ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>User Created</DialogTitle>
+                <DialogDescription>
+                  Share these credentials with the new user. The password will not be shown again.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Email</Label>
+                  <p className="text-sm font-medium">{createEmail}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Password</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded bg-muted px-3 py-2 text-sm font-mono">
+                      {generatedPassword}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedPassword)
+                        setCopied(true)
+                      }}
+                    >
+                      {copied ? "Copied!" : "Copy"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => {
+                  setCreateDialogOpen(false)
+                  setGeneratedPassword("")
+                }}>
+                  Done
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Create User</DialogTitle>
+                <DialogDescription>
+                  Add a new user to the platform. A password will be auto-generated.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="create-name">Name</Label>
+                  <Input
+                    id="create-name"
+                    placeholder="Full name"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-email">Email</Label>
+                  <Input
+                    id="create-email"
+                    type="email"
+                    placeholder="email@example.com"
+                    value={createEmail}
+                    onChange={(e) => setCreateEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Roles</Label>
+                  <div className="space-y-3">
+                    {(["lender", "agent", "admin"] as const).map((role) => (
+                      <label key={role} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={createRoles[role]}
+                          onCheckedChange={(checked) =>
+                            setCreateRoles((prev) => ({
+                              ...prev,
+                              [role]: !!checked,
+                            }))
+                          }
+                        />
+                        <span className="text-sm capitalize">{role}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {createError && (
+                  <p className="text-sm text-destructive">{createError}</p>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setCreateDialogOpen(false)}
+                  disabled={createLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateUser}
+                  disabled={
+                    createLoading ||
+                    !createName.trim() ||
+                    !createEmail.trim() ||
+                    !Object.values(createRoles).some(Boolean)
+                  }
+                >
+                  {createLoading ? "Creating..." : "Create User"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

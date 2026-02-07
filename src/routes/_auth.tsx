@@ -109,7 +109,9 @@ function AuthLayout() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <LoonaBrand size="xl" variant="white" animated />
+          <Link to="/">
+            <LoonaBrand size="xl" variant="white" animated />
+          </Link>
           <AnimatedTagline
             text="Loan Management Made Simple"
             className="text-primary-foreground/70 mt-2"
@@ -144,18 +146,7 @@ function AuthLayout() {
                 whileHover="hover"
                 custom={index}
               >
-                <motion.div
-                  initial={{ rotate: -10, scale: 0 }}
-                  animate={{ rotate: 0, scale: 1 }}
-                  transition={{
-                    type: "spring",
-                    delay: 0.8 + index * 0.1,
-                    damping: 10,
-                    stiffness: 200,
-                  }}
-                >
-                  <feature.icon className="h-6 w-6 text-white mb-2" weight="duotone" />
-                </motion.div>
+                <feature.icon className="h-6 w-6 text-white mb-2" weight="duotone" />
                 <h3 className="font-medium text-white text-sm">{feature.title}</h3>
                 <p className="text-primary-foreground/60 text-xs mt-1">{feature.description}</p>
               </motion.div>

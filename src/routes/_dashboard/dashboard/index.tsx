@@ -8,7 +8,11 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
 import { SkeletonDashboard } from '@/components/ui/skeleton'
@@ -28,6 +32,10 @@ import {
   CheckCircle,
   Bell,
   ArrowRight,
+  X,
+  Rocket,
+  UserPlus,
+  Coins,
 } from '@phosphor-icons/react'
 import {
   format,
@@ -77,6 +85,34 @@ function DashboardPage() {
     overdueAmount: stats?.overdueAmount ?? 0,
   })
   const [isLoading, setIsLoading] = useState(false)
+
+  // Onboarding checklist state
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(ONBOARDING_DISMISSED_KEY) === 'true'
+  })
+  const [onboardingForceOpen, setOnboardingForceOpen] = useState(false)
+
+  const allStepsComplete =
+    stats !== null &&
+    stats.totalContacts > 0 &&
+    stats.totalLoans > 0 &&
+    parseFloat(String(stats.totalCollected)) > 0
+
+  const showOnboarding =
+    onboardingForceOpen || (!onboardingDismissed && !allStepsComplete)
+
+  const dismissOnboarding = () => {
+    setOnboardingDismissed(true)
+    setOnboardingForceOpen(false)
+    localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true')
+  }
+
+  const reopenOnboarding = () => {
+    setOnboardingDismissed(false)
+    setOnboardingForceOpen(true)
+    localStorage.removeItem(ONBOARDING_DISMISSED_KEY)
+  }
 
   if (unauthorized || !stats) {
     return (
@@ -134,21 +170,46 @@ function DashboardPage() {
                 Track your collections and portfolio
               </p>
             </div>
-            <Link to="/loans/new-wizard">
-              <Button
-                size="lg"
-                className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-200 hover:scale-[1.02] font-semibold px-6"
-              >
-                <CurrencyCircleDollar className="h-5 w-5" weight="bold" />
-                Issue a Loan
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              {!showOnboarding && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 border-blue-300/30 hover:bg-blue-800/40 hover:text-white font-medium"
+                  onClick={reopenOnboarding}
+                >
+                  <Rocket className="h-4 w-4" weight="bold" />
+                  Getting Started
+                </Button>
+              )}
+              <Link to="/loans/new-wizard">
+                <Button
+                  size="lg"
+                  className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-200 hover:scale-[1.02] font-semibold px-6"
+                >
+                  <CurrencyCircleDollar className="h-5 w-5" weight="bold" />
+                  Issue a Loan
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content - overlaps header */}
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+        {/* Getting Started Checklist */}
+        {showOnboarding && (
+          <GettingStartedCard
+            stats={{
+              totalContacts: stats.totalContacts,
+              totalLoans: stats.totalLoans,
+              collectedThisMonth: stats.totalCollected,
+            }}
+            onDismiss={dismissOnboarding}
+          />
+        )}
+
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="shadow-sm">
@@ -426,14 +487,22 @@ function DashboardPage() {
               {/* Commission Impact */}
               {parseFloat(stats.totalCommissions) > 0 && (
                 <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-muted-foreground mb-3">Commission Impact</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-3">
+                    Commission Impact
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-3">
                     <div className="space-y-1 p-4 rounded bg-secondary">
-                      <p className="text-sm text-muted-foreground">Gross Collected</p>
-                      <p className="text-2xl font-bold">{formatCurrency(stats.totalCollected)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Gross Collected
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {formatCurrency(stats.totalCollected)}
+                      </p>
                     </div>
                     <div className="space-y-1 p-4 rounded bg-secondary">
-                      <p className="text-sm text-muted-foreground">Commissions Paid</p>
+                      <p className="text-sm text-muted-foreground">
+                        Commissions Paid
+                      </p>
                       <p className="text-2xl font-bold text-orange-500">
                         -{formatCurrency(stats.paidCommissions)}
                       </p>
@@ -444,7 +513,9 @@ function DashboardPage() {
                       )}
                     </div>
                     <div className="space-y-1 p-4 rounded bg-primary/10 border border-primary/20">
-                      <p className="text-sm text-muted-foreground">Net Collected</p>
+                      <p className="text-sm text-muted-foreground">
+                        Net Collected
+                      </p>
                       <p className="text-2xl font-bold text-primary">
                         {formatCurrency(stats.netCollected)}
                       </p>
@@ -512,6 +583,123 @@ function DashboardPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Getting Started Onboarding Checklist
+const ONBOARDING_DISMISSED_KEY = 'loona:onboarding-dismissed'
+
+function GettingStartedCard({
+  stats,
+  onDismiss,
+}: {
+  stats: {
+    totalContacts: number
+    totalLoans: number
+    collectedThisMonth: number | string
+  }
+  onDismiss: () => void
+}) {
+  const steps = [
+    {
+      label: 'Add your first contact',
+      href: '/contacts/new' as const,
+      complete: stats.totalContacts > 0,
+      icon: UserPlus,
+    },
+    {
+      label: 'Create your first loan',
+      href: '/loans/new-wizard' as const,
+      complete: stats.totalLoans > 0,
+      icon: CurrencyCircleDollar,
+    },
+    {
+      label: 'Record a payment',
+      href: '/payments' as const,
+      complete:
+        (typeof stats.collectedThisMonth === 'string'
+          ? parseFloat(stats.collectedThisMonth)
+          : stats.collectedThisMonth) > 0,
+      icon: Coins,
+    },
+  ]
+
+  const completedCount = steps.filter((s) => s.complete).length
+
+  return (
+    <Card className="shadow-sm border-primary/20 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
+      <CardHeader className="p-4 pb-2 relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Rocket className="h-4 w-4 text-primary" weight="bold" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Getting Started</CardTitle>
+              <CardDescription>
+                {completedCount} of {steps.length} complete
+              </CardDescription>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={onDismiss}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        {/* Progress bar */}
+        <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-500"
+            style={{ width: `${(completedCount / steps.length) * 100}%` }}
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="p-4 pt-2 relative">
+        <div className="grid gap-2 sm:grid-cols-3">
+          {steps.map((step) => (
+            <Link key={step.label} to={step.href} className="block">
+              <div
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-lg border transition-colors',
+                  step.complete
+                    ? 'bg-primary/5 border-primary/20'
+                    : 'hover:bg-accent hover:border-border',
+                )}
+              >
+                <div
+                  className={cn(
+                    'h-8 w-8 rounded-full flex items-center justify-center shrink-0',
+                    step.complete ? 'bg-primary/10' : 'bg-muted',
+                  )}
+                >
+                  {step.complete ? (
+                    <CheckCircle
+                      className="h-5 w-5 text-primary"
+                      weight="fill"
+                    />
+                  ) : (
+                    <step.icon className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    'text-sm font-medium',
+                    step.complete && 'text-primary',
+                  )}
+                >
+                  {step.label}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -603,7 +791,15 @@ function PaymentCalendar({
 
           return (
             <Popover key={dateKey}>
-              <PopoverTrigger openOnHover delay={100} closeDelay={100} render={<div />} className="w-full">{dayContent}</PopoverTrigger>
+              <PopoverTrigger
+                openOnHover
+                delay={100}
+                closeDelay={100}
+                render={<div />}
+                className="w-full"
+              >
+                {dayContent}
+              </PopoverTrigger>
               <PopoverContent className="w-72 p-3">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -611,13 +807,16 @@ function PaymentCalendar({
                       {format(date, 'MMMM d, yyyy')}
                     </p>
                     <Badge variant="secondary" className="text-xs">
-                      {dayData.payments.length} payment{dayData.payments.length !== 1 ? 's' : ''}
+                      {dayData.payments.length} payment
+                      {dayData.payments.length !== 1 ? 's' : ''}
                     </Badge>
                   </div>
 
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {dayData.payments.map((payment) => {
-                      const remaining = parseFloat(payment.amount) - parseFloat(payment.paidAmount)
+                      const remaining =
+                        parseFloat(payment.amount) -
+                        parseFloat(payment.paidAmount)
                       return (
                         <div
                           key={payment.id}

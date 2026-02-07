@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { SkeletonTablePage } from '@/components/ui/skeleton'
 import { format } from 'date-fns'
 import { getAgentContacts } from '@/server/agents'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ export const Route = createFileRoute('/_dashboard/agent/contacts/')({
     const contacts = await getAgentContacts()
     return { contacts, unauthorized: false }
   },
+  pendingComponent: SkeletonTablePage,
   component: AgentContactsPage,
 })
 
