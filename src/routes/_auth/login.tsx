@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { signIn } from "@/lib/auth-client"
+import { getDashboardPath } from "@/lib/constants/roles"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,7 +36,9 @@ function LoginPage() {
         return
       }
 
-      router.navigate({ to: "/dashboard" })
+      const user = result.data?.user as { role?: string } | undefined
+      const role = user?.role
+      router.navigate({ to: getDashboardPath(role) })
     } catch {
       setError("Something went wrong. Please try again.")
       setLoading(false)

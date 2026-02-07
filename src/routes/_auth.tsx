@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router"
 import { getServerSession } from "@/server/session"
+import { getDashboardPath } from "@/lib/constants/roles"
 import { ChartLineUp, ShieldCheck, Users, Lightning } from "@phosphor-icons/react"
 import { motion } from "framer-motion"
 import { LoonaBrand, AnimatedTagline, FloatingCircle } from "@/components/ui/loona-brand"
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/_auth")({
   beforeLoad: async () => {
     const session = await getServerSession()
     if (session) {
-      throw redirect({ to: "/dashboard" })
+      throw redirect({ to: getDashboardPath(session.user.role) })
     }
   },
   component: AuthLayout,

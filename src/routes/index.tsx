@@ -6,13 +6,14 @@ import { Envelope, ArrowRight, CheckCircle, Spinner, WarningCircle } from "@phos
 import { motion } from "framer-motion"
 import { LoonaBrand, AnimatedTagline, FloatingCircle } from "@/components/ui/loona-brand"
 import { getServerSession } from "@/server/session"
+import { getDashboardPath } from "@/lib/constants/roles"
 import { joinWaitlist } from "@/server/waitlist"
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
     const session = await getServerSession()
     if (session) {
-      throw redirect({ to: "/dashboard" })
+      throw redirect({ to: getDashboardPath(session.user.role) })
     }
   },
   component: LandingPage,
