@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useNavigate, useLocation } from "@tanstack/react-router"
 import { getServerSession } from "@/server/session"
+import { getOnboardingStatus } from "@/server/onboarding"
 import { getAgentPermissions } from "@/server/agent-portal"
 import { signOut } from "@/lib/auth-client"
 import { RouteProgress } from "@/components/ui/route-progress"
@@ -38,6 +39,19 @@ export const Route = createFileRoute("/_dashboard")({
     const session = await getServerSession()
     if (!session) {
       throw redirect({ to: "/login" })
+    }
+
+    // Redirect new lenders to the welcome wizard
+    // Session cookie cache (5 min TTL) may be stale after completing onboarding,
+    // so verify against DB when the cached session says not onboarded
+    if (
+      hasRole(session.user.role, ROLES.LENDER) &&
+      !session.user.hasCompletedOnboarding
+    ) {
+      const actualStatus = await getOnboardingStatus()
+      if (!actualStatus) {
+        throw redirect({ to: "/welcome" })
+      }
     }
 
     // Fetch agent permissions if user is an agent

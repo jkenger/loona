@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
@@ -44,6 +45,11 @@ import { Route as DashboardAgentLoansNewRouteImport } from './routes/_dashboard/
 import { Route as DashboardAgentLoansLoanIdRouteImport } from './routes/_dashboard/agent/loans/$loanId'
 import { Route as DashboardAgentContactsContactIdRouteImport } from './routes/_dashboard/agent/contacts/$contactId'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/welcome': typeof WelcomeRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/welcome': typeof WelcomeRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
@@ -297,6 +305,7 @@ export interface FileRoutesById {
   '/_dashboard': typeof DashboardRouteWithChildren
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/welcome': typeof WelcomeRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/'
     | '/privacy'
     | '/terms'
+    | '/welcome'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/'
     | '/privacy'
     | '/terms'
+    | '/welcome'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/_dashboard'
     | '/privacy'
     | '/terms'
+    | '/welcome'
     | '/_auth/forgot-password'
     | '/_auth/login'
     | '/_auth/reset-password'
@@ -440,11 +452,19 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  WelcomeRoute: typeof WelcomeRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -766,6 +786,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  WelcomeRoute: WelcomeRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

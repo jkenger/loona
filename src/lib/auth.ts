@@ -38,6 +38,12 @@ export const auth = betterAuth({
         defaultValue: "lender",
         input: false,
       },
+      hasCompletedOnboarding: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
     },
   },
   session: {
