@@ -1,0 +1,1 @@
+ALTER TABLE "loans" ADD COLUMN "custom_clauses" text;

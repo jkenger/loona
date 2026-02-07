@@ -179,6 +179,9 @@ export const loans = pgTable("loans", {
   maturityDate: timestamp("maturity_date"),
   completedAt: timestamp("completed_at"),
 
+  // Customizable promissory note clauses (JSON)
+  customClauses: text("custom_clauses"),
+
   // Agent tracking
   createdByAgentId: text("created_by_agent_id").references(() => agents.id),
   assignedAgentId: text("assigned_agent_id").references(() => agents.id),

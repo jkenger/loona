@@ -13,6 +13,7 @@ type AuditAction =
   | "loan.view"
   | "loan.approve"
   | "loan.reject"
+  | "loan.updateClauses"
   // Payments
   | "payment.record"
   | "payment.view"
