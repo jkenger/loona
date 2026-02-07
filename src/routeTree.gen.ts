@@ -40,6 +40,7 @@ import { Route as DashboardAdminAuditLogsRouteImport } from './routes/_dashboard
 import { Route as DashboardLoansLoanIdIndexRouteImport } from './routes/_dashboard/loans/$loanId/index'
 import { Route as DashboardAgentLoansIndexRouteImport } from './routes/_dashboard/agent/loans/index'
 import { Route as DashboardAgentContactsIndexRouteImport } from './routes/_dashboard/agent/contacts/index'
+import { Route as DashboardLoansLoanIdPromissoryNoteRouteImport } from './routes/_dashboard/loans/$loanId/promissory-note'
 import { Route as DashboardLoansLoanIdDisclosureRouteImport } from './routes/_dashboard/loans/$loanId/disclosure'
 import { Route as DashboardAgentLoansNewRouteImport } from './routes/_dashboard/agent/loans/new'
 import { Route as DashboardAgentLoansLoanIdRouteImport } from './routes/_dashboard/agent/loans/$loanId'
@@ -204,6 +205,12 @@ const DashboardAgentContactsIndexRoute =
     path: '/agent/contacts/',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardLoansLoanIdPromissoryNoteRoute =
+  DashboardLoansLoanIdPromissoryNoteRouteImport.update({
+    id: '/loans/$loanId/promissory-note',
+    path: '/loans/$loanId/promissory-note',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardLoansLoanIdDisclosureRoute =
   DashboardLoansLoanIdDisclosureRouteImport.update({
     id: '/loans/$loanId/disclosure',
@@ -259,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/agent/loans/new': typeof DashboardAgentLoansNewRoute
   '/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
+  '/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
   '/agent/contacts/': typeof DashboardAgentContactsIndexRoute
   '/agent/loans/': typeof DashboardAgentLoansIndexRoute
   '/loans/$loanId/': typeof DashboardLoansLoanIdIndexRoute
@@ -294,6 +302,7 @@ export interface FileRoutesByTo {
   '/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/agent/loans/new': typeof DashboardAgentLoansNewRoute
   '/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
+  '/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
   '/agent/contacts': typeof DashboardAgentContactsIndexRoute
   '/agent/loans': typeof DashboardAgentLoansIndexRoute
   '/loans/$loanId': typeof DashboardLoansLoanIdIndexRoute
@@ -332,6 +341,7 @@ export interface FileRoutesById {
   '/_dashboard/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/_dashboard/agent/loans/new': typeof DashboardAgentLoansNewRoute
   '/_dashboard/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
+  '/_dashboard/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
   '/_dashboard/agent/contacts/': typeof DashboardAgentContactsIndexRoute
   '/_dashboard/agent/loans/': typeof DashboardAgentLoansIndexRoute
   '/_dashboard/loans/$loanId/': typeof DashboardLoansLoanIdIndexRoute
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/agent/loans/$loanId'
     | '/agent/loans/new'
     | '/loans/$loanId/disclosure'
+    | '/loans/$loanId/promissory-note'
     | '/agent/contacts/'
     | '/agent/loans/'
     | '/loans/$loanId/'
@@ -404,6 +415,7 @@ export interface FileRouteTypes {
     | '/agent/loans/$loanId'
     | '/agent/loans/new'
     | '/loans/$loanId/disclosure'
+    | '/loans/$loanId/promissory-note'
     | '/agent/contacts'
     | '/agent/loans'
     | '/loans/$loanId'
@@ -441,6 +453,7 @@ export interface FileRouteTypes {
     | '/_dashboard/agent/loans/$loanId'
     | '/_dashboard/agent/loans/new'
     | '/_dashboard/loans/$loanId/disclosure'
+    | '/_dashboard/loans/$loanId/promissory-note'
     | '/_dashboard/agent/contacts/'
     | '/_dashboard/agent/loans/'
     | '/_dashboard/loans/$loanId/'
@@ -675,6 +688,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentContactsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/loans/$loanId/promissory-note': {
+      id: '/_dashboard/loans/$loanId/promissory-note'
+      path: '/loans/$loanId/promissory-note'
+      fullPath: '/loans/$loanId/promissory-note'
+      preLoaderRoute: typeof DashboardLoansLoanIdPromissoryNoteRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/loans/$loanId/disclosure': {
       id: '/_dashboard/loans/$loanId/disclosure'
       path: '/loans/$loanId/disclosure'
@@ -744,6 +764,7 @@ interface DashboardRouteChildren {
   DashboardAgentLoansLoanIdRoute: typeof DashboardAgentLoansLoanIdRoute
   DashboardAgentLoansNewRoute: typeof DashboardAgentLoansNewRoute
   DashboardLoansLoanIdDisclosureRoute: typeof DashboardLoansLoanIdDisclosureRoute
+  DashboardLoansLoanIdPromissoryNoteRoute: typeof DashboardLoansLoanIdPromissoryNoteRoute
   DashboardAgentContactsIndexRoute: typeof DashboardAgentContactsIndexRoute
   DashboardAgentLoansIndexRoute: typeof DashboardAgentLoansIndexRoute
   DashboardLoansLoanIdIndexRoute: typeof DashboardLoansLoanIdIndexRoute
@@ -771,6 +792,8 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAgentLoansLoanIdRoute: DashboardAgentLoansLoanIdRoute,
   DashboardAgentLoansNewRoute: DashboardAgentLoansNewRoute,
   DashboardLoansLoanIdDisclosureRoute: DashboardLoansLoanIdDisclosureRoute,
+  DashboardLoansLoanIdPromissoryNoteRoute:
+    DashboardLoansLoanIdPromissoryNoteRoute,
   DashboardAgentContactsIndexRoute: DashboardAgentContactsIndexRoute,
   DashboardAgentLoansIndexRoute: DashboardAgentLoansIndexRoute,
   DashboardLoansLoanIdIndexRoute: DashboardLoansLoanIdIndexRoute,
