@@ -40,3 +40,14 @@ export function getRoleChecks(roleString: string | null | undefined) {
     isAgent: hasRole(roleString, ROLES.AGENT),
   }
 }
+
+/**
+ * Get the default dashboard path for a user based on their role.
+ * Priority: lender > agent > admin
+ */
+export function getDashboardPath(roleString: string | null | undefined): string {
+  if (hasRole(roleString, ROLES.LENDER)) return "/dashboard"
+  if (hasRole(roleString, ROLES.AGENT)) return "/agent"
+  if (hasRole(roleString, ROLES.ADMIN)) return "/admin"
+  return "/dashboard"
+}

@@ -125,6 +125,15 @@ export const recordPayment = createServerFn()
     throw new Error("Loan is not active")
   }
 
+  // Validate schedule item exists before any writes
+  const scheduleItem = await db.query.paymentSchedule.findFirst({
+    where: eq(paymentSchedule.id, data.scheduleItemId),
+  })
+
+  if (!scheduleItem) {
+    throw new Error("Schedule item not found")
+  }
+
   // Check if user is an agent (use assigned agent record if available)
   let agentId: string | null = null
   let agentRecord = null
@@ -155,7 +164,7 @@ export const recordPayment = createServerFn()
       loanId: data.loanId,
       amount: data.amount.toFixed(2),
       method: data.method,
-      scheduleItemId: data.scheduleItemId || null,
+      scheduleItemId: data.scheduleItemId,
       recordedByAgentId: agentId,
       paidAt: paymentDate,
       notes: data.notes || null,
@@ -178,19 +187,7 @@ export const recordPayment = createServerFn()
     })
     .where(eq(loans.id, data.loanId))
 
-  // Update schedule item (required)
-  if (!data.scheduleItemId) {
-    throw new Error("Schedule item is required")
-  }
-
-  const scheduleItem = await db.query.paymentSchedule.findFirst({
-    where: eq(paymentSchedule.id, data.scheduleItemId),
-  })
-
-  if (!scheduleItem) {
-    throw new Error("Schedule item not found")
-  }
-
+  // Update schedule item
   const newPaidAmount = parseFloat(scheduleItem.paidAmount) + data.amount
   const scheduleAmount = parseFloat(scheduleItem.amount)
   const isPaid = newPaidAmount >= scheduleAmount

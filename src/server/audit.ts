@@ -64,7 +64,7 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
     })
   } catch (error) {
     // Don't throw - audit logging should never break the main operation
-    console.error("[AUDIT] Failed to log:", error, params)
+    console.error("[AUDIT] Failed to log:", error, { action: params.action, entityType: params.entityType })
   }
 }
 
