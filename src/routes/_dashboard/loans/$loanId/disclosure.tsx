@@ -77,8 +77,8 @@ function DisclosurePage() {
     return (
       <AccessDenied
         message="Only lenders can access disclosure statements."
-        homeLink="/agent"
-        homeLinkLabel="Go to Agent Portal"
+        homeLink="/dashboard"
+        homeLinkLabel="Go to Dashboard"
       />
     )
   }
@@ -156,65 +156,25 @@ function DisclosurePage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Controls Header */}
+      {/* Header — back link only */}
       <div className="bg-[hsl(215_45%_14%)] text-white py-4 sticky top-0 z-10">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <Link
-              to="/loans/$loanId"
-              params={{ loanId: loan.id }}
-              className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Loan Details
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 rounded-lg bg-white/10 p-1">
-                <button
-                  onClick={() => setLang("en")}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                    lang === "en"
-                      ? "bg-white text-slate-900"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  EN
-                </button>
-                <button
-                  onClick={() => setLang("fil")}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                    lang === "fil"
-                      ? "bg-white text-slate-900"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  FIL
-                </button>
-              </div>
-              <Button
-                onClick={handleGeneratePDF}
-                disabled={generating}
-                className="gap-2"
-              >
-                {generating ? (
-                  <>
-                    <Spinner className="h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FilePdf className="h-4 w-4" weight="bold" />
-                    Download PDF
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+          <Link
+            to="/loans/$loanId"
+            params={{ loanId: loan.id }}
+            className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Loan Details
+          </Link>
         </div>
       </div>
 
-      {/* PDF Document Preview */}
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
+      {/* Content Area — sidebar + document */}
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
+          {/* Document Preview — second on mobile, first on desktop */}
+          <div className="min-w-0 order-2 lg:order-1">
         <div
           ref={documentRef}
           className="shadow-lg rounded-lg overflow-hidden"
@@ -239,10 +199,10 @@ function DisclosurePage() {
                   color: c.textStrong,
                 }}
               >
-                Truth in Lending Disclosure Statement
+                Loan Disclosure Statement
               </h1>
               <p style={{ fontSize: "13px", color: c.muted }}>
-                Pursuant to Republic Act No. 3765 (Truth in Lending Act)
+                Full transparency of credit terms and cost of borrowing
               </p>
             </div>
 
@@ -401,6 +361,92 @@ function DisclosurePage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Key Terms & Definitions */}
+            <div className="mb-8">
+              <h2
+                className="font-semibold mb-4"
+                style={{ fontSize: "16px", color: c.textStrong }}
+              >
+                {lang === "en"
+                  ? "Key Terms & Definitions"
+                  : "Mga Kahulugan ng Terminolohiya"}
+              </h2>
+              <div
+                style={{
+                  fontSize: "12px",
+                  lineHeight: "1.7",
+                  color: c.text,
+                }}
+              >
+                {[
+                  {
+                    term: lang === "en" ? "Principal Amount" : "Principal Amount (Halagang Inutang)",
+                    desc:
+                      lang === "en"
+                        ? "The original amount of money borrowed before any interest or fees are added."
+                        : "Ang orihinal na halagang hiniram bago maidagdag ang anumang interes o bayarin.",
+                  },
+                  {
+                    term: lang === "en" ? "Finance Charges" : "Finance Charges (Singil sa Pagpapautang)",
+                    desc:
+                      lang === "en"
+                        ? "The total cost of borrowing, which includes all interest charges over the full term of the loan."
+                        : "Ang kabuuang halaga ng panghihiram, kasama ang lahat ng interes sa buong termino ng utang.",
+                  },
+                  {
+                    term: lang === "en" ? "Total Amount Financed" : "Total Amount Financed (Kabuuang Pinondohan)",
+                    desc:
+                      lang === "en"
+                        ? "The net amount of credit provided to the borrower — equal to the principal amount."
+                        : "Ang netong halaga ng credit na ibinigay sa borrower — katumbas ng principal amount.",
+                  },
+                  {
+                    term:
+                      lang === "en"
+                        ? "Nominal Interest Rate"
+                        : "Nominal Interest Rate (Buwanang Interes)",
+                    desc:
+                      lang === "en"
+                        ? `A flat rate of ${loan.interestRate}% per month applied to the full principal (${formatCurrency(principal)}) for the entire loan term — regardless of how much has already been repaid. Multiplied by 12, this gives a simple annual rate of ${(parseFloat(loan.interestRate) * 12).toFixed(1).replace(/\.0$/, "")}%. However, this does not represent the true cost of borrowing (see EIR below).`
+                        : `Isang flat rate na ${loan.interestRate}% bawat buwan na inilalapat sa buong principal (${formatCurrency(principal)}) sa buong termino ng utang — kahit magkano na ang nabayaran. Kapag ni-multiply sa 12, nagbibigay ito ng simpleng taunang rate na ${(parseFloat(loan.interestRate) * 12).toFixed(1).replace(/\.0$/, "")}%. Gayunpaman, hindi ito kumakatawan sa tunay na halaga ng panghihiram (tingnan ang EIR sa ibaba).`,
+                  },
+                  {
+                    term:
+                      lang === "en"
+                        ? "Effective Interest Rate (EIR)"
+                        : "Effective Interest Rate / EIR (Tunay na Taunang Interes)",
+                    desc:
+                      lang === "en"
+                        ? `The true annual cost of borrowing. The EIR is higher than the simple annual rate because interest is charged on the full ${formatCurrency(principal)} for all ${loan.termMonths} month${loan.termMonths !== 1 ? "s" : ""}, even though the borrower pays back ${formatCurrency(loan.paymentAmount)} each ${(frequencyLabels[loan.paymentFrequency] || loan.paymentFrequency).toLowerCase()} period — reducing what they actually owe over time. In effect, the borrower pays interest on money already returned. The EIR measures the actual rate against the outstanding balance at each payment. For this loan, the EIR is ${formatEIR(eir)}.`
+                        : `Ang tunay na taunang halaga ng panghihiram. Mas mataas ang EIR kaysa simpleng taunang rate dahil ang interes ay sinisingil sa buong ${formatCurrency(principal)} sa loob ng ${loan.termMonths} buwan, kahit na nagbabayad ang borrower ng ${formatCurrency(loan.paymentAmount)} bawat ${(frequencyLabels[loan.paymentFrequency] || loan.paymentFrequency).toLowerCase()} period — na nagpapababa sa aktwal na natitirang utang. Sa madaling salita, nagbabayad ng interes ang borrower sa perang naibayad na. Sinusukat ng EIR ang tunay na rate laban sa natitirang balanse sa bawat bayad. Para sa utang na ito, ang EIR ay ${formatEIR(eir)}.`,
+                  },
+                  {
+                    term: lang === "en" ? "Maturity Date" : "Maturity Date (Petsa ng Pagkakatapos)",
+                    desc:
+                      lang === "en"
+                        ? "The date when the last payment is due and the loan is expected to be fully repaid."
+                        : "Ang petsa ng huling bayad at inaasahang ganap na mababayaran ang utang.",
+                  },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: "8px 12px",
+                      backgroundColor: i % 2 === 0 ? c.rowAlt : c.rowEven,
+                      borderRadius: "4px",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, color: c.textStrong }}>
+                      {item.term}
+                    </span>
+                    <span style={{ color: c.muted }}> — </span>
+                    {item.desc}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Collateral Section */}
@@ -648,22 +694,20 @@ function DisclosurePage() {
               >
                 {lang === "en" ? (
                   <>
-                    I/We acknowledge receipt of this Truth in Lending Disclosure
-                    Statement and confirm that I/we have read and understood all
-                    the terms and conditions stated herein. I/We understand that
-                    the Effective Interest Rate (EIR) disclosed above represents
-                    the true cost of borrowing on an annual basis, as required
-                    by Republic Act No. 3765 (Truth in Lending Act).
+                    I/We acknowledge receipt of this Loan Disclosure Statement
+                    and confirm that I/we have read and understood all the terms
+                    and conditions stated herein, including the total cost of
+                    borrowing and the Effective Interest Rate (EIR). I/We agree
+                    to the credit terms as disclosed above.
                   </>
                 ) : (
                   <>
-                    Kinikilala ko/namin ang pagtanggap ng Truth in Lending
-                    Disclosure Statement na ito at pinapatunayan na nabasa at
-                    naunawaan ko/namin ang lahat ng mga tuntunin at kundisyon na
-                    nakasaad dito. Nauunawaan ko/namin na ang Effective Interest
-                    Rate (EIR) na inihayag sa itaas ay kumakatawan sa tunay na
-                    halaga ng paghiram sa taunang batayan, ayon sa Republic Act
-                    No. 3765 (Truth in Lending Act).
+                    Kinikilala ko/namin ang pagtanggap ng Loan Disclosure
+                    Statement na ito at pinapatunayan na nabasa at naunawaan
+                    ko/namin ang lahat ng mga tuntunin at kundisyon na nakasaad
+                    dito, kasama ang kabuuang halaga ng panghihiram at ang
+                    Effective Interest Rate (EIR). Sumasang-ayon ako/kami sa mga
+                    tuntunin ng credit na inihayag sa itaas.
                   </>
                 )}
               </p>
@@ -754,14 +798,81 @@ function DisclosurePage() {
             >
               <p>
                 {lang === "en"
-                  ? "This disclosure is made in compliance with Republic Act No. 3765 (Truth in Lending Act) and its implementing rules and regulations."
-                  : "Ang pahayag na ito ay ginawa alinsunod sa Republic Act No. 3765 (Truth in Lending Act) at mga kaugnay na panuntunan nito."}
+                  ? "This disclosure is provided for transparency and to ensure both parties fully understand the terms and cost of this loan. It is not a substitute for professional legal or financial advice."
+                  : "Ang pahayag na ito ay ibinibigay para sa transparency at upang matiyak na lubos na nauunawaan ng magkabilang panig ang mga tuntunin at halaga ng utang na ito. Hindi ito kapalit ng propesyonal na legal o pinansyal na payo."}
               </p>
               <p style={{ marginTop: "8px" }}>
                 {lang === "en"
                   ? `Document generated on ${format(new Date(), "MMMM d, yyyy 'at' h:mm a")}`
                   : `Dokumentong nabuo noong ${format(new Date(), "MMMM d, yyyy 'at' h:mm a")}`}
               </p>
+            </div>
+          </div>
+        </div>
+          </div>
+
+          {/* Sidebar Panel — first on mobile, sticky on desktop */}
+          <div className="order-1 lg:order-2 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-104px)] rounded-lg border bg-background shadow-lg overflow-hidden flex flex-col">
+            <div className="flex flex-col h-full bg-background border-l">
+              {/* Sidebar Header */}
+              <div className="p-4 border-b">
+                <h3 className="font-semibold text-sm">Document Options</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Language &amp; export
+                </p>
+              </div>
+
+              {/* Actions Section */}
+              <div className="px-4 pt-3 pb-3 space-y-3">
+                {/* Document Language Toggle */}
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                    Document Language
+                  </label>
+                  <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+                    <button
+                      onClick={() => setLang("en")}
+                      className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                        lang === "en"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      English
+                    </button>
+                    <button
+                      onClick={() => setLang("fil")}
+                      className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                        lang === "fil"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Filipino
+                    </button>
+                  </div>
+                </div>
+
+                {/* Download PDF */}
+                <Button
+                  onClick={handleGeneratePDF}
+                  disabled={generating}
+                  className="gap-2 w-full justify-center"
+                  size="sm"
+                >
+                  {generating ? (
+                    <>
+                      <Spinner className="h-3.5 w-3.5 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FilePdf className="h-3.5 w-3.5" weight="bold" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

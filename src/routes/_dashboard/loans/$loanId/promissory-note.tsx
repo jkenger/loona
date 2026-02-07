@@ -212,7 +212,7 @@ function PromissoryNotePage() {
     }
     setEditingClauses(resolved as Record<ClauseKey, ClauseText>)
     setExpandedClause("default")
-    setEditorLang("en")
+    setEditorLang(lang)
     setEditMode(true)
   }
 
@@ -870,244 +870,242 @@ function PromissoryNotePage() {
     </div>
   )
 
-  // ─── Editor Panel (side panel) ───────────────────────────────────────
-  const editorPanel = (
+  // ─── Sidebar Panel ──────────────────────────────────────────────────
+  const sidebarPanel = (
     <div className="flex flex-col h-full bg-background border-l">
-      {/* Panel Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      {/* Sidebar Header */}
+      <div className="p-4 border-b">
+        {editMode ? (
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-sm">Edit Clauses</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Clauses 3-7 &middot; Changes update the preview live
+              </p>
+            </div>
+            <button
+              onClick={handleCancelEdit}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ) : (
+          <div>
+            <h3 className="font-semibold text-sm">Document Options</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Language, export &amp; editing
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Actions Section */}
+      <div className="px-4 pt-3 pb-3 space-y-3 border-b">
+        {/* Document Language Toggle */}
         <div>
-          <h3 className="font-semibold text-sm">Edit Clauses</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Clauses 3-7 &middot; Changes update the preview live
-          </p>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
+            {editMode ? "Editor Language" : "Document Language"}
+          </label>
+          <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+            <button
+              onClick={() => {
+                setLang("en")
+                if (editMode) setEditorLang("en")
+              }}
+              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                lang === "en"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              English
+            </button>
+            <button
+              onClick={() => {
+                setLang("fil")
+                if (editMode) setEditorLang("fil")
+              }}
+              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                lang === "fil"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Filipino
+            </button>
+          </div>
         </div>
-        <button
-          onClick={handleCancelEdit}
-          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <X size={16} />
-        </button>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-2">
+          {loan.isLender && !editMode && (
+            <Button
+              onClick={handleEnterEditMode}
+              variant="outline"
+              className="gap-2 w-full justify-center"
+              size="sm"
+            >
+              <PencilSimple className="h-3.5 w-3.5" />
+              Edit Clauses
+            </Button>
+          )}
+          <Button
+            onClick={handleGeneratePDF}
+            disabled={generating || editMode}
+            className="gap-2 w-full justify-center"
+            size="sm"
+          >
+            {generating ? (
+              <>
+                <Spinner className="h-3.5 w-3.5 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FilePdf className="h-3.5 w-3.5" weight="bold" />
+                Download PDF
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      {/* Language Toggle */}
-      <div className="px-4 pt-3 pb-2">
-        <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-          <button
-            onClick={() => setEditorLang("en")}
-            className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              editorLang === "en"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            English
-          </button>
-          <button
-            onClick={() => setEditorLang("fil")}
-            className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              editorLang === "fil"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Filipino
-          </button>
-        </div>
-      </div>
+      {/* Clause Editor (edit mode only) */}
+      {editMode && (
+        <>
+          {/* Clause Accordion */}
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <div className="space-y-2 pt-3">
+              {CLAUSE_KEYS.map((key) => {
+                const isExpanded = expandedClause === key
+                const isCustomized = isClauseEdited(key)
 
-      {/* Clause Accordion */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <div className="space-y-2 pt-2">
-          {CLAUSE_KEYS.map((key) => {
-            const isExpanded = expandedClause === key
-            const isCustomized = isClauseEdited(key)
-
-            return (
-              <div
-                key={key}
-                className={`rounded-lg border transition-colors ${
-                  isExpanded ? "border-blue-500/30 bg-blue-500/5" : "border-border"
-                }`}
-              >
-                {/* Clause Header */}
-                <button
-                  onClick={() => setExpandedClause(isExpanded ? null : key)}
-                  className="w-full flex items-center gap-2 p-3 text-left hover:bg-muted/50 transition-colors rounded-lg"
-                >
-                  <CaretDown
-                    size={14}
-                    className={`text-muted-foreground shrink-0 transition-transform ${
-                      isExpanded ? "" : "-rotate-90"
+                return (
+                  <div
+                    key={key}
+                    className={`rounded-lg border transition-colors ${
+                      isExpanded ? "border-blue-500/30 bg-blue-500/5" : "border-border"
                     }`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {CLAUSE_NUMBERS[key]}.
-                      </span>
-                      <span className="text-xs font-medium truncate">
-                        {CLAUSE_LABELS[key]}
-                      </span>
-                    </div>
-                  </div>
-                  {isCustomized ? (
-                    <Badge variant="secondary" className="text-[10px] h-4 px-1.5 shrink-0">
-                      Edited
-                    </Badge>
-                  ) : (
-                    <Check size={14} className="text-muted-foreground/40 shrink-0" />
-                  )}
-                </button>
+                  >
+                    {/* Clause Header */}
+                    <button
+                      onClick={() => setExpandedClause(isExpanded ? null : key)}
+                      className="w-full flex items-center gap-2 p-3 text-left hover:bg-muted/50 transition-colors rounded-lg"
+                    >
+                      <CaretDown
+                        size={14}
+                        className={`text-muted-foreground shrink-0 transition-transform ${
+                          isExpanded ? "" : "-rotate-90"
+                        }`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {CLAUSE_NUMBERS[key]}.
+                          </span>
+                          <span className="text-xs font-medium truncate">
+                            {CLAUSE_LABELS[key]}
+                          </span>
+                        </div>
+                      </div>
+                      {isCustomized ? (
+                        <Badge variant="secondary" className="text-[10px] h-4 px-1.5 shrink-0">
+                          Edited
+                        </Badge>
+                      ) : (
+                        <Check size={14} className="text-muted-foreground/40 shrink-0" />
+                      )}
+                    </button>
 
-                {/* Clause Editor (expanded) */}
-                {isExpanded && (
-                  <div className="px-3 pb-3 space-y-2">
-                    <Textarea
-                      value={editingClauses[key][editorLang]}
-                      onChange={(e) => handleClauseTextChange(key, editorLang, e.target.value)}
-                      className="text-xs leading-relaxed min-h-[120px] rounded-md"
-                    />
-                    {isCustomized && (
-                      <button
-                        onClick={() => handleResetClause(key)}
-                        className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <ArrowCounterClockwise size={12} />
-                        Reset to default
-                      </button>
+                    {/* Clause Editor (expanded) */}
+                    {isExpanded && (
+                      <div className="px-3 pb-3 space-y-2">
+                        <Textarea
+                          value={editingClauses[key][editorLang]}
+                          onChange={(e) => handleClauseTextChange(key, editorLang, e.target.value)}
+                          className="text-xs leading-relaxed min-h-[120px] rounded-md"
+                        />
+                        {isCustomized && (
+                          <button
+                            onClick={() => handleResetClause(key)}
+                            className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <ArrowCounterClockwise size={12} />
+                            Reset to default
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+                )
+              })}
+            </div>
+          </div>
 
-      {/* Panel Footer — Save/Cancel */}
-      <div className="border-t p-4 flex items-center gap-3">
-        <Button
-          variant="outline"
-          onClick={handleCancelEdit}
-          disabled={saving}
-          className="flex-1"
-          size="sm"
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={saving || !hasUnsavedChanges}
-          className="flex-1"
-          size="sm"
-        >
-          {saving ? (
-            <>
-              <Spinner className="h-3.5 w-3.5 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      </div>
+          {/* Panel Footer — Save/Cancel */}
+          <div className="border-t p-4 flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={handleCancelEdit}
+              disabled={saving}
+              className="flex-1"
+              size="sm"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving || !hasUnsavedChanges}
+              className="flex-1"
+              size="sm"
+            >
+              {saving ? (
+                <>
+                  <Spinner className="h-3.5 w-3.5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   )
 
   // ─── Page Layout ─────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Controls Header */}
+      {/* Header — back link only */}
       <div className="bg-[hsl(215_45%_14%)] text-white py-4 sticky top-0 z-10">
-        <div className={`mx-auto px-4 sm:px-6 lg:px-8 ${editMode ? "max-w-[1400px]" : "max-w-4xl"}`}>
-          <div className="flex items-center justify-between">
-            <Link
-              to="/loans/$loanId"
-              params={{ loanId: loan.id }}
-              className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Loan Details
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 rounded-lg bg-white/10 p-1">
-                <button
-                  onClick={() => setLang("en")}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                    lang === "en"
-                      ? "bg-white text-slate-900"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  EN
-                </button>
-                <button
-                  onClick={() => setLang("fil")}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                    lang === "fil"
-                      ? "bg-white text-slate-900"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  FIL
-                </button>
-              </div>
-              {loan.isLender && !editMode && (
-                <Button
-                  onClick={handleEnterEditMode}
-                  variant="ghost"
-                  className="gap-2 border border-white/20 text-white hover:bg-white/10 hover:text-white"
-                  size="sm"
-                >
-                  <PencilSimple className="h-3.5 w-3.5" />
-                  Edit Clauses
-                </Button>
-              )}
-              <Button
-                onClick={handleGeneratePDF}
-                disabled={generating || editMode}
-                className="gap-2"
-                size="sm"
-              >
-                {generating ? (
-                  <>
-                    <Spinner className="h-3.5 w-3.5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FilePdf className="h-3.5 w-3.5" weight="bold" />
-                    Download PDF
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+          <Link
+            to="/loans/$loanId"
+            params={{ loanId: loan.id }}
+            className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Loan Details
+          </Link>
         </div>
       </div>
 
-      {/* Content Area */}
-      {editMode ? (
-        // Split layout: editor panel + document preview
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
-            {/* Document Preview — second on mobile, first on desktop */}
-            <div className="min-w-0 order-2 lg:order-1">
-              {documentPreview}
-            </div>
+      {/* Content Area — always sidebar + document */}
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+        <div className={`grid grid-cols-1 gap-6 items-start ${editMode ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-[1fr_280px]"}`}>
+          {/* Document Preview — second on mobile, first on desktop */}
+          <div className="min-w-0 order-2 lg:order-1">
+            {documentPreview}
+          </div>
 
-            {/* Editor Panel — first on mobile, sticky side panel on desktop */}
-            <div className="order-1 lg:order-2 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-104px)] rounded-lg border bg-background shadow-lg overflow-hidden flex flex-col">
-              {editorPanel}
-            </div>
+          {/* Sidebar Panel — first on mobile, sticky side panel on desktop */}
+          <div className="order-1 lg:order-2 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-104px)] rounded-lg border bg-background shadow-lg overflow-hidden flex flex-col">
+            {sidebarPanel}
           </div>
         </div>
-      ) : (
-        // Standard layout: document centered
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
-          {documentPreview}
-        </div>
-      )}
+      </div>
     </div>
   )
 }
