@@ -716,7 +716,7 @@ function LoanDetailPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium">Disclosure Statement</p>
                   <p className="text-sm text-muted-foreground">
-                    Truth in Lending disclosure
+                    Credit terms and cost of borrowing
                   </p>
                 </div>
                 <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
@@ -738,6 +738,7 @@ function LoanDetailPage() {
                 </div>
                 <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
               </Link>
+
             </div>
           </CardContent>
         </Card>
