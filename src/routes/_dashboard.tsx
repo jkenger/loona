@@ -108,7 +108,7 @@ function DashboardLayout() {
 
   // Detect if we're in the admin portal or agent portal
   const isOnAdminPortal = location.pathname.startsWith("/admin")
-  const isOnAgentPortal = location.pathname.startsWith("/agent")
+  const isOnAgentPortal = location.pathname === "/agent" || location.pathname.startsWith("/agent/")
 
   // Check for agent permission restrictions
   const hasAgentRestrictions = agentPermissions && (
