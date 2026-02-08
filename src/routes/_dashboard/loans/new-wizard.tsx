@@ -1,7 +1,8 @@
-import { createFileRoute, useRouter, Link } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { z } from "zod"
 import { createContactAndLoan } from "@/server/loans"
 import { getContacts } from "@/server/contacts"
 import { Button } from "@/components/ui/button"
@@ -42,6 +43,11 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  CheckCircle,
+  FileText,
+  Scroll,
+  ArrowSquareOut,
+  Plus,
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
@@ -58,9 +64,14 @@ const PURPOSE_TEMPLATES = [
   { label: "Emergency", icon: "\u{1F6A8}" },
 ]
 
-const STEP_LABELS = ["Borrower", "Loan Terms", "Review"]
+const STEP_LABELS = ["Borrower", "Loan Terms", "Review", "Done"]
+
+const searchSchema = z.object({
+  contactId: z.string().optional(),
+})
 
 export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
+  validateSearch: searchSchema,
   loader: async ({ context }) => {
     const { session } = context as {
       session: { user: { role: string | null } }
@@ -76,15 +87,18 @@ export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
 })
 
 function NewLoanWizard() {
-  const router = useRouter()
   const { contacts, unauthorized } = Route.useLoaderData()
+  const { contactId: preselectedContactId } = Route.useSearch()
 
-  const [step, setStep] = useState(1)
+  const hasPreselected = !!preselectedContactId && contacts.some((c) => c.id === preselectedContactId)
+
+  const [step, setStep] = useState(hasPreselected ? 2 : 1)
   const [loading, setLoading] = useState(false)
   const [stepError, setStepError] = useState("")
+  const [createdLoanId, setCreatedLoanId] = useState<string | null>(null)
 
   // Step 1 — Borrower
-  const [isNewContact, setIsNewContact] = useState(true)
+  const [isNewContact, setIsNewContact] = useState(!hasPreselected)
   // New borrower fields
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -94,7 +108,7 @@ function NewLoanWizard() {
   const [facebookProfile, setFacebookProfile] = useState("")
   const [contactNotes, setContactNotes] = useState("")
   // Existing borrower
-  const [contactId, setContactId] = useState("")
+  const [contactId, setContactId] = useState(preselectedContactId || "")
 
   // Step 2 — Loan Terms
   const [principal, setPrincipal] = useState("")
@@ -116,8 +130,8 @@ function NewLoanWizard() {
     return (
       <AccessDenied
         message="Only lenders can create loans."
-        homeLink="/agent"
-        homeLinkLabel="Go to Agent Portal"
+        homeLink="/dashboard"
+        homeLinkLabel="Go to Dashboard"
       />
     )
   }
@@ -267,8 +281,9 @@ function NewLoanWizard() {
           }
 
       const loan = await createContactAndLoan({ data: payload })
-      toast.success("Loan created successfully")
-      router.navigate({ to: "/loans/$loanId", params: { loanId: loan.id } })
+      setCreatedLoanId(loan.id)
+      setLoading(false)
+      setStep(4)
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to create loan"
@@ -1129,6 +1144,106 @@ function NewLoanWizard() {
                   )}
                 </Button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 — Success */}
+        {step === 4 && createdLoanId && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            <Card className="shadow-lg text-center">
+              <CardContent className="p-8 space-y-4">
+                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
+                  <CheckCircle
+                    className="h-10 w-10 text-green-600 dark:text-green-400"
+                    weight="fill"
+                  />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Loan Created</h2>
+                  <p className="text-muted-foreground mt-1">
+                    The loan for{" "}
+                    <span className="font-medium text-foreground">
+                      {borrowerDisplayName}
+                    </span>{" "}
+                    has been created with a principal of{" "}
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(parseFloat(principal) || 0)}
+                    </span>
+                    . Payment schedule has been generated.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Documents */}
+            <Card className="shadow-lg">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base">Documents Ready</CardTitle>
+                <CardDescription>
+                  The following documents have been generated for this loan
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Link
+                    to="/loans/$loanId/disclosure"
+                    params={{ loanId: createdLoanId }}
+                    className="group flex items-start gap-3 p-4 rounded-lg border hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                      <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-sm">Disclosure Statement</p>
+                        <ArrowSquareOut className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Full breakdown of credit terms and cost of borrowing
+                      </p>
+                    </div>
+                  </Link>
+                  <Link
+                    to="/loans/$loanId/promissory-note"
+                    params={{ loanId: createdLoanId }}
+                    className="group flex items-start gap-3 p-4 rounded-lg border hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                  >
+                    <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                      <Scroll className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-sm">Promissory Note</p>
+                        <ArrowSquareOut className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Formal promise-to-pay agreement with terms
+                      </p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                to="/loans/$loanId"
+                params={{ loanId: createdLoanId }}
+                className="flex-1"
+              >
+                <Button className="w-full gap-2">
+                  <CurrencyCircleDollar className="h-4 w-4" />
+                  View Loan Details
+                </Button>
+              </Link>
+              <Link to="/loans/new-wizard" className="flex-1">
+                <Button variant="outline" className="w-full gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Another Loan
+                </Button>
+              </Link>
             </div>
           </div>
         )}
