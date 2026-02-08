@@ -38,6 +38,7 @@ const updateAgentSchema = z.object({
   status: z.enum(['active', 'suspended', 'terminated']).optional(),
   canCreateLoans: z.boolean().optional(),
   canRecordPayments: z.boolean().optional(),
+  tier: z.number().int().min(1).max(10).nullable().optional(),
 })
 
 // Get all agents for current lender
@@ -51,6 +52,7 @@ export const getAgents = createServerFn().handler(async () => {
       status: agents.status,
       canCreateLoans: agents.canCreateLoans,
       canRecordPayments: agents.canRecordPayments,
+      tier: agents.tier,
       totalCollected: agents.totalCollected,
       totalCommissionEarned: agents.totalCommissionEarned,
       totalCommissionPaid: agents.totalCommissionPaid,
@@ -237,6 +239,9 @@ export const updateAgent = createServerFn()
     }
     if (updates.canRecordPayments !== undefined) {
       updateData.canRecordPayments = updates.canRecordPayments
+    }
+    if (updates.tier !== undefined) {
+      updateData.tier = updates.tier
     }
 
     const [updated] = await db

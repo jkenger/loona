@@ -1,5 +1,6 @@
-import { db, payments, paymentSchedule, loans, contacts, commissions, agents } from "@/lib/db"
+import { db, payments, paymentSchedule, loans, contacts, commissions, agents, commissionSettings } from "@/lib/db"
 import { eq, desc, and, sql, lte, ne } from "drizzle-orm"
+import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
 
 /**
  * Shared payment service functions
@@ -173,11 +174,12 @@ export interface RecordPaymentParams {
   scheduleItemId?: string
   notes?: string
   agentId?: string | null
-  agentRecord?: { commissionRate: string } | null
+  agentRecord?: { commissionRate: string; tier: number | null } | null
+  lenderId?: string
 }
 
 export async function recordPaymentCore(params: RecordPaymentParams) {
-  const { loanId, amount, method, scheduleItemId, notes, agentId, agentRecord } = params
+  const { loanId, amount, method, scheduleItemId, notes, agentId, agentRecord, lenderId } = params
 
   // Create payment record
   const [payment] = await db
@@ -241,13 +243,40 @@ export async function recordPaymentCore(params: RecordPaymentParams) {
 
   // Create commission record if recorded by agent
   if (agentId && agentRecord) {
-    const commissionAmount = amount * (parseFloat(agentRecord.commissionRate) / 100)
+    // Try tier-based commission calc
+    let commissionAmount: number
+    let effectiveRate: string
+
+    const resolvedLenderId = lenderId ?? loan?.lenderId
+    if (resolvedLenderId) {
+      const settingsRow = await db.query.commissionSettings.findFirst({
+        where: eq(commissionSettings.lenderId, resolvedLenderId),
+      })
+      const config = parseCommissionConfig(settingsRow?.config ?? null)
+      const tierConfig = agentRecord.tier !== null
+        ? config.tiers.find((t) => t.tier === agentRecord.tier)
+        : null
+
+      if (tierConfig) {
+        commissionAmount = calculateTierCommission(tierConfig, amount)
+        effectiveRate = amount > 0
+          ? ((commissionAmount / amount) * 100).toFixed(2)
+          : "0.00"
+      } else {
+        commissionAmount = amount * (parseFloat(agentRecord.commissionRate) / 100)
+        effectiveRate = agentRecord.commissionRate
+      }
+    } else {
+      // No lender context — fallback to flat rate
+      commissionAmount = amount * (parseFloat(agentRecord.commissionRate) / 100)
+      effectiveRate = agentRecord.commissionRate
+    }
 
     await db.insert(commissions).values({
       agentId,
       paymentId: payment.id,
       paymentAmount: amount.toFixed(2),
-      commissionRate: agentRecord.commissionRate,
+      commissionRate: effectiveRate,
       commissionAmount: commissionAmount.toFixed(2),
     })
 
