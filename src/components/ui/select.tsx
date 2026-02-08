@@ -69,7 +69,7 @@ function SelectContent({
         side={side}
         sideOffset={sideOffset}
         align={align}
-        className="z-50"
+        className="z-50 w-[var(--anchor-width)]"
       >
         <SelectPrimitive.Popup
           data-slot="select-content"

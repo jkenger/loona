@@ -7,11 +7,13 @@ import {
   contacts,
   commissions,
   agents,
+  commissionSettings,
 } from "@/lib/db"
 import { eq, desc, and, sql, lte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
+import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
 
 // Validation schemas
 const recordPaymentSchema = z.object({
@@ -203,14 +205,34 @@ export const recordPayment = createServerFn()
 
   // Create commission record if recorded by agent
   if (agentId && agentRecord) {
-    const commissionAmount =
-      data.amount * (parseFloat(agentRecord.commissionRate) / 100)
+    // Try tier-based commission calc
+    let commissionAmount: number
+    let effectiveRate: string
+
+    const settingsRow = await db.query.commissionSettings.findFirst({
+      where: eq(commissionSettings.lenderId, loan.lenderId),
+    })
+    const config = parseCommissionConfig(settingsRow?.config ?? null)
+    const tierConfig = agentRecord.tier !== null
+      ? config.tiers.find((t) => t.tier === agentRecord.tier)
+      : null
+
+    if (tierConfig) {
+      commissionAmount = calculateTierCommission(tierConfig, data.amount)
+      effectiveRate = data.amount > 0
+        ? ((commissionAmount / data.amount) * 100).toFixed(2)
+        : "0.00"
+    } else {
+      // Fallback to flat commission rate
+      commissionAmount = data.amount * (parseFloat(agentRecord.commissionRate) / 100)
+      effectiveRate = agentRecord.commissionRate
+    }
 
     await db.insert(commissions).values({
       agentId,
       paymentId: payment.id,
       paymentAmount: data.amount.toFixed(2),
-      commissionRate: agentRecord.commissionRate,
+      commissionRate: effectiveRate,
       commissionAmount: commissionAmount.toFixed(2),
     })
 
