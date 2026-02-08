@@ -177,7 +177,7 @@ function ContactDetailPage() {
                   <Trash className="h-4 w-4" weight="bold" />
                   Delete
                 </Button>
-                <Link to="/loans/new" search={{ contactId: contact.id }}>
+                <Link to="/loans/new-wizard" search={{ contactId: contact.id }}>
                   <Button className="gap-2">
                     <Plus className="h-4 w-4" weight="bold" />
                     New Loan
@@ -293,7 +293,7 @@ function ContactDetailPage() {
                   {contact.isLender ? "No loans yet" : "No assigned loans for this contact"}
                 </p>
                 {contact.isLender && (
-                  <Link to="/loans/new" search={{ contactId: contact.id }}>
+                  <Link to="/loans/new-wizard" search={{ contactId: contact.id }}>
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
                       Create First Loan

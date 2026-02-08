@@ -201,7 +201,7 @@ function LoansPage() {
               <h1 className="text-4xl font-bold tracking-tight">Loans</h1>
               <p className="text-blue-200/70">Manage your lending portfolio</p>
             </div>
-            <Link to="/loans/new">
+            <Link to="/loans/new-wizard">
               <Button className="gap-2">
                 <Plus className="h-4 w-4" weight="bold" />
                 New Loan
@@ -432,7 +432,7 @@ function LoansPage() {
                   : "Get started by creating your first loan"}
               </p>
               {!search && statusFilter === "all" && (
-                <Link to="/loans/new">
+                <Link to="/loans/new-wizard">
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
                     Create Loan

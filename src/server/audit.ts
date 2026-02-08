@@ -26,6 +26,7 @@ type AuditAction =
   | "agent.reset_password"
   // Commissions
   | "commission.pay"
+  | "commission.updateSettings"
   // Auth
   | "auth.login"
   | "auth.logout"
@@ -35,7 +36,7 @@ type AuditAction =
   | "admin.set_role"
   | "admin.create_user"
 
-type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "user"
+type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "commission_settings" | "user"
 
 interface AuditLogParams {
   userId: string
