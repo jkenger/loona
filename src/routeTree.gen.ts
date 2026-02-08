@@ -32,8 +32,10 @@ import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard
 import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans/new'
 import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/contacts/new'
 import { Route as DashboardContactsContactIdRouteImport } from './routes/_dashboard/contacts/$contactId'
+import { Route as DashboardAgentsCommissionSettingsRouteImport } from './routes/_dashboard/agents/commission-settings'
 import { Route as DashboardAgentPaymentsRouteImport } from './routes/_dashboard/agent/payments'
 import { Route as DashboardAgentCommissionsRouteImport } from './routes/_dashboard/agent/commissions'
+import { Route as DashboardAgentCommissionProgramRouteImport } from './routes/_dashboard/agent/commission-program'
 import { Route as DashboardAdminUsersRouteImport } from './routes/_dashboard/admin/users'
 import { Route as DashboardAdminComplianceRouteImport } from './routes/_dashboard/admin/compliance'
 import { Route as DashboardAdminAuditLogsRouteImport } from './routes/_dashboard/admin/audit-logs'
@@ -160,6 +162,12 @@ const DashboardContactsContactIdRoute =
     path: '/contacts/$contactId',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAgentsCommissionSettingsRoute =
+  DashboardAgentsCommissionSettingsRouteImport.update({
+    id: '/agents/commission-settings',
+    path: '/agents/commission-settings',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAgentPaymentsRoute = DashboardAgentPaymentsRouteImport.update({
   id: '/agent/payments',
   path: '/agent/payments',
@@ -169,6 +177,12 @@ const DashboardAgentCommissionsRoute =
   DashboardAgentCommissionsRouteImport.update({
     id: '/agent/commissions',
     path: '/agent/commissions',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAgentCommissionProgramRoute =
+  DashboardAgentCommissionProgramRouteImport.update({
+    id: '/agent/commission-program',
+    path: '/agent/commission-program',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
@@ -247,8 +261,10 @@ export interface FileRoutesByFullPath {
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/admin/compliance': typeof DashboardAdminComplianceRoute
   '/admin/users': typeof DashboardAdminUsersRoute
+  '/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/new': typeof DashboardLoansNewRoute
@@ -283,8 +299,10 @@ export interface FileRoutesByTo {
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/admin/compliance': typeof DashboardAdminComplianceRoute
   '/admin/users': typeof DashboardAdminUsersRoute
+  '/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/new': typeof DashboardLoansNewRoute
@@ -322,8 +340,10 @@ export interface FileRoutesById {
   '/_dashboard/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/_dashboard/admin/compliance': typeof DashboardAdminComplianceRoute
   '/_dashboard/admin/users': typeof DashboardAdminUsersRoute
+  '/_dashboard/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/_dashboard/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/_dashboard/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/_dashboard/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/_dashboard/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/_dashboard/contacts/new': typeof DashboardContactsNewRoute
   '/_dashboard/loans/new': typeof DashboardLoansNewRoute
@@ -360,8 +380,10 @@ export interface FileRouteTypes {
     | '/admin/audit-logs'
     | '/admin/compliance'
     | '/admin/users'
+    | '/agent/commission-program'
     | '/agent/commissions'
     | '/agent/payments'
+    | '/agents/commission-settings'
     | '/contacts/$contactId'
     | '/contacts/new'
     | '/loans/new'
@@ -396,8 +418,10 @@ export interface FileRouteTypes {
     | '/admin/audit-logs'
     | '/admin/compliance'
     | '/admin/users'
+    | '/agent/commission-program'
     | '/agent/commissions'
     | '/agent/payments'
+    | '/agents/commission-settings'
     | '/contacts/$contactId'
     | '/contacts/new'
     | '/loans/new'
@@ -434,8 +458,10 @@ export interface FileRouteTypes {
     | '/_dashboard/admin/audit-logs'
     | '/_dashboard/admin/compliance'
     | '/_dashboard/admin/users'
+    | '/_dashboard/agent/commission-program'
     | '/_dashboard/agent/commissions'
     | '/_dashboard/agent/payments'
+    | '/_dashboard/agents/commission-settings'
     | '/_dashboard/contacts/$contactId'
     | '/_dashboard/contacts/new'
     | '/_dashboard/loans/new'
@@ -632,6 +658,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardContactsContactIdRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/agents/commission-settings': {
+      id: '/_dashboard/agents/commission-settings'
+      path: '/agents/commission-settings'
+      fullPath: '/agents/commission-settings'
+      preLoaderRoute: typeof DashboardAgentsCommissionSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/agent/payments': {
       id: '/_dashboard/agent/payments'
       path: '/agent/payments'
@@ -644,6 +677,13 @@ declare module '@tanstack/react-router' {
       path: '/agent/commissions'
       fullPath: '/agent/commissions'
       preLoaderRoute: typeof DashboardAgentCommissionsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/commission-program': {
+      id: '/_dashboard/agent/commission-program'
+      path: '/agent/commission-program'
+      fullPath: '/agent/commission-program'
+      preLoaderRoute: typeof DashboardAgentCommissionProgramRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/admin/users': {
@@ -746,8 +786,10 @@ interface DashboardRouteChildren {
   DashboardAdminAuditLogsRoute: typeof DashboardAdminAuditLogsRoute
   DashboardAdminComplianceRoute: typeof DashboardAdminComplianceRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
+  DashboardAgentCommissionProgramRoute: typeof DashboardAgentCommissionProgramRoute
   DashboardAgentCommissionsRoute: typeof DashboardAgentCommissionsRoute
   DashboardAgentPaymentsRoute: typeof DashboardAgentPaymentsRoute
+  DashboardAgentsCommissionSettingsRoute: typeof DashboardAgentsCommissionSettingsRoute
   DashboardContactsContactIdRoute: typeof DashboardContactsContactIdRoute
   DashboardContactsNewRoute: typeof DashboardContactsNewRoute
   DashboardLoansNewRoute: typeof DashboardLoansNewRoute
@@ -774,8 +816,11 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminAuditLogsRoute: DashboardAdminAuditLogsRoute,
   DashboardAdminComplianceRoute: DashboardAdminComplianceRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
+  DashboardAgentCommissionProgramRoute: DashboardAgentCommissionProgramRoute,
   DashboardAgentCommissionsRoute: DashboardAgentCommissionsRoute,
   DashboardAgentPaymentsRoute: DashboardAgentPaymentsRoute,
+  DashboardAgentsCommissionSettingsRoute:
+    DashboardAgentsCommissionSettingsRoute,
   DashboardContactsContactIdRoute: DashboardContactsContactIdRoute,
   DashboardContactsNewRoute: DashboardContactsNewRoute,
   DashboardLoansNewRoute: DashboardLoansNewRoute,
