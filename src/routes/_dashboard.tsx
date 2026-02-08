@@ -88,10 +88,10 @@ const adminNavigation = [
 
 // Navigation items for agent portal
 const agentNavigation = [
-  { name: "My Contacts", href: "/agent/contacts", icon: Users, exact: false },
-  { name: "My Loans", href: "/agent/loans", icon: CurrencyCircleDollar, exact: false },
+  { name: "Home", href: "/agent", icon: House, exact: true },
   { name: "My Payments", href: "/agent/payments", icon: Receipt, exact: false },
   { name: "My Commissions", href: "/agent/commissions", icon: Wallet, exact: false },
+  { name: "Program", href: "/agent/commission-program", icon: ClipboardText, exact: false, badge: "New" },
 ]
 
 function DashboardLayout() {
@@ -165,6 +165,11 @@ function DashboardLayout() {
                   className="relative px-3 py-1.5 text-sm font-medium text-blue-200/70 hover:text-white transition-colors [&.active]:text-white after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 after:ease-out hover:after:w-full [&.active]:after:w-full"
                 >
                   {item.name}
+                  {"badge" in item && (item as { badge?: string }).badge && (
+                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none bg-primary text-primary-foreground">
+                      {(item as { badge?: string }).badge}
+                    </span>
+                  )}
                 </Link>
               ))}
             </nav>
@@ -289,6 +294,11 @@ function DashboardLayout() {
                         >
                           <item.icon className="h-4 w-4 mr-2" />
                           <span>{item.name}</span>
+                          {"badge" in item && (item as { badge?: string }).badge && (
+                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none bg-primary text-primary-foreground">
+                              {(item as { badge?: string }).badge}
+                            </span>
+                          )}
                         </DropdownMenuItem>
                       ))}
                       <DropdownMenuSeparator />

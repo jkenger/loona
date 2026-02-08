@@ -247,6 +247,8 @@ export const agents = pgTable(
     totalCommissionEarned: decimal("total_commission_earned", { precision: 12, scale: 2 }).notNull().default("0"),
     totalCommissionPaid: decimal("total_commission_paid", { precision: 12, scale: 2 }).notNull().default("0"),
 
+    tier: integer("tier"),
+
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
@@ -281,6 +283,18 @@ export const commissions = pgTable(
   ]
 )
 
+// Commission Settings (lender-wide program config)
+export const commissionSettings = pgTable("commission_settings", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" })
+    .unique(),
+  config: text("config").notNull(), // JSON blob
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
 // Audit Logs
 export const auditLogs = pgTable("audit_logs", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -313,7 +327,7 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }))
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
   accounts: many(account),
   contacts: many(contacts),
@@ -321,6 +335,7 @@ export const userRelations = relations(user, ({ many }) => ({
   agentRelationships: many(agents, { relationName: "agentUser" }),
   lenderAgents: many(agents, { relationName: "lender" }),
   auditLogs: many(auditLogs),
+  commissionSettings: one(commissionSettings),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -429,6 +444,13 @@ export const commissionsRelations = relations(commissions, ({ one }) => ({
   }),
 }))
 
+export const commissionSettingsRelations = relations(commissionSettings, ({ one }) => ({
+  lender: one(user, {
+    fields: [commissionSettings.lenderId],
+    references: [user.id],
+  }),
+}))
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -453,3 +475,6 @@ export type NewAgent = typeof agents.$inferInsert
 
 export type Commission = typeof commissions.$inferSelect
 export type NewCommission = typeof commissions.$inferInsert
+
+export type CommissionSettingsRow = typeof commissionSettings.$inferSelect
+export type NewCommissionSettingsRow = typeof commissionSettings.$inferInsert
