@@ -1,17 +1,23 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, loans, paymentSchedule, contacts, agents } from "@/lib/db"
+import { db, loans, paymentSchedule, contacts, agents, penalties, penaltySettings } from "@/lib/db"
 import { eq, desc, and, sql } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
 
 import { type CustomClauses, DEFAULT_CLAUSES, type ClauseKey } from "@/lib/constants/promissory-clauses"
+import {
+  parsePenaltyConfig,
+  getRemainingPenaltyBudget,
+  type PenaltyConfig,
+} from "@/lib/constants/penalty-defaults"
+import { ensurePendingPenalties } from "./penalty-generation"
 
 // Validation schemas
 const createLoanSchema = z.object({
   contactId: z.string().min(1, "Contact is required"),
   principal: z.number().positive("Principal must be positive"),
-  interestRate: z.number().min(0).max(100),
+  interestRate: z.number().min(0).max(15),
   termMonths: z.number().int().positive(),
   paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
   startDate: z.string().transform((s) => new Date(s)),
@@ -73,6 +79,7 @@ export const getLoan = createServerFn()
         payments: {
           orderBy: (payments, { desc }) => [desc(payments.paidAt)],
         },
+        penalties: true,
         assignedAgent: {
           with: {
             agentUser: true,
@@ -103,6 +110,71 @@ export const getLoan = createServerFn()
       canRecordPayments = agentRecord?.canRecordPayments ?? false
     }
 
+    // Load penalty data inline (only for lenders with active loans)
+    let penaltyData: {
+      config: PenaltyConfig
+      penalties: {
+        id: string
+        loanId: string
+        scheduleItemId: string
+        penaltyType: "late_fee" | "daily_interest"
+        amount: string
+        status: "pending" | "applied" | "waived"
+        appliedAt: string | null
+        waivedAt: string | null
+        decidedBy: string | null
+        notes: string | null
+        createdAt: string
+      }[]
+      totalApplied: number
+      totalPending: number
+      budgetRemaining: number
+    } | null = null
+
+    if (isLender && result.status === "active") {
+      const settingsRow = await db.query.penaltySettings.findFirst({
+        where: eq(penaltySettings.lenderId, session.user.id),
+      })
+      const config = parsePenaltyConfig(settingsRow?.config ?? null)
+
+      if (config.enabled) {
+        await ensurePendingPenalties(result, config, result.penalties)
+
+        // Re-read penalties after generation
+        const freshPenalties = await db.query.penalties.findMany({
+          where: eq(penalties.loanId, id),
+        })
+
+        const totalApplied = freshPenalties
+          .filter((p) => p.status === "applied")
+          .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+
+        const totalPending = freshPenalties
+          .filter((p) => p.status === "pending")
+          .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+
+        penaltyData = {
+          config,
+          penalties: freshPenalties.map((p) => ({
+            id: p.id,
+            loanId: p.loanId,
+            scheduleItemId: p.scheduleItemId,
+            penaltyType: p.penaltyType,
+            amount: p.amount,
+            status: p.status,
+            appliedAt: p.appliedAt?.toISOString() ?? null,
+            waivedAt: p.waivedAt?.toISOString() ?? null,
+            decidedBy: p.decidedBy,
+            notes: p.notes,
+            createdAt: p.createdAt.toISOString(),
+          })),
+          totalApplied,
+          totalPending,
+          budgetRemaining: getRemainingPenaltyBudget(config, parseFloat(result.principal), totalApplied),
+        }
+      }
+    }
+
     return {
       ...result,
       startDate: result.startDate?.toISOString() ?? null,
@@ -126,6 +198,8 @@ export const getLoan = createServerFn()
         paidAt: p.paidAt.toISOString(),
         createdAt: p.createdAt.toISOString(),
       })),
+      penalties: undefined, // don't expose raw relation, use penaltyData instead
+      penaltyData,
       assignedAgent: result.assignedAgent
         ? {
             id: result.assignedAgent.id,
@@ -334,7 +408,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     notes: z.string().optional(),
     // Loan fields
     principal: z.number().positive("Principal must be positive"),
-    interestRate: z.number().min(0).max(100),
+    interestRate: z.number().min(0).max(15),
     termMonths: z.number().int().positive(),
     paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
     startDate: z.string().transform((s) => new Date(s)),
@@ -349,7 +423,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     contactId: z.string().min(1, "Contact is required"),
     // Loan fields
     principal: z.number().positive("Principal must be positive"),
-    interestRate: z.number().min(0).max(100),
+    interestRate: z.number().min(0).max(15),
     termMonths: z.number().int().positive(),
     paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
     startDate: z.string().transform((s) => new Date(s)),
@@ -648,7 +722,7 @@ const agentLoanSchema = z.discriminatedUnion("isNewContact", [
     facebookProfile: z.string().optional(),
     notes: z.string().optional(),
     principal: z.number().positive(),
-    interestRate: z.number().min(0).max(100),
+    interestRate: z.number().min(0).max(15),
     termMonths: z.number().int().positive(),
     paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
     startDate: z.string().transform((s) => new Date(s)),
@@ -663,7 +737,7 @@ const agentLoanSchema = z.discriminatedUnion("isNewContact", [
     isNewContact: z.literal(false),
     contactId: z.string().min(1),
     principal: z.number().positive(),
-    interestRate: z.number().min(0).max(100),
+    interestRate: z.number().min(0).max(15),
     termMonths: z.number().int().positive(),
     paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
     startDate: z.string().transform((s) => new Date(s)),

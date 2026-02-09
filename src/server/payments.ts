@@ -8,12 +8,16 @@ import {
   commissions,
   agents,
   commissionSettings,
+  penaltySettings,
+  penalties,
 } from "@/lib/db"
 import { eq, desc, and, sql, lte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
 import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
+import { parsePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
+import { ensurePendingPenalties } from "./penalty-generation"
 
 // Validation schemas
 const recordPaymentSchema = z.object({
@@ -81,10 +85,47 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
     )
     .orderBy(paymentSchedule.dueDate)
 
-  return result.map((p) => ({
-    ...p,
-    dueDate: p.dueDate.toISOString(),
-  }))
+  // Load penalty config and penalties for overdue items
+  const settingsRow = await db.query.penaltySettings.findFirst({
+    where: eq(penaltySettings.lenderId, session.user.id),
+  })
+  const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
+
+  const overdueIds = result.filter((r) => r.status === "overdue").map((r) => r.id)
+  let penaltyMap: Record<string, { id: string; penaltyType: string; amount: string; status: string }[]> = {}
+
+  if (overdueIds.length > 0) {
+    const penaltyRows = await db.query.penalties.findMany({
+      where: sql`${penalties.scheduleItemId} IN ${overdueIds}`,
+    })
+    for (const p of penaltyRows) {
+      if (!penaltyMap[p.scheduleItemId]) penaltyMap[p.scheduleItemId] = []
+      penaltyMap[p.scheduleItemId].push({
+        id: p.id,
+        penaltyType: p.penaltyType,
+        amount: p.amount,
+        status: p.status,
+      })
+    }
+  }
+
+  return result.map((p) => {
+    const daysOverdue = p.status === "overdue" ? calendarDaysOverdue(p.dueDate, now) : 0
+    // How many days until late fee applies (0 = already applies, -1 = penalties disabled)
+    let penaltyIn = -1
+    if (penaltyConfig.enabled && penaltyConfig.lateFee.enabled && p.status === "overdue") {
+      const remaining = penaltyConfig.lateFee.gracePeriodDays - daysOverdue
+      penaltyIn = Math.max(0, remaining)
+    }
+
+    return {
+      ...p,
+      dueDate: p.dueDate.toISOString(),
+      penalties: penaltyMap[p.id] ?? [],
+      daysOverdue,
+      penaltyIn,
+    }
+  })
 })
 
 export const recordPayment = createServerFn()
@@ -156,6 +197,19 @@ export const recordPayment = createServerFn()
       agentId = foundAgent.id
       agentRecord = foundAgent
     }
+  }
+
+  // Check for duplicate payment (same loan, schedule item, amount within 60s)
+  const recentDuplicate = await db.query.payments.findFirst({
+    where: and(
+      eq(payments.loanId, data.loanId),
+      eq(payments.scheduleItemId, data.scheduleItemId),
+      eq(payments.amount, data.amount.toFixed(2)),
+      sql`${payments.createdAt} > NOW() - INTERVAL '60 seconds'`
+    ),
+  })
+  if (recentDuplicate) {
+    throw new Error("This payment was already recorded. Please wait before retrying.")
   }
 
   // Create payment record
@@ -276,4 +330,38 @@ export const updateOverduePayments = createServerFn().handler(async () => {
     )
 
   return { success: true }
+})
+
+/**
+ * Generate/update pending penalty records for overdue schedule items.
+ * Called on dashboard load. Creates pending records that the lender can apply or waive.
+ */
+export const generatePendingPenalties = createServerFn().handler(async () => {
+  const session = await requireAuth()
+
+  // Get lender's penalty config
+  const settingsRow = await db.query.penaltySettings.findFirst({
+    where: eq(penaltySettings.lenderId, session.user.id),
+  })
+  const config = parsePenaltyConfig(settingsRow?.config ?? null)
+
+  if (!config.enabled) return { generated: 0 }
+
+  // Get active loans with overdue schedule items
+  const activeLoans = await db.query.loans.findMany({
+    where: and(
+      eq(loans.lenderId, session.user.id),
+      eq(loans.status, "active"),
+    ),
+    with: {
+      schedule: true,
+      penalties: true,
+    },
+  })
+
+  for (const loan of activeLoans) {
+    await ensurePendingPenalties(loan, config, loan.penalties)
+  }
+
+  return { generated: 0 }
 })

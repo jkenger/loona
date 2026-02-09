@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useRef, useState, useEffect } from "react"
 import { getLoan } from "@/server/loans"
+import { getPenaltySettings } from "@/server/penalty-settings"
 import { Button } from "@/components/ui/button"
 import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
+import { formatPenaltyForDisclosure, formatDailyInterestForDisclosure, type PenaltyConfig } from "@/lib/constants/penalty-defaults"
 import { ArrowLeft, FilePdf, Spinner } from "@phosphor-icons/react"
 import { format } from "date-fns"
 
@@ -15,17 +17,25 @@ export const Route = createFileRoute("/_dashboard/loans/$loanId/disclosure")({
       session: { user: { role: string | null; name: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { loan: null, unauthorized: true, lenderName: null }
+      return { loan: null, unauthorized: true, lenderName: null, penaltyConfig: null }
     }
 
     try {
       const loan = await getLoan({ data: params.loanId })
       if (!loan.isLender) {
-        return { loan: null, unauthorized: true, lenderName: null }
+        return { loan: null, unauthorized: true, lenderName: null, penaltyConfig: null }
       }
-      return { loan, unauthorized: false, lenderName: session.user.name }
+
+      let penaltyConfig: PenaltyConfig | null = null
+      try {
+        penaltyConfig = await getPenaltySettings()
+      } catch {
+        // Penalty settings not available
+      }
+
+      return { loan, unauthorized: false, lenderName: session.user.name, penaltyConfig }
     } catch {
-      return { loan: null, unauthorized: false, lenderName: null }
+      return { loan: null, unauthorized: false, lenderName: null, penaltyConfig: null }
     }
   },
   pendingComponent: SkeletonDetailPage,
@@ -66,7 +76,7 @@ function useDocColors(pdfMode: boolean) {
 }
 
 function DisclosurePage() {
-  const { loan, unauthorized, lenderName } = Route.useLoaderData()
+  const { loan, unauthorized, lenderName, penaltyConfig } = Route.useLoaderData()
   const documentRef = useRef<HTMLDivElement>(null)
   const [generating, setGenerating] = useState(false)
   const [pdfMode, setPdfMode] = useState(false)
@@ -326,6 +336,22 @@ function DisclosurePage() {
                       value: loan.maturityDate
                         ? format(new Date(loan.maturityDate), "MMMM d, yyyy")
                         : "—",
+                    },
+                    {
+                      label: "13. Late Payment Penalty",
+                      value: penaltyConfig
+                        ? formatPenaltyForDisclosure(penaltyConfig)
+                        : "None",
+                    },
+                    {
+                      label: "14. Default / Acceleration Charges",
+                      value: penaltyConfig
+                        ? formatDailyInterestForDisclosure(penaltyConfig)
+                        : "None",
+                    },
+                    {
+                      label: "15. Prepayment Policy",
+                      value: "No penalty for early repayment",
                     },
                   ].map((row, i) => (
                     <tr
