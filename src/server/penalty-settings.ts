@@ -1,13 +1,13 @@
-import { createServerFn } from "@tanstack/react-start"
-import { db, penaltySettings } from "@/lib/db"
-import { eq } from "drizzle-orm"
-import { requireAuth } from "./session"
-import { createAuditLogger } from "./audit"
-import { hasRole, ROLES } from "@/lib/constants/roles"
+import { createServerFn } from '@tanstack/react-start'
+import { eq } from 'drizzle-orm'
+import { requireAuth } from './session'
+import { createAuditLogger } from './audit'
+import { db, penaltySettings } from '@/lib/db'
+import { hasRole, ROLES } from '@/lib/constants/roles'
 import {
   parsePenaltyConfig,
   penaltyConfigSchema,
-} from "@/lib/constants/penalty-defaults"
+} from '@/lib/constants/penalty-defaults'
 
 // ============================================================================
 // Penalty Settings Server Functions
@@ -20,7 +20,7 @@ export const getPenaltySettings = createServerFn().handler(async () => {
   const session = await requireAuth()
 
   if (!hasRole(session.user.role, ROLES.LENDER)) {
-    throw new Error("Forbidden: Lender access required")
+    throw new Error('Forbidden: Lender access required')
   }
 
   const row = await db.query.penaltySettings.findFirst({
@@ -39,7 +39,7 @@ export const savePenaltySettings = createServerFn()
     const session = await requireAuth()
 
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      throw new Error("Forbidden: Lender access required")
+      throw new Error('Forbidden: Lender access required')
     }
 
     const configJson = JSON.stringify(data)
@@ -62,7 +62,7 @@ export const savePenaltySettings = createServerFn()
     }
 
     const log = createAuditLogger(session.user)
-    log("penalty.updateSettings", "penalty_settings", session.user.id)
+    log('penalty.updateSettings', 'penalty_settings', session.user.id)
 
     return { success: true }
   })
