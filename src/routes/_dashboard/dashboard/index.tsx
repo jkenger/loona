@@ -19,7 +19,7 @@ import { SkeletonDashboard } from '@/components/ui/skeleton'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
 import { getDashboardStats, type CalendarDay } from '@/server/dashboard'
-import { updateOverduePayments, generatePendingPenalties } from '@/server/payments'
+import { updateOverduePayments } from '@/server/payments'
 import {
   CurrencyCircleDollar,
   Users,
@@ -54,10 +54,8 @@ export const Route = createFileRoute('/_dashboard/dashboard/')({
     if (!hasRole(session.user.role, ROLES.LENDER)) {
       return { stats: null, unauthorized: true }
     }
-    // Update overdue payment statuses before fetching stats
+    // Update overdue statuses + generate penalties (fallback for cron)
     await updateOverduePayments()
-    // Generate/update pending penalties for overdue items
-    await generatePendingPenalties()
     const stats = await getDashboardStats()
     return { stats, unauthorized: false }
   },

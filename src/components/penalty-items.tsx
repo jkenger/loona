@@ -2,8 +2,18 @@ import { type ReactNode, useState } from "react"
 import { useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Gavel, Spinner, CaretDown } from "@phosphor-icons/react"
-import { applyPenalty, waivePenalty } from "@/server/penalties"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Gavel, Spinner, CaretDown, ArrowCounterClockwise } from "@phosphor-icons/react"
+import { applyPenalty, waivePenalty, revertPenalty } from "@/server/penalties"
 
 export interface PenaltyItem {
   id: string
@@ -48,6 +58,11 @@ export function PenaltyItems({
   const [expanded, setExpanded] = useState(false)
   const [applyingId, setApplyingId] = useState<string | null>(null)
   const [waivingId, setWaivingId] = useState<string | null>(null)
+  const [revertingId, setRevertingId] = useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    type: "apply" | "waive" | "revert"
+    penalty: PenaltyItem
+  } | null>(null)
 
   const applied = penalties.filter((p) => p.status === "applied")
   const pending = penalties.filter((p) => p.status === "pending")
@@ -63,6 +78,7 @@ export function PenaltyItems({
         : `in ${penaltyIn}d`
 
   const handleApply = async (penaltyId: string) => {
+    setConfirmAction(null)
     setApplyingId(penaltyId)
     try {
       await applyPenalty({ data: { penaltyId } })
@@ -76,6 +92,7 @@ export function PenaltyItems({
   }
 
   const handleWaive = async (penaltyId: string) => {
+    setConfirmAction(null)
     setWaivingId(penaltyId)
     try {
       await waivePenalty({ data: { penaltyId } })
@@ -85,6 +102,20 @@ export function PenaltyItems({
       toast.error(err instanceof Error ? err.message : "Failed to waive penalty")
     } finally {
       setWaivingId(null)
+    }
+  }
+
+  const handleRevert = async (penaltyId: string) => {
+    setConfirmAction(null)
+    setRevertingId(penaltyId)
+    try {
+      await revertPenalty({ data: { penaltyId } })
+      toast.success("Penalty reverted to pending")
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to revert penalty")
+    } finally {
+      setRevertingId(null)
     }
   }
 
@@ -105,24 +136,40 @@ export function PenaltyItems({
     <div className="space-y-1.5">
       {/* Applied */}
       {applied.map((p) => (
-        <span
+        <div
           key={p.id}
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground mr-1.5"
         >
           <Gavel className="h-3 w-3" />
           {penaltyTypeLabel(p, daysOverdue)}: {formatCurrency(p.amount)} — Applied
-        </span>
+          <button
+            className="ml-1 text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
+            disabled={revertingId === p.id}
+            onClick={() => setConfirmAction({ type: "revert", penalty: p })}
+            title="Undo"
+          >
+            {revertingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : <ArrowCounterClockwise className="h-3 w-3" />}
+          </button>
+        </div>
       ))}
 
       {/* Waived */}
       {waived.map((p) => (
-        <span
+        <div
           key={p.id}
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground/60 line-through mr-1.5"
         >
           <Gavel className="h-3 w-3" />
           {penaltyTypeLabel(p, daysOverdue)}: {formatCurrency(p.amount)} — Waived
-        </span>
+          <button
+            className="ml-1 no-underline text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
+            disabled={revertingId === p.id}
+            onClick={() => setConfirmAction({ type: "revert", penalty: p })}
+            title="Undo"
+          >
+            {revertingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : <ArrowCounterClockwise className="h-3 w-3" />}
+          </button>
+        </div>
       ))}
 
       {/* Pending */}
@@ -144,7 +191,7 @@ export function PenaltyItems({
               variant="outline"
               className="h-6 text-xs px-2"
               disabled={waivingId === p.id}
-              onClick={() => handleWaive(p.id)}
+              onClick={() => setConfirmAction({ type: "waive", penalty: p })}
             >
               {waivingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : "Waive"}
             </Button>
@@ -152,7 +199,7 @@ export function PenaltyItems({
               size="sm"
               className="h-6 text-xs px-2"
               disabled={applyingId === p.id}
-              onClick={() => handleApply(p.id)}
+              onClick={() => setConfirmAction({ type: "apply", penalty: p })}
             >
               {applyingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : "Apply"}
             </Button>
@@ -169,5 +216,78 @@ export function PenaltyItems({
     </div>
   ) : null
 
-  return <>{children({ toggleButton, detailPanel })}</>
+  return (
+    <>
+      {children({ toggleButton, detailPanel })}
+
+      {/* Confirmation dialog */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === "apply"
+                ? "Apply Penalty"
+                : confirmAction?.type === "waive"
+                  ? "Waive Penalty"
+                  : "Revert Penalty"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.type === "apply" ? (
+                <>
+                  This will add{" "}
+                  <span className="font-semibold text-foreground">
+                    {confirmAction ? formatCurrency(confirmAction.penalty.amount) : ""}
+                  </span>{" "}
+                  ({confirmAction ? penaltyTypeLabel(confirmAction.penalty, daysOverdue) : ""}) to the
+                  loan balance.
+                </>
+              ) : confirmAction?.type === "waive" ? (
+                <>
+                  This will waive the{" "}
+                  <span className="font-semibold text-foreground">
+                    {confirmAction ? formatCurrency(confirmAction.penalty.amount) : ""}
+                  </span>{" "}
+                  {confirmAction ? penaltyTypeLabel(confirmAction.penalty, daysOverdue).toLowerCase() : ""} penalty.
+                  No amount will be charged.
+                </>
+              ) : (
+                <>
+                  This will revert the{" "}
+                  <span className="font-semibold text-foreground">
+                    {confirmAction ? formatCurrency(confirmAction.penalty.amount) : ""}
+                  </span>{" "}
+                  {confirmAction ? penaltyTypeLabel(confirmAction.penalty, daysOverdue).toLowerCase() : ""} penalty
+                  back to pending.
+                  {confirmAction?.penalty.status === "applied" && (
+                    <> The amount will be subtracted from the loan balance.</>
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!confirmAction) return
+                if (confirmAction.type === "apply") {
+                  handleApply(confirmAction.penalty.id)
+                } else if (confirmAction.type === "waive") {
+                  handleWaive(confirmAction.penalty.id)
+                } else {
+                  handleRevert(confirmAction.penalty.id)
+                }
+              }}
+            >
+              {confirmAction?.type === "apply"
+                ? "Apply"
+                : confirmAction?.type === "waive"
+                  ? "Waive"
+                  : "Revert"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
 }

@@ -1,0 +1,15 @@
+name: Daily Overdue Check
+on:
+  schedule:
+    - cron: '0 0 * * *' # midnight UTC daily
+  workflow_dispatch: {} # manual trigger
+
+jobs:
+  overdue-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger overdue check
+        run: |
+          curl -f -X GET \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/overdue"

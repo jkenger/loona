@@ -1,27 +1,6 @@
 import { createFileRoute, useRouter, Link } from '@tanstack/react-router'
-import {
-  getAgents,
-  createAgent,
-  updateAgent,
-  payCommission,
-  resetAgentPassword,
-} from '@/server/agents'
-import { getCommissionSettings } from '@/server/commission-settings'
 import { useState } from 'react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { format } from 'date-fns'
 import {
   UsersThree,
   Plus,
@@ -37,6 +16,23 @@ import {
   CalendarBlank,
   X,
 } from '@phosphor-icons/react'
+import { toast } from 'sonner'
+import type { CommissionProgramConfig } from '@/lib/constants/commission-defaults'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+
 import {
   Select,
   SelectContent,
@@ -44,14 +40,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { CommissionProgramConfig } from '@/lib/constants/commission-defaults'
+
 import { commissionTypeLabel } from '@/lib/constants/commission-defaults'
 import { Switch } from '@/components/ui/switch'
 import { SkeletonTablePage } from '@/components/ui/skeleton'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
 import { PageHeader, PageContent } from '@/components/ui/page-header'
-import { format } from 'date-fns'
+
+import {
+  getAgents,
+  createAgent,
+  updateAgent,
+  payCommission,
+  resetAgentPassword,
+} from '@/server/agents'
+import { getCommissionSettings } from '@/server/commission-settings'
 
 export const Route = createFileRoute('/_dashboard/agents/')({
   loader: async ({ context }) => {
@@ -546,8 +550,13 @@ function AgentsPage() {
                                       <SelectTrigger className="w-full">
                                         <SelectValue>
                                           {(value) => {
-                                            const t = commissionConfig.tiers.find((t) => String(t.tier) === value)
-                                            return t ? `Tier ${t.tier} — ${t.name}` : value
+                                            const t =
+                                              commissionConfig.tiers.find(
+                                                (t) => String(t.tier) === value,
+                                              )
+                                            return t
+                                              ? `Tier ${t.tier} — ${t.name}`
+                                              : value
                                           }}
                                         </SelectValue>
                                       </SelectTrigger>
