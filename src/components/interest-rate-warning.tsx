@@ -1,47 +1,45 @@
 import { Warning, Info } from "@phosphor-icons/react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 
 interface InterestRateWarningProps {
   rate: number | string
   className?: string
 }
 
+const MAX_RATE = 15 // Hard ceiling — server rejects above this
 const HIGH_RATE_THRESHOLD = 6 // Above 6% monthly is very high
 const ADVISORY_THRESHOLD = 3 // Above 3% monthly warrants documentation advice
 
-function RateDetails({ type }: { type: "high" | "advisory" }) {
+function RateDetails({ type }: { type: "max" | "high" | "advisory" }) {
+  const content = {
+    max: {
+      label: "Why is there a limit?",
+      title: `Why ${MAX_RATE}% per month?`,
+      body: `${MAX_RATE}% monthly already means 180% a year. If a borrower ever disputes the loan, courts can cancel rates they consider too high — and you lose your protection. This limit keeps your loans in a range that holds up if things go wrong.`,
+    },
+    high: {
+      label: "Learn more",
+      title: "Why This Matters",
+      body: "Rates this high can cause problems if a borrower disputes the loan later. To protect yourself, make sure they sign the Promissory Note and Disclosure Statement before you release the money.",
+    },
+    advisory: {
+      label: "Learn more",
+      title: "Why Document Everything?",
+      body: "Signed documents protect both you and the borrower. Have them sign the Promissory Note and review the Disclosure Statement so there's a clear record that everyone agreed to the terms.",
+    },
+  }[type]
+
   return (
-    <Popover>
-      <PopoverTrigger className="inline-flex items-center gap-1 text-xs underline underline-offset-2 opacity-70 hover:opacity-100 cursor-help">
+    <span className="relative inline-block group/tip">
+      <span className="inline-flex items-center gap-1 text-xs underline underline-offset-2 opacity-70 hover:opacity-100 cursor-help">
         <Info className="h-3 w-3" />
-        Learn more
-      </PopoverTrigger>
-      <PopoverContent className="max-w-sm text-sm">
-        {type === "high" ? (
-          <div className="space-y-3">
-            <p className="font-medium">Why This Matters</p>
-            <p className="text-muted-foreground">
-              Very high interest rates can lead to disputes and may be considered
-              "unconscionable" if challenged in court. Philippine courts have historically
-              reduced excessive rates in civil cases. To protect yourself, ensure the
-              borrower clearly understands and signs the Promissory Note and Disclosure
-              Statement before disbursing the loan.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="font-medium">Why Document Everything?</p>
-            <p className="text-muted-foreground">
-              Written agreements protect both you and the borrower. Have them sign the
-              Promissory Note and review the Disclosure Statement so there's a clear
-              record that both parties understood and agreed to the terms — especially the
-              total cost and Effective Interest Rate (EIR).
-            </p>
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
+        {content.label}
+      </span>
+      <span className="absolute bottom-full left-0 mb-2 w-72 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/tip:opacity-100 group-hover/tip:pointer-events-auto transition-opacity z-50">
+        <span className="block font-medium text-xs mb-1">{content.title}</span>
+        <span className="block text-xs text-muted-foreground leading-relaxed">{content.body}</span>
+      </span>
+    </span>
   )
 }
 
@@ -50,6 +48,19 @@ export function InterestRateWarning({ rate, className }: InterestRateWarningProp
 
   if (isNaN(numericRate) || numericRate <= ADVISORY_THRESHOLD) {
     return null
+  }
+
+  if (numericRate > MAX_RATE) {
+    return (
+      <Alert className={`border-red-500 bg-red-50 text-red-900 dark:border-red-600 dark:bg-red-950/50 dark:text-red-200 [&>svg]:text-red-600 ${className || ""}`}>
+        <Warning className="h-4 w-4" />
+        <AlertTitle>Rate Exceeds Maximum</AlertTitle>
+        <AlertDescription className="text-sm text-red-800 dark:text-red-300">
+          The maximum allowed interest rate is {MAX_RATE}% per month. Please lower the rate to continue.{" "}
+          <RateDetails type="max" />
+        </AlertDescription>
+      </Alert>
+    )
   }
 
   const isHighRate = numericRate > HIGH_RATE_THRESHOLD

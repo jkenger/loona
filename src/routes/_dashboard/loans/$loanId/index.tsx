@@ -1,14 +1,14 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { getLoan, deleteLoan, approveLoan, rejectLoan } from "@/server/loans"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
-import { recordPayment } from "@/server/payments"
+import { PenaltyItems } from "@/components/penalty-items"
+import { RecordPaymentDialog } from "@/components/record-payment-dialog"
+import { ReversePaymentDialog } from "@/components/reverse-payment-dialog"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Select,
   SelectContent,
@@ -46,9 +46,10 @@ import {
   X,
   Scroll,
   ArrowSquareOut,
+  Gavel,
+  ArrowCounterClockwise,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
-import { DatePicker } from "@/components/ui/date-picker"
 import { format } from "date-fns"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 
@@ -86,6 +87,7 @@ type ScheduleItem = NonNullable<Awaited<ReturnType<typeof getLoan>>>["schedule"]
 
 function LoanDetailPage() {
   const { loan, agents, unauthorized } = Route.useLoaderData()
+  const penaltyData = loan?.penaltyData ?? null
   const router = useRouter()
   const [assigning, setAssigning] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -99,16 +101,13 @@ function LoanDetailPage() {
   const [updateStartDate, setUpdateStartDate] = useState(true)
   const [rejectionReason, setRejectionReason] = useState("")
 
-  // Payment form state
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
-  const [paymentStep, setPaymentStep] = useState<"form" | "confirm">("form")
+  // Payment dialog state
   const [selectedScheduleItem, setSelectedScheduleItem] = useState<ScheduleItem | null>(null)
-  const [paymentAmount, setPaymentAmount] = useState("")
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash" | "maya" | "bank">("cash")
-  const [paymentDate, setPaymentDate] = useState<Date>(new Date())
-  const [paymentNotes, setPaymentNotes] = useState("")
-  const [isRecordingPayment, setIsRecordingPayment] = useState(false)
 
+  // Reverse payment dialog state
+  const [selectedPaymentForReversal, setSelectedPaymentForReversal] = useState<{
+    id: string; amount: string; method: string; paidAt: string
+  } | null>(null)
 
   if (unauthorized) {
     return (
@@ -196,51 +195,7 @@ function LoanDetailPage() {
     }
   }
 
-  const openPaymentDialog = (item: ScheduleItem) => {
-    setSelectedScheduleItem(item)
-    const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-    setPaymentAmount(remaining.toString())
-    setPaymentMethod("cash")
-    setPaymentDate(new Date())
-    setPaymentNotes("")
-    setPaymentStep("form")
-    setShowPaymentDialog(true)
-  }
-
-  const closePaymentDialog = () => {
-    setShowPaymentDialog(false)
-    setSelectedScheduleItem(null)
-    setPaymentAmount("")
-    setPaymentDate(new Date())
-    setPaymentNotes("")
-    setPaymentStep("form")
-  }
-
-  const handleRecordPayment = async () => {
-    if (!selectedScheduleItem) return
-
-    setIsRecordingPayment(true)
-    try {
-      await recordPayment({
-        data: {
-          loanId: loan.id,
-          scheduleItemId: selectedScheduleItem.id,
-          amount: parseFloat(paymentAmount),
-          method: paymentMethod,
-          paidAt: format(paymentDate, "yyyy-MM-dd"),
-          notes: paymentNotes || undefined,
-        },
-      })
-      toast.success("Payment recorded successfully")
-      closePaymentDialog()
-      router.invalidate()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to record payment")
-    } finally {
-      setIsRecordingPayment(false)
-    }
-  }
-
+  const hasOverdueItems = loan?.schedule.some((s) => s.status === "overdue")
 
   const statusConfig: Record<string, { variant: any; label: string; className?: string }> = {
     pending_disbursement: { variant: "outline", label: "Pending Disbursement" },
@@ -600,6 +555,36 @@ function LoanDetailPage() {
         </div>
       )}
 
+      {/* Penalty Summary */}
+      {penaltyData && penaltyData.config.enabled && hasOverdueItems && (
+        <Card className="shadow-sm border-amber-300/50">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Gavel className="h-5 w-5 text-amber-600" />
+              Penalties
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1 p-3 rounded bg-muted/50">
+                <p className="text-sm text-muted-foreground">Applied</p>
+                <p className="text-lg font-bold">{formatCurrency(penaltyData.totalApplied)}</p>
+              </div>
+              <div className="space-y-1 p-3 rounded bg-amber-50 dark:bg-amber-900/20">
+                <p className="text-sm text-muted-foreground">Pending Decisions</p>
+                <p className="text-lg font-bold text-amber-600">
+                  {penaltyData.penalties.filter((p) => p.status === "pending").length}
+                </p>
+              </div>
+              <div className="space-y-1 p-3 rounded bg-muted/50">
+                <p className="text-sm text-muted-foreground">Cap Remaining</p>
+                <p className="text-lg font-bold">{formatCurrency(penaltyData.budgetRemaining)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Payment Schedule */}
       <Card className="shadow-sm">
         <CardHeader className="p-4 pb-2">
@@ -614,50 +599,79 @@ function LoanDetailPage() {
             {loan.schedule.map((item, index) => {
               const config = scheduleStatusConfig[item.status]
               const StatusIcon = config.icon
+              const itemPenalties = penaltyData?.penalties.filter(
+                (p) => p.scheduleItemId === item.id,
+              ) ?? []
+              const appliedPenaltyTotal = itemPenalties
+                .filter((p) => p.status === "applied")
+                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+              // Compute days overdue from due date (calendar days)
+              const daysOverdue = item.status === "overdue"
+                ? Math.max(0, Math.floor((new Date(new Date().toDateString()).getTime() - new Date(new Date(item.dueDate).toDateString()).getTime()) / 86400000))
+                : 0
 
               return (
-                <div
+                <PenaltyItems
                   key={item.id}
-                  className={`flex items-center justify-between p-3 rounded border ${
-                    item.status === "overdue" ? "border-destructive/50" : ""
-                  }`}
+                  penalties={itemPenalties}
+                  daysOverdue={daysOverdue}
+                  formatCurrency={formatCurrency}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
-                      <StatusIcon className="h-4 w-4" weight="bold" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Payment #{index + 1}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Due: {new Date(item.dueDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                      {item.status === "paid" && item.paidAt && (
-                        <p className="text-xs text-muted-foreground">
-                          Paid: {new Date(item.paidAt).toLocaleDateString()}
-                        </p>
-                      )}
-                      {item.status === "partial" && (
-                        <p className="text-xs text-primary">
-                          Paid: {formatCurrency(item.paidAmount)}
-                        </p>
-                      )}
-                    </div>
-                    {item.status !== "paid" && loan.status === "active" && (
-                      <Button
-                        size="sm"
-                        variant={item.status === "overdue" ? "default" : "outline"}
-                        onClick={() => openPaymentDialog(item)}
+                  {({ toggleButton, detailPanel }) => (
+                    <div className="space-y-1">
+                      <div
+                        className={`flex items-center justify-between p-3 rounded border ${
+                          item.status === "overdue" ? "border-destructive/50" : ""
+                        }`}
                       >
-                        Pay
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                        <div className="flex items-center gap-3">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
+                            <StatusIcon className="h-4 w-4" weight="bold" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Payment #{index + 1}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
+                              {toggleButton}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-semibold">{formatCurrency(item.amount)}</p>
+                            {appliedPenaltyTotal > 0 && (
+                              <p className="text-xs text-amber-600">
+                                + {formatCurrency(appliedPenaltyTotal)} penalty
+                              </p>
+                            )}
+                            {item.status === "paid" && item.paidAt && (
+                              <p className="text-xs text-muted-foreground">
+                                Paid: {new Date(item.paidAt).toLocaleDateString()}
+                              </p>
+                            )}
+                            {item.status === "partial" && (
+                              <p className="text-xs text-primary">
+                                Paid: {formatCurrency(item.paidAmount)}
+                              </p>
+                            )}
+                          </div>
+                          {item.status !== "paid" && loan.status === "active" && (
+                            <Button
+                              size="sm"
+                              variant={item.status === "overdue" ? "default" : "outline"}
+                              onClick={() => setSelectedScheduleItem(item)}
+                            >
+                              Pay
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {detailPanel && (
+                        <div className="ml-11">{detailPanel}</div>
+                      )}
+                    </div>
+                  )}
+                </PenaltyItems>
               )
             })}
           </div>
@@ -672,23 +686,66 @@ function LoanDetailPage() {
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="space-y-3">
-              {loan.payments.slice(0, 5).map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between py-2 border-b last:border-0"
-                >
-                  <div>
-                    <p className="font-medium">{formatCurrency(payment.amount)}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(payment.paidAt).toLocaleDateString()} via{" "}
-                      {payment.method.toUpperCase()}
-                    </p>
+              {loan.payments.slice(0, 5).map((payment) => {
+                const isReversed = !!payment.reversedAt
+                // Check if this is the most recent non-reversed payment for its schedule item
+                const canReverse = !isReversed && payment.scheduleItemId && !loan.payments.some(
+                  (other) =>
+                    other.id !== payment.id &&
+                    !other.reversedAt &&
+                    other.scheduleItemId === payment.scheduleItemId &&
+                    new Date(other.createdAt) > new Date(payment.createdAt)
+                )
+                return (
+                  <div
+                    key={payment.id}
+                    className={`flex items-center justify-between py-2 border-b last:border-0 ${isReversed ? "opacity-60" : ""}`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className={`font-medium ${isReversed ? "line-through" : ""}`}>
+                          {formatCurrency(payment.amount)}
+                        </p>
+                        {isReversed && (
+                          <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">
+                            Reversed
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(payment.paidAt).toLocaleDateString()} via{" "}
+                        {payment.method.toUpperCase()}
+                      </p>
+                      {isReversed && payment.reversalReason && (
+                        <p className="text-xs text-destructive/70 mt-0.5">
+                          Reason: {payment.reversalReason}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {payment.notes && (
+                        <p className="text-sm text-muted-foreground">{payment.notes}</p>
+                      )}
+                      {canReverse && loan.isLender && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          onClick={() => setSelectedPaymentForReversal({
+                            id: payment.id,
+                            amount: payment.amount,
+                            method: payment.method,
+                            paidAt: payment.paidAt,
+                          })}
+                        >
+                          <ArrowCounterClockwise className="h-3.5 w-3.5 mr-1" />
+                          Reverse
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  {payment.notes && (
-                    <p className="text-sm text-muted-foreground">{payment.notes}</p>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -784,157 +841,32 @@ function LoanDetailPage() {
       </Dialog>
 
       {/* Record Payment Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {paymentStep === "form" ? "Record Payment" : "Confirm Payment"}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedScheduleItem && (
-                <>
-                  Payment #{loan.schedule.findIndex(s => s.id === selectedScheduleItem.id) + 1} · Due{" "}
-                  {new Date(selectedScheduleItem.dueDate).toLocaleDateString()}
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+      <RecordPaymentDialog
+        open={!!selectedScheduleItem}
+        onOpenChange={(open) => { if (!open) setSelectedScheduleItem(null) }}
+        loanId={loan.id}
+        borrowerName={loan.contact.name}
+        scheduleItem={selectedScheduleItem}
+        appliedPenalties={
+          selectedScheduleItem
+            ? (penaltyData?.penalties ?? [])
+                .filter((p) => p.scheduleItemId === selectedScheduleItem.id && p.status === "applied")
+                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+            : 0
+        }
+        scheduleIndex={
+          selectedScheduleItem
+            ? loan.schedule.findIndex((s) => s.id === selectedScheduleItem.id)
+            : undefined
+        }
+      />
 
-          {selectedScheduleItem && paymentStep === "form" && (
-            <div className="space-y-4">
-              {/* Schedule item info */}
-              <div className="p-3 rounded bg-muted/50 text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount Due</span>
-                  <span className="font-medium">{formatCurrency(selectedScheduleItem.amount)}</span>
-                </div>
-                {parseFloat(selectedScheduleItem.paidAmount) > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Already Paid</span>
-                    <span className="font-medium text-primary">{formatCurrency(selectedScheduleItem.paidAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t pt-1 mt-1">
-                  <span className="text-muted-foreground">Remaining</span>
-                  <span className="font-semibold">
-                    {formatCurrency(parseFloat(selectedScheduleItem.amount) - parseFloat(selectedScheduleItem.paidAmount))}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="paymentAmount">Payment Amount</Label>
-                  <CurrencyInput
-                    id="paymentAmount"
-                    value={paymentAmount}
-                    onValueChange={setPaymentAmount}
-                    placeholder="1,000"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
-                    <SelectTrigger>
-                      {{ cash: "Cash", gcash: "GCash", maya: "Maya", bank: "Bank Transfer" }[paymentMethod]}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="gcash">GCash</SelectItem>
-                      <SelectItem value="maya">Maya</SelectItem>
-                      <SelectItem value="bank">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Payment Date</Label>
-                  <DatePicker
-                    value={paymentDate}
-                    onChange={(date) => date && setPaymentDate(date)}
-                  />
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="paymentNotes">Notes (optional)</Label>
-                  <Input
-                    id="paymentNotes"
-                    placeholder="Any additional notes..."
-                    value={paymentNotes}
-                    onChange={(e) => setPaymentNotes(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {selectedScheduleItem && paymentStep === "confirm" && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-                <div className="text-center pb-3 border-b">
-                  <p className="text-2xl font-bold text-primary">{formatCurrency(paymentAmount)}</p>
-                  <p className="text-sm text-muted-foreground">Payment Amount</p>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Borrower</span>
-                    <span className="font-medium">{loan.contact.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Payment Date</span>
-                    <span className="font-medium">{format(paymentDate, "MMMM d, yyyy")}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Method</span>
-                    <span className="font-medium">
-                      {{ cash: "Cash", gcash: "GCash", maya: "Maya", bank: "Bank Transfer" }[paymentMethod]}
-                    </span>
-                  </div>
-                  {paymentNotes && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Notes</span>
-                      <span className="font-medium text-right max-w-[180px] truncate">{paymentNotes}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground text-center">
-                Please review the details above before confirming.
-              </p>
-            </div>
-          )}
-
-          <DialogFooter>
-            {paymentStep === "form" ? (
-              <>
-                <Button variant="outline" onClick={closePaymentDialog}>
-                  Cancel
-                </Button>
-                <Button onClick={() => setPaymentStep("confirm")} disabled={!paymentAmount}>
-                  Review Payment
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" onClick={() => setPaymentStep("form")}>
-                  Back
-                </Button>
-                <Button onClick={handleRecordPayment} disabled={isRecordingPayment}>
-                  {isRecordingPayment ? (
-                    <>
-                      <Spinner className="h-4 w-4 animate-spin mr-2" />
-                      Recording...
-                    </>
-                  ) : (
-                    "Confirm Payment"
-                  )}
-                </Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Reverse Payment Dialog */}
+      <ReversePaymentDialog
+        open={!!selectedPaymentForReversal}
+        onOpenChange={(open) => { if (!open) setSelectedPaymentForReversal(null) }}
+        payment={selectedPaymentForReversal}
+      />
 
       {/* Approve Loan Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>

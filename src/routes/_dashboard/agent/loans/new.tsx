@@ -46,6 +46,7 @@ import {
   ArrowLeft,
   Check,
   Clock,
+  Info,
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
@@ -238,6 +239,10 @@ function AgentNewLoanWizard() {
     }
     if (!interestRate || parseFloat(interestRate) < 0) {
       setStepError("Interest rate is required")
+      return false
+    }
+    if (parseFloat(interestRate) > 15) {
+      setStepError("Interest rate cannot exceed 15% per month")
       return false
     }
     if (!termMonths || parseInt(termMonths) <= 0) {
@@ -674,7 +679,7 @@ function AgentNewLoanWizard() {
                         id="interestRate"
                         type="number"
                         min="0"
-                        max="100"
+                        max="15"
                         step="0.5"
                         placeholder="5"
                         value={interestRate}
@@ -945,7 +950,15 @@ function AgentNewLoanWizard() {
                     <span className="font-medium">{interestRate || 0}% / mo</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Effective Rate</span>
+                    <span className="text-muted-foreground relative group/eir cursor-help">
+                      Effective Rate
+                      <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/eir:opacity-100" />
+                      <span className="absolute bottom-full left-0 mb-2 w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/eir:opacity-100 group-hover/eir:pointer-events-auto transition-opacity z-50">
+                        <span className="block text-xs text-muted-foreground leading-relaxed">
+                          The Effective Interest Rate (EIR) shows the true annual cost. It's higher than the monthly rate because interest is charged on the full principal for the entire term, even as you pay it down each period.
+                        </span>
+                      </span>
+                    </span>
                     <span className="font-medium text-primary">
                       {formatEIR(calculations.eir)}
                     </span>

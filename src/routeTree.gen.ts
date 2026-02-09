@@ -27,7 +27,9 @@ import { Route as DashboardContactsIndexRouteImport } from './routes/_dashboard/
 import { Route as DashboardAgentsIndexRouteImport } from './routes/_dashboard/agents/index'
 import { Route as DashboardAgentIndexRouteImport } from './routes/_dashboard/agent/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/_dashboard/admin/index'
+import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
 import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard/loans/new-wizard'
 import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans/new'
 import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/contacts/new'
@@ -136,11 +138,22 @@ const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const ApiCronOverdueRoute = ApiCronOverdueRouteImport.update({
+  id: '/api/cron/overdue',
+  path: '/api/cron/overdue',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardSettingsPenaltySettingsRoute =
+  DashboardSettingsPenaltySettingsRouteImport.update({
+    id: '/settings/penalty-settings',
+    path: '/settings/penalty-settings',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardLoansNewWizardRoute = DashboardLoansNewWizardRouteImport.update({
   id: '/loans/new-wizard',
   path: '/loans/new-wizard',
@@ -269,7 +282,9 @@ export interface FileRoutesByFullPath {
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/admin/': typeof DashboardAdminIndexRoute
   '/agent/': typeof DashboardAgentIndexRoute
   '/agents/': typeof DashboardAgentsIndexRoute
@@ -307,7 +322,9 @@ export interface FileRoutesByTo {
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/admin': typeof DashboardAdminIndexRoute
   '/agent': typeof DashboardAgentIndexRoute
   '/agents': typeof DashboardAgentsIndexRoute
@@ -348,7 +365,9 @@ export interface FileRoutesById {
   '/_dashboard/contacts/new': typeof DashboardContactsNewRoute
   '/_dashboard/loans/new': typeof DashboardLoansNewRoute
   '/_dashboard/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/_dashboard/admin/': typeof DashboardAdminIndexRoute
   '/_dashboard/agent/': typeof DashboardAgentIndexRoute
   '/_dashboard/agents/': typeof DashboardAgentsIndexRoute
@@ -388,7 +407,9 @@ export interface FileRouteTypes {
     | '/contacts/new'
     | '/loans/new'
     | '/loans/new-wizard'
+    | '/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/cron/overdue'
     | '/admin/'
     | '/agent/'
     | '/agents/'
@@ -426,7 +447,9 @@ export interface FileRouteTypes {
     | '/contacts/new'
     | '/loans/new'
     | '/loans/new-wizard'
+    | '/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/cron/overdue'
     | '/admin'
     | '/agent'
     | '/agents'
@@ -466,7 +489,9 @@ export interface FileRouteTypes {
     | '/_dashboard/contacts/new'
     | '/_dashboard/loans/new'
     | '/_dashboard/loans/new-wizard'
+    | '/_dashboard/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/cron/overdue'
     | '/_dashboard/admin/'
     | '/_dashboard/agent/'
     | '/_dashboard/agents/'
@@ -493,6 +518,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   WelcomeRoute: typeof WelcomeRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCronOverdueRoute: typeof ApiCronOverdueRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -623,12 +649,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/api/cron/overdue': {
+      id: '/api/cron/overdue'
+      path: '/api/cron/overdue'
+      fullPath: '/api/cron/overdue'
+      preLoaderRoute: typeof ApiCronOverdueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard/settings/penalty-settings': {
+      id: '/_dashboard/settings/penalty-settings'
+      path: '/settings/penalty-settings'
+      fullPath: '/settings/penalty-settings'
+      preLoaderRoute: typeof DashboardSettingsPenaltySettingsRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/_dashboard/loans/new-wizard': {
       id: '/_dashboard/loans/new-wizard'
@@ -794,6 +834,7 @@ interface DashboardRouteChildren {
   DashboardContactsNewRoute: typeof DashboardContactsNewRoute
   DashboardLoansNewRoute: typeof DashboardLoansNewRoute
   DashboardLoansNewWizardRoute: typeof DashboardLoansNewWizardRoute
+  DashboardSettingsPenaltySettingsRoute: typeof DashboardSettingsPenaltySettingsRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
   DashboardAgentIndexRoute: typeof DashboardAgentIndexRoute
   DashboardAgentsIndexRoute: typeof DashboardAgentsIndexRoute
@@ -825,6 +866,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardContactsNewRoute: DashboardContactsNewRoute,
   DashboardLoansNewRoute: DashboardLoansNewRoute,
   DashboardLoansNewWizardRoute: DashboardLoansNewWizardRoute,
+  DashboardSettingsPenaltySettingsRoute: DashboardSettingsPenaltySettingsRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
   DashboardAgentIndexRoute: DashboardAgentIndexRoute,
   DashboardAgentsIndexRoute: DashboardAgentsIndexRoute,
@@ -856,6 +898,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   WelcomeRoute: WelcomeRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCronOverdueRoute: ApiCronOverdueRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
