@@ -109,7 +109,7 @@ export const getLoan = createServerFn()
       canRecordPayments = agentRecord?.canRecordPayments ?? false
     }
 
-    // Load penalty data inline (only for lenders with active loans)
+    // Load penalty data inline (for any viewer when loan is active)
     let penaltyData: {
       config: PenaltyConfig
       penalties: {
@@ -130,9 +130,9 @@ export const getLoan = createServerFn()
       budgetRemaining: number
     } | null = null
 
-    if (isLender && result.status === "active") {
+    if (result.status === "active") {
       const settingsRow = await db.query.penaltySettings.findFirst({
-        where: eq(penaltySettings.lenderId, session.user.id),
+        where: eq(penaltySettings.lenderId, result.lenderId),
       })
       const config = parsePenaltyConfig(settingsRow?.config ?? null)
 

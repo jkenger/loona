@@ -7,10 +7,13 @@ import {
   loans,
   contacts,
   paymentSchedule,
+  penalties,
+  penaltySettings,
 } from "@/lib/db"
 import { eq, desc, and, sql, ne, lte } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { z } from "zod"
+import { parsePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 
 // ============================================================================
 // Agent Portal Service
@@ -295,6 +298,7 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
       status: paymentSchedule.status,
       paidAmount: paymentSchedule.paidAmount,
       loanId: loans.id,
+      lenderId: loans.lenderId,
       contactName: contacts.name,
       contactId: contacts.id,
       contactPhone: contacts.phone,
@@ -312,10 +316,53 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
     )
     .orderBy(paymentSchedule.dueDate)
 
-  return result.map((p) => ({
-    ...p,
-    dueDate: p.dueDate.toISOString(),
-  }))
+  // Load penalty configs per lender
+  const uniqueLenderIds = [...new Set(result.map((r) => r.lenderId))]
+  const penaltyConfigMap = new Map<string, ReturnType<typeof parsePenaltyConfig>>()
+
+  for (const lenderId of uniqueLenderIds) {
+    const settingsRow = await db.query.penaltySettings.findFirst({
+      where: eq(penaltySettings.lenderId, lenderId),
+    })
+    penaltyConfigMap.set(lenderId, parsePenaltyConfig(settingsRow?.config ?? null))
+  }
+
+  // Load penalties for overdue schedule items
+  const overdueIds = result.filter((r) => r.status === "overdue").map((r) => r.id)
+  let penaltyMap: Record<string, { id: string; penaltyType: string; amount: string; status: string }[]> = {}
+
+  if (overdueIds.length > 0) {
+    const penaltyRows = await db.query.penalties.findMany({
+      where: sql`${penalties.scheduleItemId} IN ${overdueIds}`,
+    })
+    for (const p of penaltyRows) {
+      if (!penaltyMap[p.scheduleItemId]) penaltyMap[p.scheduleItemId] = []
+      penaltyMap[p.scheduleItemId].push({
+        id: p.id,
+        penaltyType: p.penaltyType,
+        amount: p.amount,
+        status: p.status,
+      })
+    }
+  }
+
+  return result.map((p) => {
+    const daysOverdue = p.status === "overdue" ? calendarDaysOverdue(p.dueDate, now) : 0
+    const penaltyConfig = penaltyConfigMap.get(p.lenderId)
+    let penaltyIn = -1
+    if (penaltyConfig?.enabled && penaltyConfig.lateFee.enabled && p.status === "overdue") {
+      const remaining = penaltyConfig.lateFee.gracePeriodDays - daysOverdue
+      penaltyIn = Math.max(0, remaining)
+    }
+
+    return {
+      ...p,
+      dueDate: p.dueDate.toISOString(),
+      penalties: penaltyMap[p.id] ?? [],
+      daysOverdue,
+      penaltyIn,
+    }
+  })
 })
 
 // Get contact detail for agent (only shows assigned loans)
