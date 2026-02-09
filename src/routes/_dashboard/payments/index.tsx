@@ -1,36 +1,26 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { getUpcomingPayments, getPayments, recordPayment } from "@/server/payments"
+import { createFileRoute, Link } from "@tanstack/react-router"
+import { getUpcomingPayments, getPayments } from "@/server/payments"
 import { PenaltyItems } from "@/components/penalty-items"
+import { RecordPaymentDialog } from "@/components/record-payment-dialog"
+import { ReversePaymentDialog } from "@/components/reverse-payment-dialog"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { CurrencyInput } from "@/components/ui/currency-input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
 import {
   Receipt,
   Warning,
   Clock,
   Check,
-  Spinner,
   CurrencyCircleDollar,
-  X,
-  Notepad,
   Funnel,
   DownloadSimple,
   TrendUp,
   CalendarCheck,
+  ArrowCounterClockwise,
 } from "@phosphor-icons/react"
 import { subDays, startOfMonth, isAfter, format } from "date-fns"
-import { DatePicker } from "@/components/ui/date-picker"
 import { formatRelativeDate } from "@/lib/utils/date"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
@@ -113,7 +103,6 @@ function PaymentsPageSkeleton() {
 }
 
 function PaymentsPage() {
-  const router = useRouter()
   const { upcoming, history, unauthorized } = Route.useLoaderData()
 
   if (unauthorized) {
@@ -126,17 +115,12 @@ function PaymentsPage() {
     )
   }
 
-  const [showPaymentForm, setShowPaymentForm] = useState(false)
-  const [paymentStep, setPaymentStep] = useState<"form" | "confirm">("form")
   const [selectedScheduleItem, setSelectedScheduleItem] = useState<(typeof upcoming)[0] | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
 
-  // Payment form state
-  const [amount, setAmount] = useState("")
-  const [method, setMethod] = useState<"cash" | "gcash" | "maya" | "bank">("cash")
-  const [paidAt, setPaidAt] = useState<Date>(new Date())
-  const [notes, setNotes] = useState("")
+  // Reverse payment dialog state
+  const [selectedPaymentForReversal, setSelectedPaymentForReversal] = useState<{
+    id: string; amount: string; method: string; paidAt: string
+  } | null>(null)
 
   // Date range filter
   const [dateFilter, setDateFilter] = useState<"all" | "month" | "30days" | "90days">("month")
@@ -203,57 +187,6 @@ function PaymentsPage() {
     link.click()
     URL.revokeObjectURL(url)
     toast.success("Payments exported to CSV")
-  }
-
-  const openPaymentForm = (item: (typeof upcoming)[0]) => {
-    setSelectedScheduleItem(item)
-    const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-    const appliedPenalties = item.penalties
-      .filter((p) => p.status === "applied")
-      .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-    setAmount((remaining + appliedPenalties).toString())
-    setPaidAt(new Date())
-    setPaymentStep("form")
-    setShowPaymentForm(true)
-  }
-
-  const closePaymentForm = () => {
-    setShowPaymentForm(false)
-    setSelectedScheduleItem(null)
-    setAmount("")
-    setPaidAt(new Date())
-    setNotes("")
-    setError("")
-    setPaymentStep("form")
-  }
-
-  const handleRecordPayment = async () => {
-    if (!selectedScheduleItem) return
-
-    setError("")
-    setLoading(true)
-
-    try {
-      await recordPayment({
-        data: {
-          loanId: selectedScheduleItem.loanId,
-          scheduleItemId: selectedScheduleItem.id,
-          amount: parseFloat(amount),
-          method,
-          paidAt: format(paidAt, "yyyy-MM-dd"),
-          notes: notes || undefined,
-        },
-      })
-
-      closePaymentForm()
-      toast.success("Payment recorded successfully")
-      router.invalidate()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to record payment")
-      setError(err instanceof Error ? err.message : "Failed to record payment")
-    } finally {
-      setLoading(false)
-    }
   }
 
   return (
@@ -394,7 +327,7 @@ function PaymentsPage() {
                                   <Button
                                     size="sm"
                                     variant="destructive"
-                                    onClick={() => openPaymentForm(item)}
+                                    onClick={() => setSelectedScheduleItem(item)}
                                     className="h-8"
                                   >
                                     Record
@@ -466,7 +399,7 @@ function PaymentsPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => openPaymentForm(item)}
+                                  onClick={() => setSelectedScheduleItem(item)}
                                   className="h-8"
                                 >
                                   Record
@@ -514,182 +447,8 @@ function PaymentsPage() {
             </Card>
           </div>
 
-          {/* Right Column: Payment Form + History */}
+          {/* Right Column: History */}
           <div className="space-y-6">
-            {/* Payment Form */}
-            {showPaymentForm && selectedScheduleItem && (
-              <Card className="border-primary shadow-lg">
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>{paymentStep === "form" ? "Record Payment" : "Confirm Payment"}</CardTitle>
-                      <CardDescription>
-                        {selectedScheduleItem.contactName} · Due {formatRelativeDate(selectedScheduleItem.dueDate)}
-                      </CardDescription>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={closePaymentForm}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  {paymentStep === "form" ? (
-                    <div className="space-y-4">
-                      {/* Schedule item info */}
-                      <div className="p-3 rounded bg-muted/50 text-sm space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Amount Due</span>
-                          <span className="font-medium">{formatCurrency(selectedScheduleItem.amount)}</span>
-                        </div>
-                        {parseFloat(selectedScheduleItem.paidAmount) > 0 && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Already Paid</span>
-                            <span className="font-medium text-primary">{formatCurrency(selectedScheduleItem.paidAmount)}</span>
-                          </div>
-                        )}
-                        {(() => {
-                          const remaining = parseFloat(selectedScheduleItem.amount) - parseFloat(selectedScheduleItem.paidAmount)
-                          const appliedTotal = selectedScheduleItem.penalties
-                            .filter((p) => p.status === "applied")
-                            .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-                          if (appliedTotal <= 0) return null
-                          return (
-                            <>
-                              <div className="flex justify-between border-t pt-1 mt-1">
-                                <span className="text-muted-foreground">Remaining</span>
-                                <span className="font-medium">{formatCurrency(remaining)}</span>
-                              </div>
-                              <div className="flex justify-between text-amber-600">
-                                <span>Applied Penalties</span>
-                                <span className="font-medium">+{formatCurrency(appliedTotal)}</span>
-                              </div>
-                              <div className="flex justify-between border-t pt-1 mt-1 font-semibold">
-                                <span>Total Due</span>
-                                <span>{formatCurrency(remaining + appliedTotal)}</span>
-                              </div>
-                            </>
-                          )
-                        })()}
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="amount">Payment Amount</Label>
-                          <CurrencyInput
-                            id="amount"
-                            value={amount}
-                            onValueChange={setAmount}
-                            placeholder="1,000"
-                            required
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="method">Payment Method</Label>
-                          <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
-                            <SelectTrigger>
-                              {{ cash: "Cash", gcash: "GCash", maya: "Maya", bank: "Bank Transfer" }[method]}
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cash">Cash</SelectItem>
-                              <SelectItem value="gcash">GCash</SelectItem>
-                              <SelectItem value="maya">Maya</SelectItem>
-                              <SelectItem value="bank">Bank Transfer</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label>Payment Date</Label>
-                          <DatePicker
-                            value={paidAt}
-                            onChange={(date) => date && setPaidAt(date)}
-                          />
-                        </div>
-
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor="notes">Notes</Label>
-                          <div className="relative">
-                            <Notepad className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              id="notes"
-                              placeholder="Optional notes..."
-                              value={notes}
-                              onChange={(e) => setNotes(e.target.value)}
-                              className="pl-10"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {error && <p className="text-sm text-destructive">{error}</p>}
-
-                      <div className="flex gap-3">
-                        <Button type="button" variant="outline" onClick={closePaymentForm}>
-                          Cancel
-                        </Button>
-                        <Button type="button" onClick={() => setPaymentStep("confirm")} disabled={!amount}>
-                          Review Payment
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-                        <div className="text-center pb-3 border-b">
-                          <p className="text-2xl font-bold text-primary">{formatCurrency(amount)}</p>
-                          <p className="text-sm text-muted-foreground">Payment Amount</p>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Borrower</span>
-                            <span className="font-medium">{selectedScheduleItem.contactName}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Payment Date</span>
-                            <span className="font-medium">{format(paidAt, "MMMM d, yyyy")}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Method</span>
-                            <span className="font-medium">
-                              {{ cash: "Cash", gcash: "GCash", maya: "Maya", bank: "Bank Transfer" }[method]}
-                            </span>
-                          </div>
-                          {notes && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Notes</span>
-                              <span className="font-medium text-right max-w-[180px] truncate">{notes}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground text-center">
-                        Please review the details above before confirming.
-                      </p>
-
-                      {error && <p className="text-sm text-destructive">{error}</p>}
-
-                      <div className="flex gap-3">
-                        <Button type="button" variant="outline" onClick={() => setPaymentStep("form")}>
-                          Back
-                        </Button>
-                        <Button type="button" onClick={handleRecordPayment} disabled={loading}>
-                          {loading ? (
-                            <>
-                              <Spinner className="h-4 w-4 animate-spin mr-2" />
-                              Recording...
-                            </>
-                          ) : (
-                            "Confirm Payment"
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
             {/* History */}
             <Card className="shadow-sm h-fit">
             <CardHeader className="p-4 pb-2">
@@ -738,33 +497,77 @@ function PaymentsPage() {
             <CardContent className="p-4 pt-0">
               {filteredHistory.length > 0 ? (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {filteredHistory.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="flex items-center justify-between p-3 rounded border"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <Check className="h-4 w-4 text-primary" weight="bold" />
+                  {filteredHistory.map((payment) => {
+                    const isReversed = !!payment.reversedAt
+                    // Check if this is the most recent non-reversed payment for its schedule item
+                    const canReverse = !isReversed && payment.scheduleItemId && !history.some(
+                      (other) =>
+                        other.id !== payment.id &&
+                        !other.reversedAt &&
+                        other.scheduleItemId === payment.scheduleItemId &&
+                        new Date(other.createdAt) > new Date(payment.createdAt)
+                    )
+                    return (
+                      <div
+                        key={payment.id}
+                        className={`flex items-center justify-between p-3 rounded border ${isReversed ? "opacity-60" : ""}`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isReversed ? "bg-destructive/10" : "bg-primary/10"}`}>
+                            {isReversed ? (
+                              <ArrowCounterClockwise className="h-4 w-4 text-destructive" weight="bold" />
+                            ) : (
+                              <Check className="h-4 w-4 text-primary" weight="bold" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                to="/loans/$loanId"
+                                params={{ loanId: payment.loanId }}
+                                className={`font-medium text-sm hover:text-primary truncate block ${isReversed ? "line-through" : ""}`}
+                              >
+                                {payment.contactName}
+                              </Link>
+                              {isReversed && (
+                                <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30 shrink-0">
+                                  Reversed
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(payment.paidAt), "MMM d")} · {payment.method.toUpperCase()}
+                            </p>
+                            {isReversed && payment.reversalReason && (
+                              <p className="text-xs text-destructive/70 mt-0.5 truncate">
+                                Reason: {payment.reversalReason}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <Link
-                            to="/loans/$loanId"
-                            params={{ loanId: payment.loanId }}
-                            className="font-medium text-sm hover:text-primary truncate block"
-                          >
-                            {payment.contactName}
-                          </Link>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(payment.paidAt), "MMM d")} · {payment.method.toUpperCase()}
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <p className={`font-semibold text-sm ${isReversed ? "text-muted-foreground line-through" : "text-primary"}`}>
+                            +{formatCurrency(payment.amount)}
                           </p>
+                          {canReverse && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                              onClick={() => setSelectedPaymentForReversal({
+                                id: payment.id,
+                                amount: payment.amount,
+                                method: payment.method,
+                                paidAt: payment.paidAt,
+                              })}
+                            >
+                              <ArrowCounterClockwise className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      <p className="font-semibold text-sm text-primary shrink-0 ml-2">
-                        +{formatCurrency(payment.amount)}
-                      </p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -791,6 +594,29 @@ function PaymentsPage() {
           </div>
         </div>
       </div>
+
+      {/* Record Payment Dialog */}
+      <RecordPaymentDialog
+        open={!!selectedScheduleItem}
+        onOpenChange={(open) => { if (!open) setSelectedScheduleItem(null) }}
+        loanId={selectedScheduleItem?.loanId ?? ""}
+        borrowerName={selectedScheduleItem?.contactName ?? ""}
+        scheduleItem={selectedScheduleItem}
+        appliedPenalties={
+          selectedScheduleItem
+            ? selectedScheduleItem.penalties
+                .filter((p) => p.status === "applied")
+                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+            : 0
+        }
+      />
+
+      {/* Reverse Payment Dialog */}
+      <ReversePaymentDialog
+        open={!!selectedPaymentForReversal}
+        onOpenChange={(open) => { if (!open) setSelectedPaymentForReversal(null) }}
+        payment={selectedPaymentForReversal}
+      />
     </div>
   )
 }

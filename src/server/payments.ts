@@ -43,6 +43,10 @@ export const getPayments = createServerFn().handler(async () => {
       loanId: loans.id,
       contactName: contacts.name,
       principal: loans.principal,
+      scheduleItemId: payments.scheduleItemId,
+      reversedAt: payments.reversedAt,
+      reversalReason: payments.reversalReason,
+      createdAt: payments.createdAt,
     })
     .from(payments)
     .innerJoin(loans, eq(payments.loanId, loans.id))
@@ -54,6 +58,8 @@ export const getPayments = createServerFn().handler(async () => {
   return result.map((p) => ({
     ...p,
     paidAt: p.paidAt.toISOString(),
+    reversedAt: p.reversedAt?.toISOString() ?? null,
+    createdAt: p.createdAt.toISOString(),
   }))
 })
 
@@ -199,13 +205,14 @@ export const recordPayment = createServerFn()
     }
   }
 
-  // Check for duplicate payment (same loan, schedule item, amount within 60s)
+  // Check for duplicate payment (same loan, schedule item, amount within 60s, not reversed)
   const recentDuplicate = await db.query.payments.findFirst({
     where: and(
       eq(payments.loanId, data.loanId),
       eq(payments.scheduleItemId, data.scheduleItemId),
       eq(payments.amount, data.amount.toFixed(2)),
-      sql`${payments.createdAt} > NOW() - INTERVAL '60 seconds'`
+      sql`${payments.createdAt} > NOW() - INTERVAL '60 seconds'`,
+      sql`${payments.reversedAt} IS NULL`
     ),
   })
   if (recentDuplicate) {
@@ -317,11 +324,12 @@ export const recordPayment = createServerFn()
   }
 })
 
-// Update overdue payments (can be called by cron or dashboard load)
+// Update overdue payments + generate penalties (called on dashboard load as fallback)
 export const updateOverduePayments = createServerFn().handler(async () => {
-  await requireAuth()
+  const session = await requireAuth()
   const now = new Date()
 
+  // Mark pending schedule items as overdue
   await db
     .update(paymentSchedule)
     .set({ status: "overdue" })
@@ -329,39 +337,165 @@ export const updateOverduePayments = createServerFn().handler(async () => {
       and(eq(paymentSchedule.status, "pending"), lte(paymentSchedule.dueDate, now))
     )
 
-  return { success: true }
-})
-
-/**
- * Generate/update pending penalty records for overdue schedule items.
- * Called on dashboard load. Creates pending records that the lender can apply or waive.
- */
-export const generatePendingPenalties = createServerFn().handler(async () => {
-  const session = await requireAuth()
-
-  // Get lender's penalty config
+  // Generate penalties for this lender
   const settingsRow = await db.query.penaltySettings.findFirst({
     where: eq(penaltySettings.lenderId, session.user.id),
   })
   const config = parsePenaltyConfig(settingsRow?.config ?? null)
 
-  if (!config.enabled) return { generated: 0 }
+  if (config.enabled) {
+    const activeLoans = await db.query.loans.findMany({
+      where: and(
+        eq(loans.lenderId, session.user.id),
+        eq(loans.status, "active"),
+      ),
+      with: {
+        schedule: true,
+        penalties: true,
+      },
+    })
 
-  // Get active loans with overdue schedule items
-  const activeLoans = await db.query.loans.findMany({
-    where: and(
-      eq(loans.lenderId, session.user.id),
-      eq(loans.status, "active"),
-    ),
-    with: {
-      schedule: true,
-      penalties: true,
-    },
-  })
-
-  for (const loan of activeLoans) {
-    await ensurePendingPenalties(loan, config, loan.penalties)
+    for (const loan of activeLoans) {
+      await ensurePendingPenalties(loan, config, loan.penalties)
+    }
   }
 
-  return { generated: 0 }
+  return { success: true }
 })
+
+// Reverse a payment (soft delete + undo side effects)
+const reversePaymentSchema = z.object({
+  paymentId: z.string().min(1),
+  reason: z.string().min(1, "Reason is required"),
+})
+
+export const reversePayment = createServerFn()
+  .inputValidator(reversePaymentSchema)
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+
+    // Load payment with loan and commission
+    const payment = await db.query.payments.findFirst({
+      where: eq(payments.id, data.paymentId),
+      with: {
+        loan: true,
+        commission: true,
+      },
+    })
+
+    if (!payment) {
+      throw new Error("Payment not found")
+    }
+
+    // Only lender can reverse
+    if (payment.loan.lenderId !== session.user.id) {
+      throw new Error("Payment not found")
+    }
+
+    // Check not already reversed
+    if (payment.reversedAt) {
+      throw new Error("Payment has already been reversed")
+    }
+
+    // Must have a schedule item to check "most recent" rule
+    if (!payment.scheduleItemId) {
+      throw new Error("Cannot reverse a payment without a schedule item")
+    }
+
+    // Check this is the most recent non-reversed payment for this schedule item
+    const laterPayment = await db.query.payments.findFirst({
+      where: and(
+        eq(payments.scheduleItemId, payment.scheduleItemId),
+        sql`${payments.reversedAt} IS NULL`,
+        sql`${payments.createdAt} > ${payment.createdAt}`
+      ),
+    })
+
+    if (laterPayment) {
+      throw new Error("Only the most recent payment for a schedule item can be reversed")
+    }
+
+    const now = new Date()
+
+    // 1. Soft-delete the payment
+    await db
+      .update(payments)
+      .set({
+        reversedAt: now,
+        reversedBy: session.user.id,
+        reversalReason: data.reason,
+      })
+      .where(eq(payments.id, data.paymentId))
+
+    // 2. Update loan balances (inverse of recordPayment)
+    const paymentAmount = parseFloat(payment.amount)
+    const newAmountPaid = Math.max(0, parseFloat(payment.loan.amountPaid) - paymentAmount)
+    const newRemainingBalance = parseFloat(payment.loan.totalToRepay) - newAmountPaid
+
+    const wasCompleted = payment.loan.status === "completed"
+
+    await db
+      .update(loans)
+      .set({
+        amountPaid: newAmountPaid.toFixed(2),
+        remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
+        status: wasCompleted ? "active" : payment.loan.status,
+        completedAt: wasCompleted ? null : payment.loan.completedAt,
+        updatedAt: now,
+      })
+      .where(eq(loans.id, payment.loanId))
+
+    // 3. Update schedule item (inverse)
+    const scheduleItem = await db.query.paymentSchedule.findFirst({
+      where: eq(paymentSchedule.id, payment.scheduleItemId),
+    })
+
+    if (scheduleItem) {
+      const newPaidAmount = Math.max(0, parseFloat(scheduleItem.paidAmount) - paymentAmount)
+
+      let newStatus: "pending" | "partial" | "overdue"
+      if (newPaidAmount <= 0) {
+        newStatus = new Date(scheduleItem.dueDate) < now ? "overdue" : "pending"
+      } else {
+        newStatus = "partial"
+      }
+
+      await db
+        .update(paymentSchedule)
+        .set({
+          paidAmount: newPaidAmount.toFixed(2),
+          status: newStatus,
+          paidAt: null,
+        })
+        .where(eq(paymentSchedule.id, payment.scheduleItemId))
+    }
+
+    // 4. Reverse commission if exists
+    if (payment.commission) {
+      const commissionAmount = parseFloat(payment.commission.commissionAmount)
+
+      // Delete the commission record
+      await db
+        .delete(commissions)
+        .where(eq(commissions.id, payment.commission.id))
+
+      // Decrement agent totals
+      await db
+        .update(agents)
+        .set({
+          totalCollected: sql`GREATEST(0, ${agents.totalCollected} - ${paymentAmount})`,
+          totalCommissionEarned: sql`GREATEST(0, ${agents.totalCommissionEarned} - ${commissionAmount})`,
+        })
+        .where(eq(agents.id, payment.commission.agentId))
+    }
+
+    // 5. Audit log
+    const log = createAuditLogger(session.user)
+    log("payment.reverse", "payment", data.paymentId, {
+      loanId: payment.loanId,
+      amount: paymentAmount,
+      reason: data.reason,
+    })
+
+    return { success: true }
+  })

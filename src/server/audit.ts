@@ -16,6 +16,7 @@ type AuditAction =
   | "loan.updateClauses"
   // Payments
   | "payment.record"
+  | "payment.reverse"
   | "payment.view"
   // Agents
   | "agent.create"
@@ -30,6 +31,7 @@ type AuditAction =
   // Penalties
   | "penalty.apply"
   | "penalty.waive"
+  | "penalty.revert"
   | "penalty.updateSettings"
   // Auth
   | "auth.login"

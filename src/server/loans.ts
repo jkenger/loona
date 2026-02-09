@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, loans, paymentSchedule, contacts, agents, penalties, penaltySettings } from "@/lib/db"
+import { db, loans, paymentSchedule, contacts, agents, penaltySettings } from "@/lib/db"
 import { eq, desc, and, sql } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
@@ -11,7 +11,6 @@ import {
   getRemainingPenaltyBudget,
   type PenaltyConfig,
 } from "@/lib/constants/penalty-defaults"
-import { ensurePendingPenalties } from "./penalty-generation"
 
 // Validation schemas
 const createLoanSchema = z.object({
@@ -138,24 +137,17 @@ export const getLoan = createServerFn()
       const config = parsePenaltyConfig(settingsRow?.config ?? null)
 
       if (config.enabled) {
-        await ensurePendingPenalties(result, config, result.penalties)
-
-        // Re-read penalties after generation
-        const freshPenalties = await db.query.penalties.findMany({
-          where: eq(penalties.loanId, id),
-        })
-
-        const totalApplied = freshPenalties
+        const totalApplied = result.penalties
           .filter((p) => p.status === "applied")
           .reduce((sum, p) => sum + parseFloat(p.amount), 0)
 
-        const totalPending = freshPenalties
+        const totalPending = result.penalties
           .filter((p) => p.status === "pending")
           .reduce((sum, p) => sum + parseFloat(p.amount), 0)
 
         penaltyData = {
           config,
-          penalties: freshPenalties.map((p) => ({
+          penalties: result.penalties.map((p) => ({
             id: p.id,
             loanId: p.loanId,
             scheduleItemId: p.scheduleItemId,
@@ -197,6 +189,7 @@ export const getLoan = createServerFn()
         ...p,
         paidAt: p.paidAt.toISOString(),
         createdAt: p.createdAt.toISOString(),
+        reversedAt: p.reversedAt?.toISOString() ?? null,
       })),
       penalties: undefined, // don't expose raw relation, use penaltyData instead
       penaltyData,

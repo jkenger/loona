@@ -225,6 +225,11 @@ export const payments = pgTable("payments", {
   recordedByAgentId: text("recorded_by_agent_id").references(() => agents.id),
   notes: text("notes"),
 
+  // Reversal fields (soft delete)
+  reversedAt: timestamp("reversed_at"),
+  reversedBy: text("reversed_by").references(() => user.id),
+  reversalReason: text("reversal_reason"),
+
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
