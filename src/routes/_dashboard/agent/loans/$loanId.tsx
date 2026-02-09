@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { SkeletonDetailPage } from '@/components/ui/skeleton'
 import { getLoan } from '@/server/loans'
-import { recordPayment } from '@/server/payments'
-import { toast } from 'sonner'
+import { PenaltyItems } from '@/components/penalty-items'
+import { RecordPaymentDialog } from '@/components/record-payment-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -12,24 +12,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { CurrencyInput } from '@/components/ui/currency-input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { DatePicker } from '@/components/ui/date-picker'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
 import { useState } from 'react'
@@ -41,12 +23,11 @@ import {
   Clock,
   Warning,
   Phone,
-  Spinner,
   ShieldCheck,
   Users,
   Tag,
+  Gavel,
 } from '@phosphor-icons/react'
-import { format } from 'date-fns'
 import { calculateEIR, formatEIR } from '@/lib/utils/eir'
 
 export const Route = createFileRoute('/_dashboard/agent/loans/$loanId')({
@@ -75,17 +56,9 @@ type ScheduleItem = NonNullable<Awaited<ReturnType<typeof getLoan>>>['schedule']
 
 function AgentLoanDetailPage() {
   const { loan, unauthorized } = Route.useLoaderData()
-  const router = useRouter()
 
   // Payment dialog state
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
-  const [paymentStep, setPaymentStep] = useState<'form' | 'confirm'>('form')
   const [selectedScheduleItem, setSelectedScheduleItem] = useState<ScheduleItem | null>(null)
-  const [paymentAmount, setPaymentAmount] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'gcash' | 'maya' | 'bank'>('cash')
-  const [paymentDate, setPaymentDate] = useState<Date>(new Date())
-  const [paymentNotes, setPaymentNotes] = useState('')
-  const [isRecordingPayment, setIsRecordingPayment] = useState(false)
 
   if (unauthorized) {
     return (
@@ -109,50 +82,8 @@ function AgentLoanDetailPage() {
     )
   }
 
-  const openPaymentDialog = (item: ScheduleItem) => {
-    setSelectedScheduleItem(item)
-    const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-    setPaymentAmount(remaining.toString())
-    setPaymentMethod('cash')
-    setPaymentDate(new Date())
-    setPaymentNotes('')
-    setPaymentStep('form')
-    setShowPaymentDialog(true)
-  }
-
-  const closePaymentDialog = () => {
-    setShowPaymentDialog(false)
-    setSelectedScheduleItem(null)
-    setPaymentAmount('')
-    setPaymentDate(new Date())
-    setPaymentNotes('')
-    setPaymentStep('form')
-  }
-
-  const handleRecordPayment = async () => {
-    if (!selectedScheduleItem) return
-
-    setIsRecordingPayment(true)
-    try {
-      await recordPayment({
-        data: {
-          loanId: loan.id,
-          scheduleItemId: selectedScheduleItem.id,
-          amount: parseFloat(paymentAmount),
-          method: paymentMethod,
-          paidAt: format(paymentDate, 'yyyy-MM-dd'),
-          notes: paymentNotes || undefined,
-        },
-      })
-      toast.success('Payment recorded successfully')
-      closePaymentDialog()
-      router.invalidate()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to record payment')
-    } finally {
-      setIsRecordingPayment(false)
-    }
-  }
+  const penaltyData = loan.penaltyData ?? null
+  const hasOverdueItems = loan.schedule.some((s) => s.status === 'overdue')
 
   const statusConfig: Record<string, { variant: any; label: string; className?: string }> = {
     pending_disbursement: { variant: 'outline', label: 'Pending Disbursement' },
@@ -433,6 +364,36 @@ function AgentLoanDetailPage() {
           </div>
         )}
 
+        {/* Penalty Summary */}
+        {penaltyData && penaltyData.config.enabled && hasOverdueItems && (
+          <Card className="shadow-sm border-amber-300/50">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Gavel className="h-5 w-5 text-amber-600" />
+                Penalties
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1 p-3 rounded bg-muted/50">
+                  <p className="text-sm text-muted-foreground">Applied</p>
+                  <p className="text-lg font-bold">{formatCurrency(penaltyData.totalApplied)}</p>
+                </div>
+                <div className="space-y-1 p-3 rounded bg-amber-50 dark:bg-amber-900/20">
+                  <p className="text-sm text-muted-foreground">Pending Decisions</p>
+                  <p className="text-lg font-bold text-amber-600">
+                    {penaltyData.penalties.filter((p) => p.status === 'pending').length}
+                  </p>
+                </div>
+                <div className="space-y-1 p-3 rounded bg-muted/50">
+                  <p className="text-sm text-muted-foreground">Cap Remaining</p>
+                  <p className="text-lg font-bold">{formatCurrency(penaltyData.budgetRemaining)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Payment Schedule */}
         <Card className="shadow-sm">
           <CardHeader className="p-4 pb-2">
@@ -447,50 +408,78 @@ function AgentLoanDetailPage() {
               {loan.schedule.map((item, index) => {
                 const config = scheduleStatusConfig[item.status]
                 const StatusIcon = config.icon
+                const itemPenalties = penaltyData?.penalties.filter(
+                  (p) => p.scheduleItemId === item.id,
+                ) ?? []
+                const appliedPenaltyTotal = itemPenalties
+                  .filter((p) => p.status === 'applied')
+                  .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+                const daysOverdue = item.status === 'overdue'
+                  ? Math.max(0, Math.floor((new Date(new Date().toDateString()).getTime() - new Date(new Date(item.dueDate).toDateString()).getTime()) / 86400000))
+                  : 0
 
                 return (
-                  <div
+                  <PenaltyItems
                     key={item.id}
-                    className={`flex items-center justify-between p-3 rounded border ${
-                      item.status === 'overdue' ? 'border-destructive/50' : ''
-                    }`}
+                    penalties={itemPenalties}
+                    daysOverdue={daysOverdue}
+                    formatCurrency={formatCurrency}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
-                        <StatusIcon className="h-4 w-4" weight="bold" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Payment #{index + 1}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Due: {new Date(item.dueDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                        {item.status === 'paid' && item.paidAt && (
-                          <p className="text-xs text-muted-foreground">
-                            Paid: {new Date(item.paidAt).toLocaleDateString()}
-                          </p>
-                        )}
-                        {item.status === 'partial' && (
-                          <p className="text-xs text-primary">
-                            Paid: {formatCurrency(item.paidAmount)}
-                          </p>
-                        )}
-                      </div>
-                      {item.status !== 'paid' && loan.status === 'active' && loan.canRecordPayments && (
-                        <Button
-                          size="sm"
-                          variant={item.status === 'overdue' ? 'default' : 'outline'}
-                          onClick={() => openPaymentDialog(item)}
+                    {({ toggleButton, detailPanel }) => (
+                      <div className="space-y-1">
+                        <div
+                          className={`flex items-center justify-between p-3 rounded border ${
+                            item.status === 'overdue' ? 'border-destructive/50' : ''
+                          }`}
                         >
-                          Collect
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                          <div className="flex items-center gap-3">
+                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
+                              <StatusIcon className="h-4 w-4" weight="bold" />
+                            </div>
+                            <div>
+                              <p className="font-medium">Payment #{index + 1}</p>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
+                                {toggleButton}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="font-semibold">{formatCurrency(item.amount)}</p>
+                              {appliedPenaltyTotal > 0 && (
+                                <p className="text-xs text-amber-600">
+                                  + {formatCurrency(appliedPenaltyTotal)} penalty
+                                </p>
+                              )}
+                              {item.status === 'paid' && item.paidAt && (
+                                <p className="text-xs text-muted-foreground">
+                                  Paid: {new Date(item.paidAt).toLocaleDateString()}
+                                </p>
+                              )}
+                              {item.status === 'partial' && (
+                                <p className="text-xs text-primary">
+                                  Paid: {formatCurrency(item.paidAmount)}
+                                </p>
+                              )}
+                            </div>
+                            {item.status !== 'paid' && loan.status === 'active' && loan.canRecordPayments && (
+                              <Button
+                                size="sm"
+                                variant={item.status === 'overdue' ? 'default' : 'outline'}
+                                onClick={() => setSelectedScheduleItem(item)}
+                              >
+                                Collect
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {detailPanel && (
+                          <div className="ml-11">{detailPanel}</div>
+                        )}
+                      </div>
+                    )}
+                  </PenaltyItems>
                 )
               })}
             </div>
@@ -534,157 +523,25 @@ function AgentLoanDetailPage() {
       </div>
 
       {/* Record Payment Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {paymentStep === 'form' ? 'Record Payment' : 'Confirm Payment'}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedScheduleItem && (
-                <>
-                  Payment #{loan.schedule.findIndex(s => s.id === selectedScheduleItem.id) + 1} · Due{' '}
-                  {new Date(selectedScheduleItem.dueDate).toLocaleDateString()}
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedScheduleItem && paymentStep === 'form' && (
-            <div className="space-y-4">
-              {/* Schedule item info */}
-              <div className="p-3 rounded bg-muted/50 text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount Due</span>
-                  <span className="font-medium">{formatCurrency(selectedScheduleItem.amount)}</span>
-                </div>
-                {parseFloat(selectedScheduleItem.paidAmount) > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Already Paid</span>
-                    <span className="font-medium text-primary">{formatCurrency(selectedScheduleItem.paidAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t pt-1 mt-1">
-                  <span className="text-muted-foreground">Remaining</span>
-                  <span className="font-semibold">
-                    {formatCurrency(parseFloat(selectedScheduleItem.amount) - parseFloat(selectedScheduleItem.paidAmount))}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="paymentAmount">Payment Amount</Label>
-                  <CurrencyInput
-                    id="paymentAmount"
-                    value={paymentAmount}
-                    onValueChange={setPaymentAmount}
-                    placeholder="1,000"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Select value={paymentMethod} onValueChange={(v) => v && setPaymentMethod(v as any)}>
-                    <SelectTrigger>
-                      {{ cash: 'Cash', gcash: 'GCash', maya: 'Maya', bank: 'Bank Transfer' }[paymentMethod]}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="gcash">GCash</SelectItem>
-                      <SelectItem value="maya">Maya</SelectItem>
-                      <SelectItem value="bank">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Payment Date</Label>
-                  <DatePicker
-                    value={paymentDate}
-                    onChange={(date) => date && setPaymentDate(date)}
-                  />
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="paymentNotes">Notes (optional)</Label>
-                  <Input
-                    id="paymentNotes"
-                    placeholder="Any additional notes..."
-                    value={paymentNotes}
-                    onChange={(e) => setPaymentNotes(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {selectedScheduleItem && paymentStep === 'confirm' && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-                <div className="text-center pb-3 border-b">
-                  <p className="text-2xl font-bold text-primary">{formatCurrency(paymentAmount)}</p>
-                  <p className="text-sm text-muted-foreground">Payment Amount</p>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Borrower</span>
-                    <span className="font-medium">{loan.contact.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Payment Date</span>
-                    <span className="font-medium">{format(paymentDate, 'MMMM d, yyyy')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Method</span>
-                    <span className="font-medium">
-                      {{ cash: 'Cash', gcash: 'GCash', maya: 'Maya', bank: 'Bank Transfer' }[paymentMethod]}
-                    </span>
-                  </div>
-                  {paymentNotes && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Notes</span>
-                      <span className="font-medium text-right max-w-[180px] truncate">{paymentNotes}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground text-center">
-                Please review the details above before confirming.
-              </p>
-            </div>
-          )}
-
-          <DialogFooter>
-            {paymentStep === 'form' ? (
-              <>
-                <Button variant="outline" onClick={closePaymentDialog}>
-                  Cancel
-                </Button>
-                <Button onClick={() => setPaymentStep('confirm')} disabled={!paymentAmount}>
-                  Review Payment
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" onClick={() => setPaymentStep('form')}>
-                  Back
-                </Button>
-                <Button onClick={handleRecordPayment} disabled={isRecordingPayment}>
-                  {isRecordingPayment ? (
-                    <>
-                      <Spinner className="h-4 w-4 animate-spin mr-2" />
-                      Recording...
-                    </>
-                  ) : (
-                    'Confirm Payment'
-                  )}
-                </Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RecordPaymentDialog
+        open={!!selectedScheduleItem}
+        onOpenChange={(open) => { if (!open) setSelectedScheduleItem(null) }}
+        loanId={loan.id}
+        borrowerName={loan.contact.name}
+        scheduleItem={selectedScheduleItem}
+        appliedPenalties={
+          selectedScheduleItem
+            ? (penaltyData?.penalties ?? [])
+                .filter((p) => p.scheduleItemId === selectedScheduleItem.id && p.status === 'applied')
+                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+            : 0
+        }
+        scheduleIndex={
+          selectedScheduleItem
+            ? loan.schedule.findIndex((s) => s.id === selectedScheduleItem.id)
+            : undefined
+        }
+      />
     </div>
   )
 }
