@@ -4,10 +4,25 @@ on:
     - cron: '0 0 * * *' # midnight UTC daily
   workflow_dispatch: {} # manual trigger
 
+# Required GitHub repository secrets:
+#   APP_URL      - deployed app URL, e.g. https://loona.example.com (no trailing slash)
+#   CRON_SECRET  - shared secret matching CRON_SECRET env var on the server
+
 jobs:
   overdue-check:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "::error::APP_URL secret is not set. Add it in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::CRON_SECRET secret is not set. Add it in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
       - name: Trigger overdue check
         run: |
           curl -f -X GET \
