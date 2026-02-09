@@ -85,6 +85,13 @@
       "when": 1770607064465,
       "tag": "0011_noisy_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1770636434470,
+      "tag": "0012_flawless_jubilee",
+      "breakpoints": true
     }
   ]
 }
