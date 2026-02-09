@@ -28,6 +28,7 @@ import { Route as DashboardAgentsIndexRouteImport } from './routes/_dashboard/ag
 import { Route as DashboardAgentIndexRouteImport } from './routes/_dashboard/agent/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/_dashboard/admin/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
 import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard/loans/new-wizard'
 import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans/new'
 import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/contacts/new'
@@ -141,6 +142,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardSettingsPenaltySettingsRoute =
+  DashboardSettingsPenaltySettingsRouteImport.update({
+    id: '/settings/penalty-settings',
+    path: '/settings/penalty-settings',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardLoansNewWizardRoute = DashboardLoansNewWizardRouteImport.update({
   id: '/loans/new-wizard',
   path: '/loans/new-wizard',
@@ -269,6 +276,7 @@ export interface FileRoutesByFullPath {
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/': typeof DashboardAdminIndexRoute
   '/agent/': typeof DashboardAgentIndexRoute
@@ -307,6 +315,7 @@ export interface FileRoutesByTo {
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin': typeof DashboardAdminIndexRoute
   '/agent': typeof DashboardAgentIndexRoute
@@ -348,6 +357,7 @@ export interface FileRoutesById {
   '/_dashboard/contacts/new': typeof DashboardContactsNewRoute
   '/_dashboard/loans/new': typeof DashboardLoansNewRoute
   '/_dashboard/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_dashboard/admin/': typeof DashboardAdminIndexRoute
   '/_dashboard/agent/': typeof DashboardAgentIndexRoute
@@ -388,6 +398,7 @@ export interface FileRouteTypes {
     | '/contacts/new'
     | '/loans/new'
     | '/loans/new-wizard'
+    | '/settings/penalty-settings'
     | '/api/auth/$'
     | '/admin/'
     | '/agent/'
@@ -426,6 +437,7 @@ export interface FileRouteTypes {
     | '/contacts/new'
     | '/loans/new'
     | '/loans/new-wizard'
+    | '/settings/penalty-settings'
     | '/api/auth/$'
     | '/admin'
     | '/agent'
@@ -466,6 +478,7 @@ export interface FileRouteTypes {
     | '/_dashboard/contacts/new'
     | '/_dashboard/loans/new'
     | '/_dashboard/loans/new-wizard'
+    | '/_dashboard/settings/penalty-settings'
     | '/api/auth/$'
     | '/_dashboard/admin/'
     | '/_dashboard/agent/'
@@ -629,6 +642,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard/settings/penalty-settings': {
+      id: '/_dashboard/settings/penalty-settings'
+      path: '/settings/penalty-settings'
+      fullPath: '/settings/penalty-settings'
+      preLoaderRoute: typeof DashboardSettingsPenaltySettingsRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/_dashboard/loans/new-wizard': {
       id: '/_dashboard/loans/new-wizard'
@@ -794,6 +814,7 @@ interface DashboardRouteChildren {
   DashboardContactsNewRoute: typeof DashboardContactsNewRoute
   DashboardLoansNewRoute: typeof DashboardLoansNewRoute
   DashboardLoansNewWizardRoute: typeof DashboardLoansNewWizardRoute
+  DashboardSettingsPenaltySettingsRoute: typeof DashboardSettingsPenaltySettingsRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
   DashboardAgentIndexRoute: typeof DashboardAgentIndexRoute
   DashboardAgentsIndexRoute: typeof DashboardAgentsIndexRoute
@@ -825,6 +846,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardContactsNewRoute: DashboardContactsNewRoute,
   DashboardLoansNewRoute: DashboardLoansNewRoute,
   DashboardLoansNewWizardRoute: DashboardLoansNewWizardRoute,
+  DashboardSettingsPenaltySettingsRoute: DashboardSettingsPenaltySettingsRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
   DashboardAgentIndexRoute: DashboardAgentIndexRoute,
   DashboardAgentsIndexRoute: DashboardAgentsIndexRoute,

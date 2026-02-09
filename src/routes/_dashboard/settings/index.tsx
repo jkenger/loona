@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { createFileRoute, useRouter, Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -30,6 +30,8 @@ import {
   Eye,
   EyeSlash,
   PencilSimple,
+  Warning,
+  ArrowSquareOut,
 } from "@phosphor-icons/react"
 import { SkeletonFormPage } from "@/components/ui/skeleton"
 
@@ -277,6 +279,31 @@ function SettingsPage() {
                   Change Password
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Penalty Settings Card */}
+          <Card className="shadow-lg">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Warning className="h-5 w-5 text-destructive" />
+                Penalty Rules
+              </CardTitle>
+              <CardDescription>Configure late fees and penalty interest for overdue payments</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <Link
+                to="/settings/penalty-settings"
+                className="group flex items-center justify-between p-3 rounded border bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <div>
+                  <p className="font-medium">Late Fees & Penalties</p>
+                  <p className="text-sm text-muted-foreground">
+                    Set up late fees, daily penalty interest, and caps
+                  </p>
+                </div>
+                <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
             </CardContent>
           </Card>
         </div>

@@ -58,6 +58,9 @@ export const commissionStatusEnum = pgEnum("commission_status", [
   "paid",
 ])
 
+export const penaltyTypeEnum = pgEnum("penalty_type", ["late_fee", "daily_interest"])
+export const penaltyStatusEnum = pgEnum("penalty_status", ["pending", "applied", "waived"])
+
 // ============================================================================
 // Auth Tables (Better Auth)
 // ============================================================================
@@ -295,6 +298,33 @@ export const commissionSettings = pgTable("commission_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
 
+// Penalty Settings (lender-wide penalty config)
+export const penaltySettings = pgTable("penalty_settings", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" })
+    .unique(),
+  config: text("config").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+// Penalties (ledger of all penalty decisions)
+export const penalties = pgTable("penalties", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  loanId: text("loan_id").notNull().references(() => loans.id, { onDelete: "cascade" }),
+  scheduleItemId: text("schedule_item_id").notNull().references(() => paymentSchedule.id, { onDelete: "cascade" }),
+  penaltyType: penaltyTypeEnum("penalty_type").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  status: penaltyStatusEnum("status").notNull().default("pending"),
+  appliedAt: timestamp("applied_at"),
+  waivedAt: timestamp("waived_at"),
+  decidedBy: text("decided_by").references(() => user.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
 // Audit Logs
 export const auditLogs = pgTable("audit_logs", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -336,6 +366,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   lenderAgents: many(agents, { relationName: "lender" }),
   auditLogs: many(auditLogs),
   commissionSettings: one(commissionSettings),
+  penaltySettings: one(penaltySettings),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -385,6 +416,7 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
   }),
   schedule: many(paymentSchedule),
   payments: many(payments),
+  penalties: many(penalties),
 }))
 
 export const paymentScheduleRelations = relations(paymentSchedule, ({ one, many }) => ({
@@ -393,6 +425,7 @@ export const paymentScheduleRelations = relations(paymentSchedule, ({ one, many 
     references: [loans.id],
   }),
   payments: many(payments),
+  penalties: many(penalties),
 }))
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
@@ -451,6 +484,16 @@ export const commissionSettingsRelations = relations(commissionSettings, ({ one 
   }),
 }))
 
+export const penaltySettingsRelations = relations(penaltySettings, ({ one }) => ({
+  lender: one(user, { fields: [penaltySettings.lenderId], references: [user.id] }),
+}))
+
+export const penaltiesRelations = relations(penalties, ({ one }) => ({
+  loan: one(loans, { fields: [penalties.loanId], references: [loans.id] }),
+  scheduleItem: one(paymentSchedule, { fields: [penalties.scheduleItemId], references: [paymentSchedule.id] }),
+  decidedByUser: one(user, { fields: [penalties.decidedBy], references: [user.id] }),
+}))
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -478,3 +521,6 @@ export type NewCommission = typeof commissions.$inferInsert
 
 export type CommissionSettingsRow = typeof commissionSettings.$inferSelect
 export type NewCommissionSettingsRow = typeof commissionSettings.$inferInsert
+
+export type PenaltySettingsRow = typeof penaltySettings.$inferSelect
+export type PenaltyRow = typeof penalties.$inferSelect

@@ -27,6 +27,10 @@ type AuditAction =
   // Commissions
   | "commission.pay"
   | "commission.updateSettings"
+  // Penalties
+  | "penalty.apply"
+  | "penalty.waive"
+  | "penalty.updateSettings"
   // Auth
   | "auth.login"
   | "auth.logout"
@@ -36,7 +40,7 @@ type AuditAction =
   | "admin.set_role"
   | "admin.create_user"
 
-type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "commission_settings" | "user"
+type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "commission_settings" | "penalty" | "penalty_settings" | "user"
 
 interface AuditLogParams {
   userId: string

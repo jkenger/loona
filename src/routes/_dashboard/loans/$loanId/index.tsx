@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { getLoan, deleteLoan, approveLoan, rejectLoan } from "@/server/loans"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
 import { recordPayment } from "@/server/payments"
+import { PenaltyItems } from "@/components/penalty-items"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,6 +47,7 @@ import {
   X,
   Scroll,
   ArrowSquareOut,
+  Gavel,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -86,6 +88,7 @@ type ScheduleItem = NonNullable<Awaited<ReturnType<typeof getLoan>>>["schedule"]
 
 function LoanDetailPage() {
   const { loan, agents, unauthorized } = Route.useLoaderData()
+  const penaltyData = loan?.penaltyData ?? null
   const router = useRouter()
   const [assigning, setAssigning] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -199,7 +202,10 @@ function LoanDetailPage() {
   const openPaymentDialog = (item: ScheduleItem) => {
     setSelectedScheduleItem(item)
     const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-    setPaymentAmount(remaining.toString())
+    const appliedPenalties = (penaltyData?.penalties ?? [])
+      .filter((p) => p.scheduleItemId === item.id && p.status === "applied")
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+    setPaymentAmount((remaining + appliedPenalties).toString())
     setPaymentMethod("cash")
     setPaymentDate(new Date())
     setPaymentNotes("")
@@ -241,6 +247,8 @@ function LoanDetailPage() {
     }
   }
 
+
+  const hasOverdueItems = loan?.schedule.some((s) => s.status === "overdue")
 
   const statusConfig: Record<string, { variant: any; label: string; className?: string }> = {
     pending_disbursement: { variant: "outline", label: "Pending Disbursement" },
@@ -600,6 +608,36 @@ function LoanDetailPage() {
         </div>
       )}
 
+      {/* Penalty Summary */}
+      {penaltyData && penaltyData.config.enabled && hasOverdueItems && (
+        <Card className="shadow-sm border-amber-300/50">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Gavel className="h-5 w-5 text-amber-600" />
+              Penalties
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1 p-3 rounded bg-muted/50">
+                <p className="text-sm text-muted-foreground">Applied</p>
+                <p className="text-lg font-bold">{formatCurrency(penaltyData.totalApplied)}</p>
+              </div>
+              <div className="space-y-1 p-3 rounded bg-amber-50 dark:bg-amber-900/20">
+                <p className="text-sm text-muted-foreground">Pending Decisions</p>
+                <p className="text-lg font-bold text-amber-600">
+                  {penaltyData.penalties.filter((p) => p.status === "pending").length}
+                </p>
+              </div>
+              <div className="space-y-1 p-3 rounded bg-muted/50">
+                <p className="text-sm text-muted-foreground">Cap Remaining</p>
+                <p className="text-lg font-bold">{formatCurrency(penaltyData.budgetRemaining)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Payment Schedule */}
       <Card className="shadow-sm">
         <CardHeader className="p-4 pb-2">
@@ -614,50 +652,79 @@ function LoanDetailPage() {
             {loan.schedule.map((item, index) => {
               const config = scheduleStatusConfig[item.status]
               const StatusIcon = config.icon
+              const itemPenalties = penaltyData?.penalties.filter(
+                (p) => p.scheduleItemId === item.id,
+              ) ?? []
+              const appliedPenaltyTotal = itemPenalties
+                .filter((p) => p.status === "applied")
+                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+              // Compute days overdue from due date (calendar days)
+              const daysOverdue = item.status === "overdue"
+                ? Math.max(0, Math.floor((new Date(new Date().toDateString()).getTime() - new Date(new Date(item.dueDate).toDateString()).getTime()) / 86400000))
+                : 0
 
               return (
-                <div
+                <PenaltyItems
                   key={item.id}
-                  className={`flex items-center justify-between p-3 rounded border ${
-                    item.status === "overdue" ? "border-destructive/50" : ""
-                  }`}
+                  penalties={itemPenalties}
+                  daysOverdue={daysOverdue}
+                  formatCurrency={formatCurrency}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
-                      <StatusIcon className="h-4 w-4" weight="bold" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Payment #{index + 1}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Due: {new Date(item.dueDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                      {item.status === "paid" && item.paidAt && (
-                        <p className="text-xs text-muted-foreground">
-                          Paid: {new Date(item.paidAt).toLocaleDateString()}
-                        </p>
-                      )}
-                      {item.status === "partial" && (
-                        <p className="text-xs text-primary">
-                          Paid: {formatCurrency(item.paidAmount)}
-                        </p>
-                      )}
-                    </div>
-                    {item.status !== "paid" && loan.status === "active" && (
-                      <Button
-                        size="sm"
-                        variant={item.status === "overdue" ? "default" : "outline"}
-                        onClick={() => openPaymentDialog(item)}
+                  {({ toggleButton, detailPanel }) => (
+                    <div className="space-y-1">
+                      <div
+                        className={`flex items-center justify-between p-3 rounded border ${
+                          item.status === "overdue" ? "border-destructive/50" : ""
+                        }`}
                       >
-                        Pay
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                        <div className="flex items-center gap-3">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
+                            <StatusIcon className="h-4 w-4" weight="bold" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Payment #{index + 1}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
+                              {toggleButton}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-semibold">{formatCurrency(item.amount)}</p>
+                            {appliedPenaltyTotal > 0 && (
+                              <p className="text-xs text-amber-600">
+                                + {formatCurrency(appliedPenaltyTotal)} penalty
+                              </p>
+                            )}
+                            {item.status === "paid" && item.paidAt && (
+                              <p className="text-xs text-muted-foreground">
+                                Paid: {new Date(item.paidAt).toLocaleDateString()}
+                              </p>
+                            )}
+                            {item.status === "partial" && (
+                              <p className="text-xs text-primary">
+                                Paid: {formatCurrency(item.paidAmount)}
+                              </p>
+                            )}
+                          </div>
+                          {item.status !== "paid" && loan.status === "active" && (
+                            <Button
+                              size="sm"
+                              variant={item.status === "overdue" ? "default" : "outline"}
+                              onClick={() => openPaymentDialog(item)}
+                            >
+                              Pay
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {detailPanel && (
+                        <div className="ml-11">{detailPanel}</div>
+                      )}
+                    </div>
+                  )}
+                </PenaltyItems>
               )
             })}
           </div>
@@ -820,6 +887,25 @@ function LoanDetailPage() {
                     {formatCurrency(parseFloat(selectedScheduleItem.amount) - parseFloat(selectedScheduleItem.paidAmount))}
                   </span>
                 </div>
+                {(() => {
+                  const appliedTotal = (penaltyData?.penalties ?? [])
+                    .filter((p) => p.scheduleItemId === selectedScheduleItem.id && p.status === "applied")
+                    .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+                  if (appliedTotal <= 0) return null
+                  const remaining = parseFloat(selectedScheduleItem.amount) - parseFloat(selectedScheduleItem.paidAmount)
+                  return (
+                    <>
+                      <div className="flex justify-between text-amber-600">
+                        <span>Applied Penalties</span>
+                        <span className="font-medium">+{formatCurrency(appliedTotal)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1 mt-1 font-semibold">
+                        <span>Total Due</span>
+                        <span>{formatCurrency(remaining + appliedTotal)}</span>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">

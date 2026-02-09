@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { getUpcomingPayments, getPayments, recordPayment } from "@/server/payments"
+import { PenaltyItems } from "@/components/penalty-items"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -207,7 +208,10 @@ function PaymentsPage() {
   const openPaymentForm = (item: (typeof upcoming)[0]) => {
     setSelectedScheduleItem(item)
     const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-    setAmount(remaining.toString())
+    const appliedPenalties = item.penalties
+      .filter((p) => p.status === "applied")
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+    setAmount((remaining + appliedPenalties).toString())
     setPaidAt(new Date())
     setPaymentStep("form")
     setShowPaymentForm(true)
@@ -351,37 +355,58 @@ function PaymentsPage() {
                   <div className="space-y-2">
                     {overdueItems.map((item) => {
                       const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
+                      const appliedPenaltyTotal = item.penalties
+                        .filter((p) => p.status === "applied")
+                        .reduce((sum, p) => sum + parseFloat(p.amount), 0)
                       return (
-                        <div
+                        <PenaltyItems
                           key={item.id}
-                          className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5"
+                          penalties={item.penalties}
+                          daysOverdue={item.daysOverdue}
+                          penaltyIn={item.penaltyIn}
+                          formatCurrency={formatCurrency}
                         >
-                          <div className="min-w-0 flex-1">
-                            <Link
-                              to="/contacts/$contactId"
-                              params={{ contactId: item.contactId }}
-                              className="font-medium text-sm hover:text-primary truncate block"
-                            >
-                              {item.contactName}
-                            </Link>
-                            <p className="text-xs text-muted-foreground">
-                              Due {formatRelativeDate(item.dueDate)}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 ml-2">
-                            <div className="text-right">
-                              <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
+                          {({ toggleButton, detailPanel }) => (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5">
+                                <div className="min-w-0 flex-1">
+                                  <Link
+                                    to="/contacts/$contactId"
+                                    params={{ contactId: item.contactId }}
+                                    className="font-medium text-sm hover:text-primary truncate block"
+                                  >
+                                    {item.contactName}
+                                  </Link>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>Due {formatRelativeDate(item.dueDate)}</span>
+                                    {toggleButton}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 ml-2">
+                                  <div className="text-right">
+                                    <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
+                                    {appliedPenaltyTotal > 0 && (
+                                      <p className="text-xs text-amber-600">
+                                        + {formatCurrency(appliedPenaltyTotal)} penalty
+                                      </p>
+                                    )}
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => openPaymentForm(item)}
+                                    className="h-8"
+                                  >
+                                    Record
+                                  </Button>
+                                </div>
+                              </div>
+                              {detailPanel && (
+                                <div className="ml-3">{detailPanel}</div>
+                              )}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => openPaymentForm(item)}
-                              className="h-8"
-                            >
-                              Record
-                            </Button>
-                          </div>
-                        </div>
+                          )}
+                        </PenaltyItems>
                       )
                     })}
                   </div>
@@ -511,17 +536,40 @@ function PaymentsPage() {
                   {paymentStep === "form" ? (
                     <div className="space-y-4">
                       {/* Schedule item info */}
-                      <div className="p-3 rounded bg-muted/50 text-sm">
+                      <div className="p-3 rounded bg-muted/50 text-sm space-y-1">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Amount Due</span>
                           <span className="font-medium">{formatCurrency(selectedScheduleItem.amount)}</span>
                         </div>
                         {parseFloat(selectedScheduleItem.paidAmount) > 0 && (
-                          <div className="flex justify-between mt-1">
+                          <div className="flex justify-between">
                             <span className="text-muted-foreground">Already Paid</span>
                             <span className="font-medium text-primary">{formatCurrency(selectedScheduleItem.paidAmount)}</span>
                           </div>
                         )}
+                        {(() => {
+                          const remaining = parseFloat(selectedScheduleItem.amount) - parseFloat(selectedScheduleItem.paidAmount)
+                          const appliedTotal = selectedScheduleItem.penalties
+                            .filter((p) => p.status === "applied")
+                            .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+                          if (appliedTotal <= 0) return null
+                          return (
+                            <>
+                              <div className="flex justify-between border-t pt-1 mt-1">
+                                <span className="text-muted-foreground">Remaining</span>
+                                <span className="font-medium">{formatCurrency(remaining)}</span>
+                              </div>
+                              <div className="flex justify-between text-amber-600">
+                                <span>Applied Penalties</span>
+                                <span className="font-medium">+{formatCurrency(appliedTotal)}</span>
+                              </div>
+                              <div className="flex justify-between border-t pt-1 mt-1 font-semibold">
+                                <span>Total Due</span>
+                                <span>{formatCurrency(remaining + appliedTotal)}</span>
+                              </div>
+                            </>
+                          )
+                        })()}
                       </div>
 
                       <div className="grid gap-4 sm:grid-cols-2">

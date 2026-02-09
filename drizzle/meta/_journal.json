@@ -78,6 +78,13 @@
       "when": 1770521614681,
       "tag": "0010_calm_sway",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1770607064465,
+      "tag": "0011_noisy_gladiator",
+      "breakpoints": true
     }
   ]
 }
