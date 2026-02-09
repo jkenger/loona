@@ -54,7 +54,7 @@ export const Route = createFileRoute('/_dashboard/dashboard/')({
     if (!hasRole(session.user.role, ROLES.LENDER)) {
       return { stats: null, unauthorized: true }
     }
-    // Update overdue payment statuses before fetching stats
+    // Update overdue statuses + generate penalties (fallback for cron)
     await updateOverduePayments()
     const stats = await getDashboardStats()
     return { stats, unauthorized: false }
