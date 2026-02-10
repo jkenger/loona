@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, loans, contacts, paymentSchedule, agents, commissions } from "@/lib/db"
+import { db, loans, contacts, paymentSchedule, agents, commissions, penalties, lenderSettings } from "@/lib/db"
 import { eq, and, sql, gte, lte, or } from "drizzle-orm"
 import { requireAuth } from "./session"
+import { parseLenderConfig } from "@/lib/constants/lender-defaults"
 import {
   startOfMonth,
   endOfMonth,
@@ -48,6 +49,7 @@ export const getDashboardStats = createServerFn()
       totalDisbursed: sql<string>`coalesce(sum(${loans.principal}), 0)`,
       totalCollected: sql<string>`coalesce(sum(${loans.amountPaid}), 0)`,
       outstandingBalance: sql<string>`coalesce(sum(${loans.remainingBalance}), 0)`,
+      interestEarned: sql<string>`coalesce(sum(${loans.interestEarned}), 0)`,
     })
     .from(loans)
     .where(eq(loans.lenderId, userId))
@@ -70,6 +72,21 @@ export const getDashboardStats = createServerFn()
     .from(commissions)
     .innerJoin(agents, eq(commissions.agentId, agents.id))
     .where(eq(agents.lenderId, userId))
+
+  // Get penalty income (applied penalties = collected)
+  const penaltyStats = await db
+    .select({
+      penaltyIncome: sql<string>`coalesce(sum(case when ${penalties.status} = 'applied' then ${penalties.amount} else 0 end), 0)`,
+    })
+    .from(penalties)
+    .innerJoin(loans, eq(penalties.loanId, loans.id))
+    .where(eq(loans.lenderId, userId))
+
+  // Get lender settings (initial capital)
+  const lenderSettingsRow = await db.query.lenderSettings.findFirst({
+    where: eq(lenderSettings.lenderId, userId),
+  })
+  const lenderConfig = parseLenderConfig(lenderSettingsRow?.config ?? null)
 
   // Get overdue payments
   const now = new Date()
@@ -254,12 +271,19 @@ export const getDashboardStats = createServerFn()
     .orderBy(paymentSchedule.dueDate)
     .limit(5)
 
-  // Calculate net collected (collected - commissions paid)
+  // Calculate earnings
   const totalCollectedNum = parseFloat(loanStats[0]?.totalCollected ?? "0")
+  const interestEarnedNum = parseFloat(loanStats[0]?.interestEarned ?? "0")
+  const penaltyIncomeNum = parseFloat(penaltyStats[0]?.penaltyIncome ?? "0")
   const paidCommissionsNum = parseFloat(commissionStats[0]?.paidCommissions ?? "0")
-  const netCollected = (totalCollectedNum - paidCommissionsNum).toFixed(2)
+  const grossCollected = (totalCollectedNum + penaltyIncomeNum).toFixed(2)
+  const netCollected = (totalCollectedNum + penaltyIncomeNum - paidCommissionsNum).toFixed(2)
+  const netProfit = (interestEarnedNum + penaltyIncomeNum - paidCommissionsNum).toFixed(2)
 
   return {
+    // Lender settings
+    initialCapital: lenderConfig.initialCapital,
+
     // Portfolio stats
     totalLoans: loanStats[0]?.totalLoans ?? 0,
     activeLoans: loanStats[0]?.activeLoans ?? 0,
@@ -272,7 +296,13 @@ export const getDashboardStats = createServerFn()
     totalCommissions: commissionStats[0]?.totalCommissions ?? "0",
     paidCommissions: commissionStats[0]?.paidCommissions ?? "0",
     pendingCommissions: commissionStats[0]?.pendingCommissions ?? "0",
+    grossCollected,
     netCollected,
+
+    // Earnings
+    interestEarned: loanStats[0]?.interestEarned ?? "0",
+    penaltyIncome: penaltyStats[0]?.penaltyIncome ?? "0",
+    netProfit,
 
     // Monthly summary
     expectedThisMonth: monthlyExpected[0]?.amount ?? "0",
