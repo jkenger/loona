@@ -25,7 +25,9 @@ const recordPaymentSchema = z.object({
   scheduleItemId: z.string().min(1, "Schedule item is required"),
   amount: z.number().positive(),
   method: z.enum(["cash", "gcash", "maya", "bank"]),
-  paidAt: z.string().optional().transform((s) => s ? new Date(s) : undefined),
+  paidAt: z.string().optional()
+    .transform((s) => s ? new Date(s) : undefined)
+    .refine((d) => !d || d <= new Date(), "Payment date cannot be in the future"),
   notes: z.string().optional(),
 })
 
@@ -217,6 +219,14 @@ export const recordPayment = createServerFn()
   })
   if (recentDuplicate) {
     throw new Error("This payment was already recorded. Please wait before retrying.")
+  }
+
+  // Reject overpayment
+  const remainingBalance = parseFloat(loan.remainingBalance)
+  if (data.amount > remainingBalance) {
+    throw new Error(
+      `Payment of ₱${data.amount.toFixed(2)} exceeds remaining balance of ₱${remainingBalance.toFixed(2)}`
+    )
   }
 
   // Create payment record

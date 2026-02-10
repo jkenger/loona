@@ -353,6 +353,10 @@ function DisclosurePage() {
                       label: "15. Prepayment Policy",
                       value: "No penalty for early repayment",
                     },
+                    {
+                      label: "16. Payment Allocation",
+                      value: "Each payment is applied to the scheduled installment selected at the time of recording",
+                    },
                   ].map((row, i) => (
                     <tr
                       key={i}
