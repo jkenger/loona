@@ -29,7 +29,9 @@
       "WebFetch(domain:gist.github.com)",
       "Bash(npx tsx:*)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git checkout:*)",
+      "Bash(git status:*)"
     ]
   }
 }
