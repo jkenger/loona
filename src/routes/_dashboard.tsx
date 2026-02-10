@@ -1,9 +1,14 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useNavigate, useLocation } from "@tanstack/react-router"
+import { useState } from "react"
 import { getServerSession } from "@/server/session"
 import { getOnboardingStatus } from "@/server/onboarding"
 import { getAgentPermissions } from "@/server/agent-portal"
+import { getCashPosition, saveLenderSettings } from "@/server/lender-settings"
 import { signOut } from "@/lib/auth-client"
+import { toast } from "sonner"
 import { RouteProgress } from "@/components/ui/route-progress"
+import { CurrencyInput } from "@/components/ui/currency-input"
+import { Button } from "@/components/ui/button"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { useTheme } from "@/lib/theme"
 import { LoonaBrand } from "@/components/ui/loona-brand"
@@ -25,6 +30,10 @@ import {
   Gear,
   Warning,
   ShieldCheck,
+  PencilSimple,
+  Check,
+  Spinner,
+  X,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -35,7 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export const Route = createFileRoute("/_dashboard")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const session = await getServerSession()
     if (!session) {
       throw redirect({ to: "/login" })
@@ -64,7 +73,18 @@ export const Route = createFileRoute("/_dashboard")({
       }
     }
 
-    return { session, agentPermissions }
+    // Fetch cash position for lenders on lender portal only
+    const isOnLenderPortal = !location.pathname.startsWith("/agent") && !location.pathname.startsWith("/admin")
+    let cashPosition = null
+    if (isOnLenderPortal && hasRole(session.user.role, ROLES.LENDER)) {
+      try {
+        cashPosition = await getCashPosition()
+      } catch {
+        // Ignore - wallet won't show
+      }
+    }
+
+    return { session, agentPermissions, cashPosition }
   },
   component: DashboardLayout,
 })
@@ -95,7 +115,8 @@ const agentNavigation = [
 ]
 
 function DashboardLayout() {
-  const { session, agentPermissions } = Route.useRouteContext()
+  const { session, agentPermissions, cashPosition: initialCashPosition } = Route.useRouteContext()
+  const [cashPosition, setCashPosition] = useState(initialCashPosition)
   const router = useRouter()
   const navigate = useNavigate()
   const location = useLocation()
@@ -128,6 +149,47 @@ function DashboardLayout() {
     : isOnAgentPortal && isAgent
       ? "/agent"
       : isLender ? "/dashboard" : isAgent ? "/agent" : isAdmin ? "/admin" : "/dashboard"
+
+  // Wallet state
+  const [showBreakdown, setShowBreakdown] = useState(false)
+  const [isEditingCapital, setIsEditingCapital] = useState(false)
+  const [capitalInput, setCapitalInput] = useState("")
+  const [isSavingCapital, setIsSavingCapital] = useState(false)
+
+  const hasCapitalSet = cashPosition && cashPosition.initialCapital > 0
+
+  const formatPHP = (amount: number) =>
+    new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+
+  const handleEditCapital = () => {
+    setCapitalInput(cashPosition?.initialCapital ? cashPosition.initialCapital.toString() : "")
+    setIsEditingCapital(true)
+  }
+
+  const handleSaveCapital = async () => {
+    const amount = parseFloat(capitalInput)
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid amount")
+      return
+    }
+    setIsSavingCapital(true)
+    try {
+      await saveLenderSettings({ data: { initialCapital: amount } })
+      const updated = await getCashPosition()
+      setCashPosition(updated)
+      setIsEditingCapital(false)
+      toast.success("Starting capital saved")
+    } catch {
+      toast.error("Failed to save capital")
+    } finally {
+      setIsSavingCapital(false)
+    }
+  }
 
   const handleSignOut = async () => {
     await signOut()
@@ -176,27 +238,144 @@ function DashboardLayout() {
 
             {/* User Menu */}
             <div className="flex items-center gap-3">
-              {/* User dropdown */}
+              {/* User dropdown with integrated wallet */}
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  className="flex items-center gap-2 px-2 py-1.5 rounded text-sm font-medium hover:bg-white/10 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-white/10 hover:bg-white/15 transition-colors"
                 >
-                  <div className="h-8 w-8 rounded-full bg-primary/30 flex items-center justify-center">
-                    <span className="text-sm font-medium text-white">
-                      {session.user.name?.charAt(0).toUpperCase() || "U"}
-                    </span>
-                  </div>
-                  <span className="hidden sm:block text-sm font-medium max-w-[120px] truncate text-white">
-                    {session.user.name}
-                  </span>
-                  <CaretDown className="h-4 w-4 text-blue-200/60" />
+                  {hasCapitalSet && !isOnAgentPortal && !isOnAdminPortal ? (
+                    <>
+                      <Wallet className="h-4 w-4 text-primary" weight="fill" />
+                      <span className="font-semibold text-white">
+                        {formatPHP(cashPosition.cashAvailable)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-6 w-6 rounded-full bg-primary/30 flex items-center justify-center">
+                        <span className="text-xs font-medium text-white">
+                          {session.user.name?.charAt(0).toUpperCase() || "U"}
+                        </span>
+                      </div>
+                      <span className="hidden sm:block text-sm font-medium text-white max-w-[120px] truncate">
+                        {session.user.name}
+                      </span>
+                    </>
+                  )}
+                  <CaretDown className="h-3.5 w-3.5 text-blue-200/60" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-72">
                   <div className="px-2 py-1.5">
                     <p className="text-sm font-medium">{session.user.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
+                  {/* Wallet Section (lender portal only) */}
+                  {isLender && !isOnAgentPortal && !isOnAdminPortal && (
+                    <>
+                      <div className="px-2 py-2">
+                        {hasCapitalSet && !isEditingCapital ? (
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <Wallet className="h-3.5 w-3.5 text-primary" weight="fill" />
+                                <span className="text-xs font-medium text-muted-foreground">Cash Position</span>
+                              </div>
+                              <button
+                                onClick={handleEditCapital}
+                                className="text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <PencilSimple className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            <p className="text-lg font-bold text-primary">
+                              {formatPHP(cashPosition.cashAvailable)}
+                            </p>
+                            <button
+                              onClick={() => setShowBreakdown(!showBreakdown)}
+                              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mt-0.5"
+                            >
+                              <CaretDown className={`h-3 w-3 transition-transform ${showBreakdown ? "rotate-180" : ""}`} />
+                              {showBreakdown ? "Hide" : "How is this calculated?"}
+                            </button>
+                            {showBreakdown && (
+                              <div className="space-y-0.5 text-xs text-muted-foreground rounded bg-muted/50 p-2 mt-1.5">
+                                <div className="flex justify-between">
+                                  <span>Starting Capital</span>
+                                  <span className="font-medium text-foreground">{formatPHP(cashPosition.initialCapital)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>&minus; Total Disbursed</span>
+                                  <span className="font-medium text-foreground">{formatPHP(parseFloat(cashPosition.totalDisbursed))}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>+ Total Collected</span>
+                                  <span className="font-medium text-foreground">{formatPHP(parseFloat(cashPosition.totalCollected))}</span>
+                                </div>
+                                <div className="flex justify-between border-t pt-1 mt-1">
+                                  <span className="font-medium text-foreground">= Cash Available</span>
+                                  <span className="font-bold text-primary">{formatPHP(cashPosition.cashAvailable)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <Wallet className="h-3.5 w-3.5 text-primary" weight="fill" />
+                              <span className="text-xs font-medium text-muted-foreground">
+                                {isEditingCapital ? "Edit Starting Capital" : "Set Starting Capital"}
+                              </span>
+                            </div>
+                            <div
+                              className="flex items-center gap-1.5"
+                              onKeyDown={(e) => e.stopPropagation()}
+                            >
+                              <CurrencyInput
+                                value={capitalInput}
+                                onValueChange={setCapitalInput}
+                                placeholder="500,000"
+                                className="h-8 text-sm flex-1"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveCapital()
+                                  if (e.key === "Escape") setIsEditingCapital(false)
+                                }}
+                              />
+                              <Button
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={handleSaveCapital}
+                                disabled={isSavingCapital}
+                              >
+                                {isSavingCapital ? (
+                                  <Spinner className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Check className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                              {isEditingCapital && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 shrink-0"
+                                  onClick={() => setIsEditingCapital(false)}
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                            {!isEditingCapital && (
+                              <p className="text-[11px] text-muted-foreground mt-1.5">
+                                Track your available cash on hand
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   {isAdmin && !isOnAdminPortal && (
                     <>
                       <DropdownMenuItem

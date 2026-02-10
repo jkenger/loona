@@ -166,6 +166,7 @@ export const loans = pgTable("loans", {
 
   // Denormalized for performance
   amountPaid: decimal("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+  interestEarned: decimal("interest_earned", { precision: 12, scale: 2 }).notNull().default("0"),
   remainingBalance: decimal("remaining_balance", { precision: 12, scale: 2 }).notNull(),
 
   // Optional details
@@ -303,6 +304,18 @@ export const commissionSettings = pgTable("commission_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
 
+// Lender Settings (lender-wide config: initial capital, etc.)
+export const lenderSettings = pgTable("lender_settings", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" })
+    .unique(),
+  config: text("config").notNull(), // JSON blob
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
 // Penalty Settings (lender-wide penalty config)
 export const penaltySettings = pgTable("penalty_settings", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -372,6 +385,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   auditLogs: many(auditLogs),
   commissionSettings: one(commissionSettings),
   penaltySettings: one(penaltySettings),
+  lenderSettings: one(lenderSettings),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -493,6 +507,10 @@ export const penaltySettingsRelations = relations(penaltySettings, ({ one }) => 
   lender: one(user, { fields: [penaltySettings.lenderId], references: [user.id] }),
 }))
 
+export const lenderSettingsRelations = relations(lenderSettings, ({ one }) => ({
+  lender: one(user, { fields: [lenderSettings.lenderId], references: [user.id] }),
+}))
+
 export const penaltiesRelations = relations(penalties, ({ one }) => ({
   loan: one(loans, { fields: [penalties.loanId], references: [loans.id] }),
   scheduleItem: one(paymentSchedule, { fields: [penalties.scheduleItemId], references: [paymentSchedule.id] }),
@@ -529,3 +547,6 @@ export type NewCommissionSettingsRow = typeof commissionSettings.$inferInsert
 
 export type PenaltySettingsRow = typeof penaltySettings.$inferSelect
 export type PenaltyRow = typeof penalties.$inferSelect
+
+export type LenderSettingsRow = typeof lenderSettings.$inferSelect
+export type NewLenderSettingsRow = typeof lenderSettings.$inferInsert
