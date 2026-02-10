@@ -28,8 +28,8 @@ export const DEFAULT_CLAUSES: Record<ClauseKey, ClauseText> = {
     fil: "Sa pagkabigo, ang Lender ay may karapatang ideklara ang buong hindi pa nababayarang balanse na agad at buong dapat bayaran, at maaaring magsagawa ng pagsingil sa pamamagitan ng anumang legal na paraan.",
   },
   attorneysFees: {
-    en: "In the event of judicial or extrajudicial collection, the Borrower agrees to pay attorney's fees equivalent to twenty-five percent (25%) of the total amount due, but in no case less than Five Thousand Pesos (₱5,000.00), plus costs of suit and other litigation expenses.",
-    fil: "Sa pagkakataon ng pagsingil sa hukuman o labas ng hukuman, ang Borrower ay sumasang-ayon na magbayad ng attorney's fees na katumbas ng dalawampu't limang porsiyento (25%) ng kabuuang halagang dapat bayaran, ngunit hindi bababa sa Limang Libong Piso (₱5,000.00), dagdag pa ang mga gastos sa paghahabla at iba pang gastusin sa paglilitis.",
+    en: "In the event of judicial or extrajudicial collection, the Borrower agrees to pay attorney's fees equivalent to ten percent (10%) of the total amount due, but in no case less than Two Thousand Pesos (₱2,000.00), plus costs of suit and other litigation expenses.",
+    fil: "Sa pagkakataon ng pagsingil sa hukuman o labas ng hukuman, ang Borrower ay sumasang-ayon na magbayad ng attorney's fees na katumbas ng sampung porsiyento (10%) ng kabuuang halagang dapat bayaran, ngunit hindi bababa sa Dalawang Libong Piso (₱2,000.00), dagdag pa ang mga gastos sa paghahabla at iba pang gastusin sa paglilitis.",
   },
   waiver: {
     en: "The Borrower hereby waives demand, presentment for payment, notice of dishonor, protest, and notice of protest of this note.",
