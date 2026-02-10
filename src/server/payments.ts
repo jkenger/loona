@@ -18,6 +18,7 @@ import { z } from "zod"
 import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
 import { parsePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
+import { assertTransition } from "./loans"
 
 // Validation schemas
 const recordPaymentSchema = z.object({
@@ -174,6 +175,9 @@ export const recordPayment = createServerFn()
     throw new Error("Loan is not active")
   }
 
+  // Pre-generate payment ID for use in batch
+  const paymentId = crypto.randomUUID()
+
   // Validate schedule item exists before any writes
   const scheduleItem = await db.query.paymentSchedule.findFirst({
     where: eq(paymentSchedule.id, data.scheduleItemId),
@@ -219,65 +223,37 @@ export const recordPayment = createServerFn()
     throw new Error("This payment was already recorded. Please wait before retrying.")
   }
 
-  // Create payment record
+  // === Compute phase ===
   const paymentDate = data.paidAt || new Date()
-  const [payment] = await db
-    .insert(payments)
-    .values({
-      loanId: data.loanId,
-      amount: data.amount.toFixed(2),
-      method: data.method,
-      scheduleItemId: data.scheduleItemId,
-      recordedByAgentId: agentId,
-      paidAt: paymentDate,
-      notes: data.notes || null,
-    })
-    .returning()
 
-  // Update loan balances
+  // Loan balance computations
   const newAmountPaid = parseFloat(loan.amountPaid) + data.amount
   const newRemainingBalance = parseFloat(loan.totalToRepay) - newAmountPaid
   const isCompleted = newRemainingBalance <= 0
+  const nextStatus = isCompleted ? "completed" : "active"
 
-  // Calculate interest portion of this payment
+  // Validate status transition
+  if (isCompleted) {
+    assertTransition(loan.status, "completed")
+  }
+
+  // Interest portion
   const principal = parseFloat(loan.principal)
   const totalToRepay = parseFloat(loan.totalToRepay)
   const interestRatio = totalToRepay > 0 ? (totalToRepay - principal) / totalToRepay : 0
   const interestPortion = data.amount * interestRatio
   const newInterestEarned = parseFloat(loan.interestEarned) + interestPortion
 
-  await db
-    .update(loans)
-    .set({
-      amountPaid: newAmountPaid.toFixed(2),
-      interestEarned: newInterestEarned.toFixed(2),
-      remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
-      status: isCompleted ? "completed" : "active",
-      completedAt: isCompleted ? new Date() : null,
-      updatedAt: new Date(),
-    })
-    .where(eq(loans.id, data.loanId))
-
-  // Update schedule item
+  // Schedule item computations
   const newPaidAmount = parseFloat(scheduleItem.paidAmount) + data.amount
   const scheduleAmount = parseFloat(scheduleItem.amount)
   const isPaid = newPaidAmount >= scheduleAmount
 
-  await db
-    .update(paymentSchedule)
-    .set({
-      paidAmount: newPaidAmount.toFixed(2),
-      status: isPaid ? "paid" : "partial",
-      paidAt: isPaid ? paymentDate : null,
-    })
-    .where(eq(paymentSchedule.id, data.scheduleItemId))
+  // Commission computation (read settings before batch)
+  let commissionAmount: number | null = null
+  let effectiveRate: string | null = null
 
-  // Create commission record if recorded by agent
   if (agentId && agentRecord) {
-    // Try tier-based commission calc
-    let commissionAmount: number
-    let effectiveRate: string
-
     const settingsRow = await db.query.commissionSettings.findFirst({
       where: eq(commissionSettings.lenderId, loan.lenderId),
     })
@@ -292,32 +268,59 @@ export const recordPayment = createServerFn()
         ? ((commissionAmount / data.amount) * 100).toFixed(2)
         : "0.00"
     } else {
-      // Fallback to flat commission rate
       commissionAmount = data.amount * (parseFloat(agentRecord.commissionRate) / 100)
       effectiveRate = agentRecord.commissionRate
     }
-
-    await db.insert(commissions).values({
-      agentId,
-      paymentId: payment.id,
-      paymentAmount: data.amount.toFixed(2),
-      commissionRate: effectiveRate,
-      commissionAmount: commissionAmount.toFixed(2),
-    })
-
-    // Update agent totals
-    await db
-      .update(agents)
-      .set({
-        totalCollected: sql`${agents.totalCollected} + ${data.amount}`,
-        totalCommissionEarned: sql`${agents.totalCommissionEarned} + ${commissionAmount}`,
-      })
-      .where(eq(agents.id, agentId))
   }
 
-  // Audit log
+  // === Atomic write phase ===
+  const writes: any[] = [
+    db.insert(payments).values({
+      id: paymentId,
+      loanId: data.loanId,
+      amount: data.amount.toFixed(2),
+      method: data.method,
+      scheduleItemId: data.scheduleItemId,
+      recordedByAgentId: agentId,
+      paidAt: paymentDate,
+      notes: data.notes || null,
+    }).returning(),
+    db.update(loans).set({
+      amountPaid: newAmountPaid.toFixed(2),
+      interestEarned: newInterestEarned.toFixed(2),
+      remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
+      status: nextStatus,
+      completedAt: isCompleted ? new Date() : null,
+      updatedAt: new Date(),
+    }).where(eq(loans.id, data.loanId)),
+    db.update(paymentSchedule).set({
+      paidAmount: newPaidAmount.toFixed(2),
+      status: isPaid ? "paid" : "partial",
+      paidAt: isPaid ? paymentDate : null,
+    }).where(eq(paymentSchedule.id, data.scheduleItemId)),
+  ]
+
+  if (agentId && agentRecord && commissionAmount !== null && effectiveRate !== null) {
+    writes.push(
+      db.insert(commissions).values({
+        agentId,
+        paymentId,
+        paymentAmount: data.amount.toFixed(2),
+        commissionRate: effectiveRate,
+        commissionAmount: commissionAmount.toFixed(2),
+      }),
+      db.update(agents).set({
+        totalCollected: sql`${agents.totalCollected} + ${data.amount}`,
+        totalCommissionEarned: sql`${agents.totalCommissionEarned} + ${commissionAmount}`,
+      }).where(eq(agents.id, agentId)),
+    )
+  }
+
+  const [[payment]] = await db.batch(writes as any)
+
+  // Audit log (non-critical, outside batch)
   const log = createAuditLogger(session.user)
-  log("payment.record", "payment", payment.id, {
+  log("payment.record", "payment", paymentId, {
     loanId: data.loanId,
     amount: data.amount,
     method: data.method,
@@ -425,17 +428,12 @@ export const reversePayment = createServerFn()
 
     const now = new Date()
 
-    // 1. Soft-delete the payment
-    await db
-      .update(payments)
-      .set({
-        reversedAt: now,
-        reversedBy: session.user.id,
-        reversalReason: data.reason,
-      })
-      .where(eq(payments.id, data.paymentId))
+    // === Reads phase (before batch) ===
+    const scheduleItem = await db.query.paymentSchedule.findFirst({
+      where: eq(paymentSchedule.id, payment.scheduleItemId),
+    })
 
-    // 2. Update loan balances (inverse of recordPayment)
+    // === Compute phase ===
     const paymentAmount = parseFloat(payment.amount)
     const newAmountPaid = Math.max(0, parseFloat(payment.loan.amountPaid) - paymentAmount)
     const newRemainingBalance = parseFloat(payment.loan.totalToRepay) - newAmountPaid
@@ -449,22 +447,27 @@ export const reversePayment = createServerFn()
 
     const wasCompleted = payment.loan.status === "completed"
 
-    await db
-      .update(loans)
-      .set({
+    // Validate status transition for completed → active reversal
+    if (wasCompleted) {
+      assertTransition(payment.loan.status, "active")
+    }
+
+    // === Atomic write phase ===
+    const writes: any[] = [
+      db.update(payments).set({
+        reversedAt: now,
+        reversedBy: session.user.id,
+        reversalReason: data.reason,
+      }).where(eq(payments.id, data.paymentId)),
+      db.update(loans).set({
         amountPaid: newAmountPaid.toFixed(2),
         interestEarned: newInterestEarned.toFixed(2),
         remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
         status: wasCompleted ? "active" : payment.loan.status,
         completedAt: wasCompleted ? null : payment.loan.completedAt,
         updatedAt: now,
-      })
-      .where(eq(loans.id, payment.loanId))
-
-    // 3. Update schedule item (inverse)
-    const scheduleItem = await db.query.paymentSchedule.findFirst({
-      where: eq(paymentSchedule.id, payment.scheduleItemId),
-    })
+      }).where(eq(loans.id, payment.loanId)),
+    ]
 
     if (scheduleItem) {
       const newPaidAmount = Math.max(0, parseFloat(scheduleItem.paidAmount) - paymentAmount)
@@ -476,36 +479,30 @@ export const reversePayment = createServerFn()
         newStatus = "partial"
       }
 
-      await db
-        .update(paymentSchedule)
-        .set({
+      writes.push(
+        db.update(paymentSchedule).set({
           paidAmount: newPaidAmount.toFixed(2),
           status: newStatus,
           paidAt: null,
-        })
-        .where(eq(paymentSchedule.id, payment.scheduleItemId))
+        }).where(eq(paymentSchedule.id, payment.scheduleItemId)),
+      )
     }
 
-    // 4. Reverse commission if exists
     if (payment.commission) {
       const commissionAmount = parseFloat(payment.commission.commissionAmount)
 
-      // Delete the commission record
-      await db
-        .delete(commissions)
-        .where(eq(commissions.id, payment.commission.id))
-
-      // Decrement agent totals
-      await db
-        .update(agents)
-        .set({
+      writes.push(
+        db.delete(commissions).where(eq(commissions.id, payment.commission.id)),
+        db.update(agents).set({
           totalCollected: sql`GREATEST(0, ${agents.totalCollected} - ${paymentAmount})`,
           totalCommissionEarned: sql`GREATEST(0, ${agents.totalCommissionEarned} - ${commissionAmount})`,
-        })
-        .where(eq(agents.id, payment.commission.agentId))
+        }).where(eq(agents.id, payment.commission.agentId)),
+      )
     }
 
-    // 5. Audit log
+    await db.batch(writes as any)
+
+    // Audit log (non-critical, outside batch)
     const log = createAuditLogger(session.user)
     log("payment.reverse", "payment", data.paymentId, {
       loanId: payment.loanId,

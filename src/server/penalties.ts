@@ -228,26 +228,20 @@ export const applyPenalty = createServerFn()
       )
     }
 
-    // Apply: update penalty record
-    await db
-      .update(penalties)
-      .set({
+    // Atomic: apply penalty + update loan balance
+    await db.batch([
+      db.update(penalties).set({
         status: "applied",
         appliedAt: new Date(),
         decidedBy: session.user.id,
         notes: data.notes || null,
-      })
-      .where(eq(penalties.id, data.penaltyId))
-
-    // Update loan balances
-    await db
-      .update(loans)
-      .set({
+      }).where(eq(penalties.id, data.penaltyId)),
+      db.update(loans).set({
         totalToRepay: sql`${loans.totalToRepay}::numeric + ${penaltyAmount}`,
         remainingBalance: sql`${loans.remainingBalance}::numeric + ${penaltyAmount}`,
         updatedAt: new Date(),
-      })
-      .where(eq(loans.id, penalty.loanId))
+      }).where(eq(loans.id, penalty.loanId)),
+    ])
 
     const log = createAuditLogger(session.user)
     log("penalty.apply", "penalty", data.penaltyId, {
@@ -354,29 +348,28 @@ export const revertPenalty = createServerFn()
     const previousStatus = penalty.status
     const penaltyAmount = parseFloat(penalty.amount)
 
-    // Revert penalty record back to pending
-    await db
-      .update(penalties)
-      .set({
+    // Atomic: revert penalty + conditional loan balance update
+    const writes: any[] = [
+      db.update(penalties).set({
         status: "pending",
         appliedAt: null,
         waivedAt: null,
         decidedBy: null,
         notes: null,
-      })
-      .where(eq(penalties.id, data.penaltyId))
+      }).where(eq(penalties.id, data.penaltyId)),
+    ]
 
-    // If it was applied, subtract from loan balances
     if (previousStatus === "applied") {
-      await db
-        .update(loans)
-        .set({
+      writes.push(
+        db.update(loans).set({
           totalToRepay: sql`${loans.totalToRepay}::numeric - ${penaltyAmount}`,
           remainingBalance: sql`${loans.remainingBalance}::numeric - ${penaltyAmount}`,
           updatedAt: new Date(),
-        })
-        .where(eq(loans.id, penalty.loanId))
+        }).where(eq(loans.id, penalty.loanId)),
+      )
     }
+
+    await db.batch(writes as any)
 
     const log = createAuditLogger(session.user)
     log("penalty.revert", "penalty", data.penaltyId, {
