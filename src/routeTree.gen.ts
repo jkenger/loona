@@ -15,6 +15,8 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog/index'
+import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
@@ -44,11 +46,15 @@ import { Route as DashboardAdminAuditLogsRouteImport } from './routes/_dashboard
 import { Route as DashboardLoansLoanIdIndexRouteImport } from './routes/_dashboard/loans/$loanId/index'
 import { Route as DashboardAgentLoansIndexRouteImport } from './routes/_dashboard/agent/loans/index'
 import { Route as DashboardAgentContactsIndexRouteImport } from './routes/_dashboard/agent/contacts/index'
+import { Route as DashboardAdminBlogIndexRouteImport } from './routes/_dashboard/admin/blog/index'
 import { Route as DashboardLoansLoanIdPromissoryNoteRouteImport } from './routes/_dashboard/loans/$loanId/promissory-note'
 import { Route as DashboardLoansLoanIdDisclosureRouteImport } from './routes/_dashboard/loans/$loanId/disclosure'
 import { Route as DashboardAgentLoansNewRouteImport } from './routes/_dashboard/agent/loans/new'
 import { Route as DashboardAgentLoansLoanIdRouteImport } from './routes/_dashboard/agent/loans/$loanId'
 import { Route as DashboardAgentContactsContactIdRouteImport } from './routes/_dashboard/agent/contacts/$contactId'
+import { Route as DashboardAdminBlogNewRouteImport } from './routes/_dashboard/admin/blog/new'
+import { Route as DashboardAdminBlogCategoriesRouteImport } from './routes/_dashboard/admin/blog/categories'
+import { Route as DashboardAdminBlogPostIdRouteImport } from './routes/_dashboard/admin/blog/$postId'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -76,6 +82,16 @@ const AuthRoute = AuthRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
@@ -232,6 +248,11 @@ const DashboardAgentContactsIndexRoute =
     path: '/agent/contacts/',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminBlogIndexRoute = DashboardAdminBlogIndexRouteImport.update({
+  id: '/admin/blog/',
+  path: '/admin/blog/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardLoansLoanIdPromissoryNoteRoute =
   DashboardLoansLoanIdPromissoryNoteRouteImport.update({
     id: '/loans/$loanId/promissory-note',
@@ -261,6 +282,23 @@ const DashboardAgentContactsContactIdRoute =
     path: '/agent/contacts/$contactId',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminBlogNewRoute = DashboardAdminBlogNewRouteImport.update({
+  id: '/admin/blog/new',
+  path: '/admin/blog/new',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAdminBlogCategoriesRoute =
+  DashboardAdminBlogCategoriesRouteImport.update({
+    id: '/admin/blog/categories',
+    path: '/admin/blog/categories',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAdminBlogPostIdRoute =
+  DashboardAdminBlogPostIdRouteImport.update({
+    id: '/admin/blog/$postId',
+    path: '/admin/blog/$postId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -271,6 +309,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/admin/compliance': typeof DashboardAdminComplianceRoute
   '/admin/users': typeof DashboardAdminUsersRoute
@@ -293,11 +333,15 @@ export interface FileRoutesByFullPath {
   '/loans/': typeof DashboardLoansIndexRoute
   '/payments/': typeof DashboardPaymentsIndexRoute
   '/settings/': typeof DashboardSettingsIndexRoute
+  '/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
+  '/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
+  '/admin/blog/new': typeof DashboardAdminBlogNewRoute
   '/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
   '/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/agent/loans/new': typeof DashboardAgentLoansNewRoute
   '/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
   '/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
+  '/admin/blog/': typeof DashboardAdminBlogIndexRoute
   '/agent/contacts/': typeof DashboardAgentContactsIndexRoute
   '/agent/loans/': typeof DashboardAgentLoansIndexRoute
   '/loans/$loanId/': typeof DashboardLoansLoanIdIndexRoute
@@ -311,6 +355,8 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog': typeof BlogIndexRoute
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/admin/compliance': typeof DashboardAdminComplianceRoute
   '/admin/users': typeof DashboardAdminUsersRoute
@@ -333,11 +379,15 @@ export interface FileRoutesByTo {
   '/loans': typeof DashboardLoansIndexRoute
   '/payments': typeof DashboardPaymentsIndexRoute
   '/settings': typeof DashboardSettingsIndexRoute
+  '/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
+  '/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
+  '/admin/blog/new': typeof DashboardAdminBlogNewRoute
   '/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
   '/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/agent/loans/new': typeof DashboardAgentLoansNewRoute
   '/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
   '/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
+  '/admin/blog': typeof DashboardAdminBlogIndexRoute
   '/agent/contacts': typeof DashboardAgentContactsIndexRoute
   '/agent/loans': typeof DashboardAgentLoansIndexRoute
   '/loans/$loanId': typeof DashboardLoansLoanIdIndexRoute
@@ -354,6 +404,8 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/signup': typeof AuthSignupRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/_dashboard/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/_dashboard/admin/compliance': typeof DashboardAdminComplianceRoute
   '/_dashboard/admin/users': typeof DashboardAdminUsersRoute
@@ -376,11 +428,15 @@ export interface FileRoutesById {
   '/_dashboard/loans/': typeof DashboardLoansIndexRoute
   '/_dashboard/payments/': typeof DashboardPaymentsIndexRoute
   '/_dashboard/settings/': typeof DashboardSettingsIndexRoute
+  '/_dashboard/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
+  '/_dashboard/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
+  '/_dashboard/admin/blog/new': typeof DashboardAdminBlogNewRoute
   '/_dashboard/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
   '/_dashboard/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/_dashboard/agent/loans/new': typeof DashboardAgentLoansNewRoute
   '/_dashboard/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
   '/_dashboard/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
+  '/_dashboard/admin/blog/': typeof DashboardAdminBlogIndexRoute
   '/_dashboard/agent/contacts/': typeof DashboardAgentContactsIndexRoute
   '/_dashboard/agent/loans/': typeof DashboardAgentLoansIndexRoute
   '/_dashboard/loans/$loanId/': typeof DashboardLoansLoanIdIndexRoute
@@ -396,6 +452,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/blog/$slug'
+    | '/blog/'
     | '/admin/audit-logs'
     | '/admin/compliance'
     | '/admin/users'
@@ -418,11 +476,15 @@ export interface FileRouteTypes {
     | '/loans/'
     | '/payments/'
     | '/settings/'
+    | '/admin/blog/$postId'
+    | '/admin/blog/categories'
+    | '/admin/blog/new'
     | '/agent/contacts/$contactId'
     | '/agent/loans/$loanId'
     | '/agent/loans/new'
     | '/loans/$loanId/disclosure'
     | '/loans/$loanId/promissory-note'
+    | '/admin/blog/'
     | '/agent/contacts/'
     | '/agent/loans/'
     | '/loans/$loanId/'
@@ -436,6 +498,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/blog/$slug'
+    | '/blog'
     | '/admin/audit-logs'
     | '/admin/compliance'
     | '/admin/users'
@@ -458,11 +522,15 @@ export interface FileRouteTypes {
     | '/loans'
     | '/payments'
     | '/settings'
+    | '/admin/blog/$postId'
+    | '/admin/blog/categories'
+    | '/admin/blog/new'
     | '/agent/contacts/$contactId'
     | '/agent/loans/$loanId'
     | '/agent/loans/new'
     | '/loans/$loanId/disclosure'
     | '/loans/$loanId/promissory-note'
+    | '/admin/blog'
     | '/agent/contacts'
     | '/agent/loans'
     | '/loans/$loanId'
@@ -478,6 +546,8 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/reset-password'
     | '/_auth/signup'
+    | '/blog/$slug'
+    | '/blog/'
     | '/_dashboard/admin/audit-logs'
     | '/_dashboard/admin/compliance'
     | '/_dashboard/admin/users'
@@ -500,11 +570,15 @@ export interface FileRouteTypes {
     | '/_dashboard/loans/'
     | '/_dashboard/payments/'
     | '/_dashboard/settings/'
+    | '/_dashboard/admin/blog/$postId'
+    | '/_dashboard/admin/blog/categories'
+    | '/_dashboard/admin/blog/new'
     | '/_dashboard/agent/contacts/$contactId'
     | '/_dashboard/agent/loans/$loanId'
     | '/_dashboard/agent/loans/new'
     | '/_dashboard/loans/$loanId/disclosure'
     | '/_dashboard/loans/$loanId/promissory-note'
+    | '/_dashboard/admin/blog/'
     | '/_dashboard/agent/contacts/'
     | '/_dashboard/agent/loans/'
     | '/_dashboard/loans/$loanId/'
@@ -517,6 +591,8 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   WelcomeRoute: typeof WelcomeRoute
+  BlogSlugRoute: typeof BlogSlugRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
 }
@@ -563,6 +639,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/signup': {
@@ -768,6 +858,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentContactsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/admin/blog/': {
+      id: '/_dashboard/admin/blog/'
+      path: '/admin/blog'
+      fullPath: '/admin/blog/'
+      preLoaderRoute: typeof DashboardAdminBlogIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/loans/$loanId/promissory-note': {
       id: '/_dashboard/loans/$loanId/promissory-note'
       path: '/loans/$loanId/promissory-note'
@@ -801,6 +898,27 @@ declare module '@tanstack/react-router' {
       path: '/agent/contacts/$contactId'
       fullPath: '/agent/contacts/$contactId'
       preLoaderRoute: typeof DashboardAgentContactsContactIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/admin/blog/new': {
+      id: '/_dashboard/admin/blog/new'
+      path: '/admin/blog/new'
+      fullPath: '/admin/blog/new'
+      preLoaderRoute: typeof DashboardAdminBlogNewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/admin/blog/categories': {
+      id: '/_dashboard/admin/blog/categories'
+      path: '/admin/blog/categories'
+      fullPath: '/admin/blog/categories'
+      preLoaderRoute: typeof DashboardAdminBlogCategoriesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/admin/blog/$postId': {
+      id: '/_dashboard/admin/blog/$postId'
+      path: '/admin/blog/$postId'
+      fullPath: '/admin/blog/$postId'
+      preLoaderRoute: typeof DashboardAdminBlogPostIdRouteImport
       parentRoute: typeof DashboardRoute
     }
   }
@@ -843,11 +961,15 @@ interface DashboardRouteChildren {
   DashboardLoansIndexRoute: typeof DashboardLoansIndexRoute
   DashboardPaymentsIndexRoute: typeof DashboardPaymentsIndexRoute
   DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
+  DashboardAdminBlogPostIdRoute: typeof DashboardAdminBlogPostIdRoute
+  DashboardAdminBlogCategoriesRoute: typeof DashboardAdminBlogCategoriesRoute
+  DashboardAdminBlogNewRoute: typeof DashboardAdminBlogNewRoute
   DashboardAgentContactsContactIdRoute: typeof DashboardAgentContactsContactIdRoute
   DashboardAgentLoansLoanIdRoute: typeof DashboardAgentLoansLoanIdRoute
   DashboardAgentLoansNewRoute: typeof DashboardAgentLoansNewRoute
   DashboardLoansLoanIdDisclosureRoute: typeof DashboardLoansLoanIdDisclosureRoute
   DashboardLoansLoanIdPromissoryNoteRoute: typeof DashboardLoansLoanIdPromissoryNoteRoute
+  DashboardAdminBlogIndexRoute: typeof DashboardAdminBlogIndexRoute
   DashboardAgentContactsIndexRoute: typeof DashboardAgentContactsIndexRoute
   DashboardAgentLoansIndexRoute: typeof DashboardAgentLoansIndexRoute
   DashboardLoansLoanIdIndexRoute: typeof DashboardLoansLoanIdIndexRoute
@@ -875,12 +997,16 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLoansIndexRoute: DashboardLoansIndexRoute,
   DashboardPaymentsIndexRoute: DashboardPaymentsIndexRoute,
   DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
+  DashboardAdminBlogPostIdRoute: DashboardAdminBlogPostIdRoute,
+  DashboardAdminBlogCategoriesRoute: DashboardAdminBlogCategoriesRoute,
+  DashboardAdminBlogNewRoute: DashboardAdminBlogNewRoute,
   DashboardAgentContactsContactIdRoute: DashboardAgentContactsContactIdRoute,
   DashboardAgentLoansLoanIdRoute: DashboardAgentLoansLoanIdRoute,
   DashboardAgentLoansNewRoute: DashboardAgentLoansNewRoute,
   DashboardLoansLoanIdDisclosureRoute: DashboardLoansLoanIdDisclosureRoute,
   DashboardLoansLoanIdPromissoryNoteRoute:
     DashboardLoansLoanIdPromissoryNoteRoute,
+  DashboardAdminBlogIndexRoute: DashboardAdminBlogIndexRoute,
   DashboardAgentContactsIndexRoute: DashboardAgentContactsIndexRoute,
   DashboardAgentLoansIndexRoute: DashboardAgentLoansIndexRoute,
   DashboardLoansLoanIdIndexRoute: DashboardLoansLoanIdIndexRoute,
@@ -897,6 +1023,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   WelcomeRoute: WelcomeRoute,
+  BlogSlugRoute: BlogSlugRoute,
+  BlogIndexRoute: BlogIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
 }

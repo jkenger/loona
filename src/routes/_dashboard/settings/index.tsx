@@ -34,7 +34,6 @@ import {
   Warning,
   ArrowSquareOut,
   Wallet,
-  Coins,
 } from "@phosphor-icons/react"
 import { SkeletonFormPage } from "@/components/ui/skeleton"
 import { getLenderSettings, saveLenderSettings } from "@/server/lender-settings"
