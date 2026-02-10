@@ -239,10 +239,18 @@ export const recordPayment = createServerFn()
   const newRemainingBalance = parseFloat(loan.totalToRepay) - newAmountPaid
   const isCompleted = newRemainingBalance <= 0
 
+  // Calculate interest portion of this payment
+  const principal = parseFloat(loan.principal)
+  const totalToRepay = parseFloat(loan.totalToRepay)
+  const interestRatio = totalToRepay > 0 ? (totalToRepay - principal) / totalToRepay : 0
+  const interestPortion = data.amount * interestRatio
+  const newInterestEarned = parseFloat(loan.interestEarned) + interestPortion
+
   await db
     .update(loans)
     .set({
       amountPaid: newAmountPaid.toFixed(2),
+      interestEarned: newInterestEarned.toFixed(2),
       remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
       status: isCompleted ? "completed" : "active",
       completedAt: isCompleted ? new Date() : null,
@@ -432,12 +440,20 @@ export const reversePayment = createServerFn()
     const newAmountPaid = Math.max(0, parseFloat(payment.loan.amountPaid) - paymentAmount)
     const newRemainingBalance = parseFloat(payment.loan.totalToRepay) - newAmountPaid
 
+    // Reverse interest portion
+    const principal = parseFloat(payment.loan.principal)
+    const totalToRepay = parseFloat(payment.loan.totalToRepay)
+    const interestRatio = totalToRepay > 0 ? (totalToRepay - principal) / totalToRepay : 0
+    const interestPortion = paymentAmount * interestRatio
+    const newInterestEarned = Math.max(0, parseFloat(payment.loan.interestEarned) - interestPortion)
+
     const wasCompleted = payment.loan.status === "completed"
 
     await db
       .update(loans)
       .set({
         amountPaid: newAmountPaid.toFixed(2),
+        interestEarned: newInterestEarned.toFixed(2),
         remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
         status: wasCompleted ? "active" : payment.loan.status,
         completedAt: wasCompleted ? null : payment.loan.completedAt,

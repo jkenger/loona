@@ -15,6 +15,7 @@ import {
   Key,
   CalendarBlank,
   X,
+  GearSix,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import type { CommissionProgramConfig } from '@/lib/constants/commission-defaults'
@@ -309,10 +310,17 @@ function AgentsPage() {
         title="Agents"
         subtitle="Manage your collection agents"
         actions={
-          <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4" weight="bold" />
-            Add Agent
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/agents/commission-settings">
+              <Button variant="outline" size="icon" title="Commission Settings">
+                <GearSix className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" weight="bold" />
+              Add Agent
+            </Button>
+          </div>
         }
       />
       <PageContent>
