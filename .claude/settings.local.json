@@ -31,7 +31,9 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(git checkout:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(xargs:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

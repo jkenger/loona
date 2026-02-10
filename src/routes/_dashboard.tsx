@@ -4,6 +4,7 @@ import { getServerSession } from "@/server/session"
 import { getOnboardingStatus } from "@/server/onboarding"
 import { getAgentPermissions } from "@/server/agent-portal"
 import { getCashPosition, saveLenderSettings } from "@/server/lender-settings"
+import { getLatestPosts } from "@/server/blog"
 import { signOut } from "@/lib/auth-client"
 import { toast } from "sonner"
 import { RouteProgress } from "@/components/ui/route-progress"
@@ -34,6 +35,8 @@ import {
   Check,
   Spinner,
   X,
+  Article,
+  Newspaper,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -42,6 +45,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover"
 
 export const Route = createFileRoute("/_dashboard")({
   beforeLoad: async ({ location }) => {
@@ -75,6 +83,7 @@ export const Route = createFileRoute("/_dashboard")({
 
     // Fetch cash position for lenders on lender portal only
     const isOnLenderPortal = !location.pathname.startsWith("/agent") && !location.pathname.startsWith("/admin")
+    const isOnAdminPortal = location.pathname.startsWith("/admin")
     let cashPosition = null
     if (isOnLenderPortal && hasRole(session.user.role, ROLES.LENDER)) {
       try {
@@ -84,7 +93,17 @@ export const Route = createFileRoute("/_dashboard")({
       }
     }
 
-    return { session, agentPermissions, cashPosition }
+    // Fetch latest blog posts for non-admin portals
+    let latestPosts: Awaited<ReturnType<typeof getLatestPosts>> = []
+    if (!isOnAdminPortal) {
+      try {
+        latestPosts = await getLatestPosts()
+      } catch {
+        // Ignore - popover won't show posts
+      }
+    }
+
+    return { session, agentPermissions, cashPosition, latestPosts }
   },
   component: DashboardLayout,
 })
@@ -104,6 +123,7 @@ const adminNavigation = [
   { name: "Users", href: "/admin/users", icon: UserList, exact: false },
   { name: "Compliance", href: "/admin/compliance", icon: ShieldCheck, exact: false },
   { name: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardText, exact: false },
+  { name: "Blog", href: "/admin/blog", icon: Article, exact: false },
 ]
 
 // Navigation items for agent portal
@@ -115,7 +135,7 @@ const agentNavigation = [
 ]
 
 function DashboardLayout() {
-  const { session, agentPermissions, cashPosition: initialCashPosition } = Route.useRouteContext()
+  const { session, agentPermissions, cashPosition: initialCashPosition, latestPosts = [] } = Route.useRouteContext()
   const [cashPosition, setCashPosition] = useState(initialCashPosition)
   const router = useRouter()
   const navigate = useNavigate()
@@ -238,6 +258,62 @@ function DashboardLayout() {
 
             {/* User Menu */}
             <div className="flex items-center gap-3">
+              {/* What's New Popover (hidden on admin portal) */}
+              {!isOnAdminPortal && (
+                <Popover>
+                  <PopoverTrigger className="flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/15 transition-colors">
+                    <Newspaper className="h-4 w-4 text-white" />
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="z-[60] w-80 p-0">
+                    <div className="px-4 pt-3 pb-2 border-b">
+                      <h3 className="text-sm font-semibold">What's New</h3>
+                    </div>
+                    {latestPosts.length > 0 ? (
+                      <div className="divide-y">
+                        {latestPosts.map((post) => (
+                          <Link
+                            key={post.slug}
+                            to={`/blog/${post.slug}`}
+                            className="block px-4 py-3 hover:bg-muted/50 transition-colors"
+                          >
+                            <p className="text-sm font-medium leading-snug">{post.title}</p>
+                            {post.excerpt && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{post.excerpt}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-1.5">
+                              {post.category && (
+                                <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                  {post.category.name}
+                                </span>
+                              )}
+                              {post.publishedAt && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {new Date(post.publishedAt).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-sm text-muted-foreground">No posts yet</p>
+                      </div>
+                    )}
+                    <div className="border-t px-4 py-2">
+                      <Link
+                        to="/blog"
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        View all posts &rarr;
+                      </Link>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
               {/* User dropdown with integrated wallet */}
               <DropdownMenu>
                 <DropdownMenuTrigger
