@@ -146,7 +146,7 @@ function DashboardPage() {
       </div>
 
       {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+      <div className="mx-auto max-w-1440 px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
         {/* Hero KPIs */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Net Profit */}
