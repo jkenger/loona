@@ -311,7 +311,7 @@ function AgentsPage() {
         subtitle="Manage your collection agents"
         actions={
           <div className="flex items-center gap-2">
-            <Link to="/agents/commission-settings">
+            <Link to="/agents/commission-settings" search={{ tab: undefined }}>
               <Button variant="outline" size="icon" title="Commission Settings">
                 <GearSix className="h-4 w-4" />
               </Button>
