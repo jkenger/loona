@@ -18,6 +18,7 @@ import { z } from "zod"
 import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
 import { parsePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
+import { revertPenaltyCore } from "./penalties"
 
 // Validation schemas
 const recordPaymentSchema = z.object({
@@ -496,7 +497,19 @@ export const reversePayment = createServerFn()
         .where(eq(paymentSchedule.id, payment.scheduleItemId))
     }
 
-    // 4. Reverse commission if exists
+    // 4. Revert applied penalties for this schedule item
+    const appliedPenalties = await db.query.penalties.findMany({
+      where: and(
+        eq(penalties.scheduleItemId, payment.scheduleItemId),
+        eq(penalties.status, "applied"),
+      ),
+    })
+
+    for (const penalty of appliedPenalties) {
+      await revertPenaltyCore(penalty.id, payment.loanId)
+    }
+
+    // 5. Reverse commission if exists
     if (payment.commission) {
       const commissionAmount = parseFloat(payment.commission.commissionAmount)
 
@@ -515,12 +528,13 @@ export const reversePayment = createServerFn()
         .where(eq(agents.id, payment.commission.agentId))
     }
 
-    // 5. Audit log
+    // 6. Audit log
     const log = createAuditLogger(session.user)
     log("payment.reverse", "payment", data.paymentId, {
       loanId: payment.loanId,
       amount: paymentAmount,
       reason: data.reason,
+      penaltiesReverted: appliedPenalties.length,
     })
 
     return { success: true }
