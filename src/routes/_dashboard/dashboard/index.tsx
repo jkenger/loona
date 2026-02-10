@@ -1,11 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Popover,
@@ -163,7 +158,7 @@ function DashboardPage() {
               render={<div />}
               className="w-full"
             >
-              <Card className="shadow-sm bg-primary/10 border-primary/20 cursor-help">
+              <Card className="shadow-sm bg-card border-primary/50 cursor-help h-full">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
                   <CardTitle className="text-sm font-medium">
                     Net Profit
@@ -201,9 +196,7 @@ function DashboardPage() {
                 )}
                 {parseFloat(stats.paidCommissions) > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      − Commissions
-                    </span>
+                    <span className="text-muted-foreground">− Commissions</span>
                     <span className="font-medium text-orange-500">
                       {formatCurrency(stats.paidCommissions)}
                     </span>
@@ -228,15 +221,12 @@ function DashboardPage() {
               render={<div />}
               className="w-full"
             >
-              <Card className="shadow-sm cursor-help">
+              <Card className="shadow-sm cursor-help h-full">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
                   <CardTitle className="text-sm font-medium">
                     Net Collected
                   </CardTitle>
-                  <CheckCircle
-                    className="h-4 w-4 text-primary"
-                    weight="bold"
-                  />
+                  <CheckCircle className="h-4 w-4 text-primary" weight="bold" />
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <div className="text-2xl font-bold">
@@ -269,9 +259,7 @@ function DashboardPage() {
                 )}
                 {parseFloat(stats.paidCommissions) > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      − Commissions
-                    </span>
+                    <span className="text-muted-foreground">− Commissions</span>
                     <span className="font-medium text-orange-500">
                       {formatCurrency(stats.paidCommissions)}
                     </span>
@@ -302,7 +290,7 @@ function DashboardPage() {
               render={<div />}
               className="w-full"
             >
-              <Card className="shadow-sm cursor-help">
+              <Card className="shadow-sm cursor-help h-full">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
                   <CardTitle className="text-sm font-medium">
                     Interest Earned
@@ -316,13 +304,17 @@ function DashboardPage() {
                   <div className="text-2xl font-bold text-emerald-600">
                     {formatCurrency(stats.interestEarned)}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    from {stats.activeLoans} active loan
+                    {stats.activeLoans !== 1 ? 's' : ''}
+                  </p>
                 </CardContent>
               </Card>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-3">
               <p className="text-sm text-muted-foreground">
-                Total interest earned across all loans from{' '}
-                {stats.activeLoans} active loan
+                Total interest earned across all loans from {stats.activeLoans}{' '}
+                active loan
                 {stats.activeLoans !== 1 ? 's' : ''}.
               </p>
             </PopoverContent>
@@ -337,7 +329,7 @@ function DashboardPage() {
               render={<div />}
               className="w-full"
             >
-              <Card className="shadow-sm cursor-help">
+              <Card className="shadow-sm cursor-help h-full">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
                   <CardTitle className="text-sm font-medium">
                     Total Disbursed
@@ -467,9 +459,7 @@ function DashboardPage() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() =>
-                  handleMonthChange(subMonths(currentMonth, 1))
-                }
+                onClick={() => handleMonthChange(subMonths(currentMonth, 1))}
               >
                 <CaretLeft className="h-4 w-4" />
               </Button>
@@ -480,9 +470,7 @@ function DashboardPage() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() =>
-                  handleMonthChange(addMonths(currentMonth, 1))
-                }
+                onClick={() => handleMonthChange(addMonths(currentMonth, 1))}
               >
                 <CaretRight className="h-4 w-4" />
               </Button>
@@ -515,13 +503,8 @@ function DashboardPage() {
 
             <Card className="shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Collected
-                </CardTitle>
-                <CheckCircle
-                  className="h-4 w-4 text-primary"
-                  weight="bold"
-                />
+                <CardTitle className="text-sm font-medium">Collected</CardTitle>
+                <CheckCircle className="h-4 w-4 text-primary" weight="bold" />
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div className="text-2xl font-bold text-primary">
@@ -537,10 +520,7 @@ function DashboardPage() {
             <Card className="shadow-sm border-destructive/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
                 <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-                <Warning
-                  className="h-4 w-4 text-destructive"
-                  weight="bold"
-                />
+                <Warning className="h-4 w-4 text-destructive" weight="bold" />
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div

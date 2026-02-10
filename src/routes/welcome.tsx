@@ -6,14 +6,16 @@ import { toast } from "sonner"
 import { getServerSession } from "@/server/session"
 import { completeOnboarding } from "@/server/onboarding"
 import { createContact } from "@/server/contacts"
+import { saveLenderSettings } from "@/server/lender-settings"
 import { hasRole, ROLES, getDashboardPath } from "@/lib/constants/roles"
 import { LoonaBrand, FloatingCircle } from "@/components/ui/loona-brand"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PhoneInput } from "@/components/ui/phone-input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Card, CardContent } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { cn, parseCurrencyInput } from "@/lib/utils"
 import {
   Check,
   ArrowRight,
@@ -23,6 +25,7 @@ import {
   Coins,
   UsersThree,
   CurrencyCircleDollar,
+  Wallet,
   Spinner,
   User,
   CheckCircle,
@@ -47,7 +50,7 @@ export const Route = createFileRoute("/welcome")({
   component: WelcomeWizard,
 })
 
-const STEP_LABELS = ["Welcome", "Contacts", "Tips", "Ready"]
+const STEP_LABELS = ["Welcome", "Capital", "Contacts", "Tips", "Ready"]
 
 const fadeVariants = {
   enter: { opacity: 0, y: 10 },
@@ -63,7 +66,7 @@ function WelcomeWizard() {
 
   const firstName = session.user.name?.split(" ")[0] || "there"
 
-  const goNext = () => setStep((s) => Math.min(s + 1, 4))
+  const goNext = () => setStep((s) => Math.min(s + 1, 5))
   const goBack = () => setStep((s) => Math.max(s - 1, 1))
 
   const handleComplete = async () => {
@@ -174,12 +177,15 @@ function WelcomeWizard() {
                   <StepWelcome firstName={firstName} onNext={goNext} onSkip={handleSkip} isCompleting={isCompleting} />
                 )}
                 {step === 2 && (
-                  <StepContacts onNext={goNext} onBack={goBack} onSkip={handleSkip} isCompleting={isCompleting} />
+                  <StepCapital onNext={goNext} onBack={goBack} onSkip={handleSkip} isCompleting={isCompleting} />
                 )}
                 {step === 3 && (
-                  <StepTips onNext={goNext} onBack={goBack} onSkip={handleSkip} isCompleting={isCompleting} />
+                  <StepContacts onNext={goNext} onBack={goBack} onSkip={handleSkip} isCompleting={isCompleting} />
                 )}
                 {step === 4 && (
+                  <StepTips onNext={goNext} onBack={goBack} onSkip={handleSkip} isCompleting={isCompleting} />
+                )}
+                {step === 5 && (
                   <StepReady onComplete={handleComplete} onBack={goBack} isCompleting={isCompleting} />
                 )}
               </motion.div>
@@ -258,7 +264,121 @@ function StepWelcome({
 }
 
 // ============================================================================
-// Step 2 — Add your first contact
+// Step 2 — Set starting capital
+// ============================================================================
+
+function StepCapital({
+  onNext,
+  onBack,
+  onSkip,
+  isCompleting,
+}: {
+  onNext: () => void
+  onBack: () => void
+  onSkip: () => void
+  isCompleting: boolean
+}) {
+  const [capitalValue, setCapitalValue] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  const handleSave = async () => {
+    const amount = parseCurrencyInput(capitalValue)
+    if (!amount || amount <= 0) {
+      toast.error("Please enter a valid amount")
+      return
+    }
+
+    setSaving(true)
+    try {
+      await saveLenderSettings({ data: { initialCapital: amount } })
+      toast.success("Starting capital saved!")
+      setSaved(true)
+      onNext()
+    } catch {
+      toast.error("Failed to save capital")
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 mx-auto">
+          <Wallet className="h-6 w-6 text-primary" weight="duotone" />
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Set your starting capital
+        </h2>
+        <p className="text-muted-foreground">
+          How much money do you have available for lending? This helps track your cash position.
+        </p>
+      </div>
+
+      <div className="space-y-2 max-w-sm mx-auto">
+        <Label htmlFor="onboard-capital">Starting Capital</Label>
+        <CurrencyInput
+          id="onboard-capital"
+          value={capitalValue}
+          onValueChange={setCapitalValue}
+          placeholder="500,000"
+          autoFocus
+        />
+        <p className="text-xs text-muted-foreground">
+          You can update this anytime from Settings or your wallet.
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center gap-3 pt-2">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="lg" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <Button
+            size="lg"
+            className="gap-2 px-6"
+            onClick={handleSave}
+            disabled={saving || saved}
+          >
+            {saving ? (
+              <>
+                <Spinner className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                Save & Continue
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onNext}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            I'll do this later
+          </button>
+          <span className="text-muted-foreground/40">·</span>
+          <button
+            type="button"
+            onClick={onSkip}
+            disabled={isCompleting}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            Skip intro
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Step 3 — Add your first contact
 // ============================================================================
 
 function StepContacts({
@@ -411,7 +531,7 @@ function StepContacts({
 }
 
 // ============================================================================
-// Step 3 — Quick tips
+// Step 4 — Quick tips
 // ============================================================================
 
 const tips = [
@@ -568,7 +688,7 @@ function StepTips({
 }
 
 // ============================================================================
-// Step 4 — You're all set!
+// Step 5 — You're all set!
 // ============================================================================
 
 function StepReady({
