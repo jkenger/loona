@@ -1,12 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Popover,
@@ -14,7 +8,6 @@ import {
   PopoverContent,
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
-import { IconButton } from '@/components/ui/icon-button'
 import { SkeletonDashboard } from '@/components/ui/skeleton'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
@@ -22,7 +15,6 @@ import { getDashboardStats, type CalendarDay } from '@/server/dashboard'
 import { updateOverduePayments } from '@/server/payments'
 import {
   CurrencyCircleDollar,
-  Users,
   CalendarCheck,
   Warning,
   TrendUp,
@@ -154,63 +146,237 @@ function DashboardPage() {
       </div>
 
       {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-              <CardTitle className="text-sm font-medium">Expected</CardTitle>
-              <CalendarCheck
-                className="h-4 w-4 text-muted-foreground"
-                weight="bold"
-              />
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-bold">
-                {formatCurrency(summary.expectedThisMonth)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {summary.paymentsExpected} payments this month
+      <div className="mx-auto max-w-1440 px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+        {/* Hero KPIs */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Net Profit */}
+          <Popover>
+            <PopoverTrigger
+              openOnHover
+              delay={200}
+              closeDelay={150}
+              render={<div />}
+              className="w-full"
+            >
+              <Card className="shadow-sm bg-card border-primary/50 cursor-help h-full">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Net Profit
+                  </CardTitle>
+                  <TrendUp className="h-4 w-4 text-primary" weight="bold" />
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(stats.netProfit)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    your earnings
+                  </p>
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Breakdown
               </p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-              <CardTitle className="text-sm font-medium">Collected</CardTitle>
-              <CheckCircle className="h-4 w-4 text-primary" weight="bold" />
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-bold text-primary">
-                {formatCurrency(summary.collectedThisMonth)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {summary.collectionRate}% collection rate ·{' '}
-                {summary.paymentsCollected} paid
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-destructive/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-              <Warning className="h-4 w-4 text-destructive" weight="bold" />
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div
-                className={cn(
-                  'text-2xl font-bold',
-                  summary.overdueCount > 0 && 'text-destructive',
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Interest</span>
+                  <span className="font-medium text-emerald-600">
+                    {formatCurrency(stats.interestEarned)}
+                  </span>
+                </div>
+                {parseFloat(stats.penaltyIncome) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">+ Penalties</span>
+                    <span className="font-medium text-emerald-600">
+                      {formatCurrency(stats.penaltyIncome)}
+                    </span>
+                  </div>
                 )}
-              >
-                {formatCurrency(summary.overdueAmount)}
+                {parseFloat(stats.paidCommissions) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">− Commissions</span>
+                    <span className="font-medium text-orange-500">
+                      {formatCurrency(stats.paidCommissions)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t pt-1.5">
+                  <span className="font-medium">Net Profit</span>
+                  <span className="font-bold text-primary">
+                    {formatCurrency(stats.netProfit)}
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {summary.overdueCount} overdue payment
-                {summary.overdueCount !== 1 ? 's' : ''}
+            </PopoverContent>
+          </Popover>
+
+          {/* Net Collected */}
+          <Popover>
+            <PopoverTrigger
+              openOnHover
+              delay={200}
+              closeDelay={150}
+              render={<div />}
+              className="w-full"
+            >
+              <Card className="shadow-sm cursor-help h-full">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Net Collected
+                  </CardTitle>
+                  <CheckCircle className="h-4 w-4 text-primary" weight="bold" />
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(stats.netCollected)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    after commissions
+                  </p>
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Breakdown
               </p>
-            </CardContent>
-          </Card>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Collected</span>
+                  <span className="font-medium">
+                    {formatCurrency(stats.totalCollected)}
+                  </span>
+                </div>
+                {parseFloat(stats.penaltyIncome) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">+ Penalties</span>
+                    <span className="font-medium text-emerald-600">
+                      {formatCurrency(stats.penaltyIncome)}
+                    </span>
+                  </div>
+                )}
+                {parseFloat(stats.paidCommissions) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">− Commissions</span>
+                    <span className="font-medium text-orange-500">
+                      {formatCurrency(stats.paidCommissions)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t pt-1.5">
+                  <span className="font-medium">Net Collected</span>
+                  <span className="font-bold">
+                    {formatCurrency(stats.netCollected)}
+                  </span>
+                </div>
+                {parseFloat(stats.pendingCommissions) > 0 && (
+                  <p className="text-xs text-muted-foreground pt-1.5 border-t">
+                    {formatCurrency(stats.pendingCommissions)} pending
+                    commissions not yet deducted
+                  </p>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Interest Earned */}
+          <Popover>
+            <PopoverTrigger
+              openOnHover
+              delay={200}
+              closeDelay={150}
+              render={<div />}
+              className="w-full"
+            >
+              <Card className="shadow-sm cursor-help h-full">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Interest Earned
+                  </CardTitle>
+                  <CurrencyCircleDollar
+                    className="h-4 w-4 text-emerald-600"
+                    weight="bold"
+                  />
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="text-2xl font-bold text-emerald-600">
+                    {formatCurrency(stats.interestEarned)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    from {stats.activeLoans} active loan
+                    {stats.activeLoans !== 1 ? 's' : ''}
+                  </p>
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3">
+              <p className="text-sm text-muted-foreground">
+                Total interest earned across all loans from {stats.activeLoans}{' '}
+                active loan
+                {stats.activeLoans !== 1 ? 's' : ''}.
+              </p>
+            </PopoverContent>
+          </Popover>
+
+          {/* Total Disbursed */}
+          <Popover>
+            <PopoverTrigger
+              openOnHover
+              delay={200}
+              closeDelay={150}
+              render={<div />}
+              className="w-full"
+            >
+              <Card className="shadow-sm cursor-help h-full">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Disbursed
+                  </CardTitle>
+                  <Receipt
+                    className="h-4 w-4 text-muted-foreground"
+                    weight="bold"
+                  />
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(stats.totalDisbursed)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    capital out
+                  </p>
+                </CardContent>
+              </Card>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Summary
+              </p>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Loans</span>
+                  <span className="font-medium">{stats.totalLoans}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Active Loans</span>
+                  <span className="font-medium">{stats.activeLoans}</span>
+                </div>
+                <div className="flex justify-between border-t pt-1.5">
+                  <span className="text-muted-foreground">Outstanding</span>
+                  <span className="font-medium">
+                    {formatCurrency(stats.outstandingBalance)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Collected</span>
+                  <span className="font-medium">
+                    {formatCurrency(stats.totalCollected)}
+                  </span>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Overdue Payments Banner */}
@@ -284,41 +450,104 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* Calendar and Quick Actions */}
+        {/* Monthly Performance */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Monthly Performance</h2>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleMonthChange(subMonths(currentMonth, 1))}
+              >
+                <CaretLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium min-w-[140px] text-center">
+                {format(currentMonth, 'MMMM yyyy')}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleMonthChange(addMonths(currentMonth, 1))}
+              >
+                <CaretRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              'grid gap-4 md:grid-cols-3',
+              isLoading && 'opacity-50 pointer-events-none',
+            )}
+          >
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                <CardTitle className="text-sm font-medium">Expected</CardTitle>
+                <CalendarCheck
+                  className="h-4 w-4 text-muted-foreground"
+                  weight="bold"
+                />
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold">
+                  {formatCurrency(summary.expectedThisMonth)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {summary.paymentsExpected} payments this month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                <CardTitle className="text-sm font-medium">Collected</CardTitle>
+                <CheckCircle className="h-4 w-4 text-primary" weight="bold" />
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold text-primary">
+                  {formatCurrency(summary.collectedThisMonth)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {summary.collectionRate}% rate · {summary.paymentsCollected}{' '}
+                  paid
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-destructive/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+                <Warning className="h-4 w-4 text-destructive" weight="bold" />
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div
+                  className={cn(
+                    'text-2xl font-bold',
+                    summary.overdueCount > 0 && 'text-destructive',
+                  )}
+                >
+                  {formatCurrency(summary.overdueAmount)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {summary.overdueCount} overdue payment
+                  {summary.overdueCount !== 1 ? 's' : ''}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Calendar and Sidebar */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Payment Calendar */}
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader className="p-4 pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">
-                  Payment Calendar
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() =>
-                      handleMonthChange(subMonths(currentMonth, 1))
-                    }
-                  >
-                    <CaretLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm font-medium min-w-[120px] text-center">
-                    {format(currentMonth, 'MMMM yyyy')}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() =>
-                      handleMonthChange(addMonths(currentMonth, 1))
-                    }
-                  >
-                    <CaretRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <CardTitle className="text-lg font-semibold">
+                Payment Calendar
+              </CardTitle>
             </CardHeader>
             <CardContent
               className={cn(
@@ -333,198 +562,113 @@ function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <Card className="shadow-sm">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-2">
-              <Link to="/loans/new-wizard" className="block">
-                <div className="flex items-center gap-3 p-3 rounded hover:bg-accent transition-colors">
-                  <IconButton variant="secondary" size="sm">
-                    <CurrencyCircleDollar weight="bold" />
-                  </IconButton>
-                  <div>
-                    <p className="font-medium text-sm">Create Loan</p>
-                    <p className="text-xs text-muted-foreground">
-                      Issue a new loan
-                    </p>
-                  </div>
-                </div>
-              </Link>
-              <Link to="/contacts/new" className="block">
-                <div className="flex items-center gap-3 p-3 rounded hover:bg-accent transition-colors">
-                  <IconButton variant="secondary" size="sm">
-                    <Users weight="bold" />
-                  </IconButton>
-                  <div>
-                    <p className="font-medium text-sm">Add Contact</p>
-                    <p className="text-xs text-muted-foreground">
-                      New borrower
-                    </p>
-                  </div>
-                </div>
-              </Link>
-              <Link to="/payments" className="block">
-                <div className="flex items-center gap-3 p-3 rounded hover:bg-accent transition-colors">
-                  <IconButton variant="secondary" size="sm">
-                    <Receipt weight="bold" />
-                  </IconButton>
-                  <div>
-                    <p className="font-medium text-sm">Record Payment</p>
-                    <p className="text-xs text-muted-foreground">
-                      Log a collection
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Portfolio Summary and Forecast */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Portfolio Summary */}
-          <Card className="lg:col-span-2 shadow-sm">
-            <CardHeader className="p-4 pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendUp className="h-5 w-5 text-primary" weight="bold" />
-                    Portfolio Summary
-                  </CardTitle>
-                  <CardDescription>
-                    Your lending activity at a glance
-                  </CardDescription>
-                </div>
-                <Badge variant="secondary">
-                  {stats.activeLoans} Active Loans
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-1 p-4 rounded bg-secondary">
-                  <p className="text-sm text-muted-foreground">
-                    Total Disbursed
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {formatCurrency(stats.totalDisbursed)}
-                  </p>
-                </div>
-                <div className="space-y-1 p-4 rounded bg-secondary">
-                  <p className="text-sm text-muted-foreground">
-                    Total Collected
-                  </p>
-                  <p className="text-2xl font-bold text-primary">
-                    {formatCurrency(stats.totalCollected)}
-                  </p>
-                </div>
-                <div className="space-y-1 p-4 rounded bg-secondary">
-                  <p className="text-sm text-muted-foreground">Outstanding</p>
-                  <p className="text-2xl font-bold">
-                    {formatCurrency(stats.outstandingBalance)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Commission Impact */}
-              {parseFloat(stats.totalCommissions) > 0 && (
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-muted-foreground mb-3">
-                    Commission Impact
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="space-y-1 p-4 rounded bg-secondary">
-                      <p className="text-sm text-muted-foreground">
-                        Gross Collected
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {formatCurrency(stats.totalCollected)}
-                      </p>
-                    </div>
-                    <div className="space-y-1 p-4 rounded bg-secondary">
-                      <p className="text-sm text-muted-foreground">
-                        Commissions Paid
-                      </p>
-                      <p className="text-2xl font-bold text-orange-500">
-                        -{formatCurrency(stats.paidCommissions)}
-                      </p>
-                      {parseFloat(stats.pendingCommissions) > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          +{formatCurrency(stats.pendingCommissions)} pending
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-1 p-4 rounded bg-primary/10 border border-primary/20">
-                      <p className="text-sm text-muted-foreground">
-                        Net Collected
-                      </p>
-                      <p className="text-2xl font-bold text-primary">
-                        {formatCurrency(stats.netCollected)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Forecast */}
-          <Card className="shadow-sm">
-            <CardHeader className="p-4 pb-2">
-              <div className="flex items-center gap-2">
-                <TrendUp className="h-4 w-4 text-primary" weight="bold" />
-                <CardTitle className="text-lg font-semibold">
-                  Expected Collections
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-4">
-              <div className="space-y-3">
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Portfolio Overview */}
+            <Card className="shadow-sm">
+              <CardHeader className="p-4 pb-2">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Next 30 days
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.forecast.next30DaysCount} payments
+                  <CardTitle className="text-lg font-semibold">
+                    Portfolio Overview
+                  </CardTitle>
+                  <Badge variant="secondary">
+                    {stats.activeLoans} Active Loans
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Total Loans
+                    </span>
+                    <span className="text-sm font-medium">
+                      {stats.totalLoans}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Total Contacts
+                    </span>
+                    <span className="text-sm font-medium">
+                      {stats.totalContacts}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-3">
+                    <span className="text-sm text-muted-foreground">
+                      Total Collected
+                    </span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(stats.totalCollected)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Outstanding
+                    </span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(stats.outstandingBalance)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Forecast */}
+            <Card className="shadow-sm">
+              <CardHeader className="p-4 pb-2">
+                <div className="flex items-center gap-2">
+                  <TrendUp className="h-4 w-4 text-primary" weight="bold" />
+                  <CardTitle className="text-lg font-semibold">
+                    Expected Collections
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Next 30 days
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {stats.forecast.next30DaysCount} payments
+                      </p>
+                    </div>
+                    <p className="text-xl font-bold">
+                      {formatCurrency(stats.forecast.next30Days)}
                     </p>
                   </div>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(stats.forecast.next30Days)}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Next 60 days
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.forecast.next60DaysCount} payments
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(stats.forecast.next60Days)}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Next 90 days
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.forecast.next90DaysCount} payments
+                  <div className="flex items-center justify-between pt-3 border-t">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Next 60 days
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {stats.forecast.next60DaysCount} payments
+                      </p>
+                    </div>
+                    <p className="text-xl font-bold">
+                      {formatCurrency(stats.forecast.next60Days)}
                     </p>
                   </div>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(stats.forecast.next90Days)}
-                  </p>
+                  <div className="flex items-center justify-between pt-3 border-t">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Next 90 days
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {stats.forecast.next90DaysCount} payments
+                      </p>
+                    </div>
+                    <p className="text-xl font-bold">
+                      {formatCurrency(stats.forecast.next90Days)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

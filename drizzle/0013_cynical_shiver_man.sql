@@ -1,0 +1,1 @@
+ALTER TABLE "loans" ADD COLUMN "interest_earned" numeric(12, 2) DEFAULT '0' NOT NULL;

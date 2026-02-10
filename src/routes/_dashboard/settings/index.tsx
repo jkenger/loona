@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { useSession, changePassword, updateUserName } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Label } from "@/components/ui/label"
 import {
   Card,
@@ -32,10 +33,22 @@ import {
   PencilSimple,
   Warning,
   ArrowSquareOut,
+  Wallet,
+  Coins,
 } from "@phosphor-icons/react"
 import { SkeletonFormPage } from "@/components/ui/skeleton"
+import { getLenderSettings, saveLenderSettings } from "@/server/lender-settings"
+import { hasRole, ROLES } from "@/lib/constants/roles"
 
 export const Route = createFileRoute("/_dashboard/settings/")({
+  loader: async ({ context }) => {
+    const { session } = context as {
+      session: { user: { role: string | null } }
+    }
+    const isLender = hasRole(session.user.role, ROLES.LENDER)
+    const lenderConfig = isLender ? await getLenderSettings() : null
+    return { lenderConfig }
+  },
   pendingComponent: SkeletonFormPage,
   component: SettingsPage,
 })
@@ -43,6 +56,7 @@ export const Route = createFileRoute("/_dashboard/settings/")({
 function SettingsPage() {
   const router = useRouter()
   const { data: session } = useSession()
+  const { lenderConfig } = Route.useLoaderData()
 
   // Profile edit state
   const [isEditingName, setIsEditingName] = useState(false)
@@ -58,6 +72,12 @@ function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState("")
+
+  // Capital state
+  const [isEditingCapital, setIsEditingCapital] = useState(false)
+  const [capitalInput, setCapitalInput] = useState("")
+  const [isSavingCapital, setIsSavingCapital] = useState(false)
+  const [currentCapital, setCurrentCapital] = useState(lenderConfig?.initialCapital ?? 0)
 
   const user = session?.user
 
@@ -144,6 +164,33 @@ function SettingsPage() {
       setIsChangingPassword(false)
     }
   }
+
+  const handleEditCapital = () => {
+    setCapitalInput(currentCapital > 0 ? currentCapital.toString() : "")
+    setIsEditingCapital(true)
+  }
+
+
+  const handleSaveCapital = async () => {
+    const amount = parseFloat(capitalInput)
+    if (isNaN(amount) || amount < 0) {
+      toast.error("Please enter a valid amount")
+      return
+    }
+    setIsSavingCapital(true)
+    try {
+      await saveLenderSettings({ data: { initialCapital: amount } })
+      setCurrentCapital(amount)
+      setIsEditingCapital(false)
+      toast.success("Starting capital updated")
+    } catch {
+      toast.error("Failed to save capital")
+    } finally {
+      setIsSavingCapital(false)
+    }
+  }
+
+  const isLender = hasRole(user?.role ?? null, ROLES.LENDER)
 
   if (!user) {
     return null
@@ -306,6 +353,84 @@ function SettingsPage() {
               </Link>
             </CardContent>
           </Card>
+
+          {/* Financial Settings Card */}
+          {isLender && (
+            <Card className="shadow-lg">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  Financial Settings
+                </CardTitle>
+                <CardDescription>Set your starting capital for cash position tracking</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-2">
+                  <Label>Starting Capital</Label>
+                  {isEditingCapital ? (
+                    <div className="flex gap-2">
+                      <CurrencyInput
+                        value={capitalInput}
+                        onValueChange={setCapitalInput}
+                        placeholder="500,000"
+                        className="flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveCapital()
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSaveCapital}
+                        disabled={isSavingCapital}
+                      >
+                        {isSavingCapital ? (
+                          <Spinner className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsEditingCapital(false)}
+                        disabled={isSavingCapital}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Wallet className="h-5 w-5 text-muted-foreground" />
+                        <span className="font-medium">
+                          {currentCapital > 0
+                            ? new Intl.NumberFormat("en-PH", {
+                                style: "currency",
+                                currency: "PHP",
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              }).format(currentCapital)
+                            : "Not set"}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleEditCapital}
+                        className="gap-1"
+                      >
+                        <PencilSimple className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    This is used to calculate your cash position on the dashboard.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
