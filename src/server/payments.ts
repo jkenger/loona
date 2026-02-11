@@ -18,7 +18,7 @@ import { z } from "zod"
 import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
 import { parsePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
-import { assertTransition } from "./loans"
+import { revertPenaltyCore } from "./penalties"
 
 // Validation schemas
 const recordPaymentSchema = z.object({
@@ -26,7 +26,9 @@ const recordPaymentSchema = z.object({
   scheduleItemId: z.string().min(1, "Schedule item is required"),
   amount: z.number().positive(),
   method: z.enum(["cash", "gcash", "maya", "bank"]),
-  paidAt: z.string().optional().transform((s) => s ? new Date(s) : undefined),
+  paidAt: z.string().optional()
+    .transform((s) => s ? new Date(s) : undefined)
+    .refine((d) => !d || d <= new Date(), "Payment date cannot be in the future"),
   notes: z.string().optional(),
 })
 
@@ -223,7 +225,15 @@ export const recordPayment = createServerFn()
     throw new Error("This payment was already recorded. Please wait before retrying.")
   }
 
-  // === Compute phase ===
+  // Reject overpayment
+  const remainingBalance = parseFloat(loan.remainingBalance)
+  if (data.amount > remainingBalance) {
+    throw new Error(
+      `Payment of ₱${data.amount.toFixed(2)} exceeds remaining balance of ₱${remainingBalance.toFixed(2)}`
+    )
+  }
+
+  // Create payment record
   const paymentDate = data.paidAt || new Date()
 
   // Loan balance computations
@@ -488,6 +498,19 @@ export const reversePayment = createServerFn()
       )
     }
 
+    // 4. Revert applied penalties for this schedule item
+    const appliedPenalties = await db.query.penalties.findMany({
+      where: and(
+        eq(penalties.scheduleItemId, payment.scheduleItemId),
+        eq(penalties.status, "applied"),
+      ),
+    })
+
+    for (const penalty of appliedPenalties) {
+      await revertPenaltyCore(penalty.id, payment.loanId)
+    }
+
+    // 5. Reverse commission if exists
     if (payment.commission) {
       const commissionAmount = parseFloat(payment.commission.commissionAmount)
 
@@ -500,14 +523,13 @@ export const reversePayment = createServerFn()
       )
     }
 
-    await db.batch(writes as any)
-
-    // Audit log (non-critical, outside batch)
+    // 6. Audit log
     const log = createAuditLogger(session.user)
     log("payment.reverse", "payment", data.paymentId, {
       loanId: payment.loanId,
       amount: paymentAmount,
       reason: data.reason,
+      penaltiesReverted: appliedPenalties.length,
     })
 
     return { success: true }

@@ -310,6 +310,37 @@ export const waivePenalty = createServerFn()
   })
 
 /**
+ * Core revert logic — no auth check, caller is responsible.
+ * Reverts an applied or waived penalty back to pending.
+ * For applied penalties, subtracts the amount from the loan balance using GREATEST(0, ...).
+ * Returns silently if the penalty is already pending.
+ */
+export async function revertPenaltyCore(penaltyId: string, loanId: string): Promise<void> {
+  const penalty = await db.query.penalties.findFirst({
+    where: eq(penalties.id, penaltyId),
+  })
+  if (!penalty || penalty.status === "pending") return
+
+  const penaltyAmount = parseFloat(penalty.amount)
+
+  await db
+    .update(penalties)
+    .set({ status: "pending", appliedAt: null, waivedAt: null, decidedBy: null, notes: null })
+    .where(eq(penalties.id, penaltyId))
+
+  if (penalty.status === "applied") {
+    await db
+      .update(loans)
+      .set({
+        totalToRepay: sql`GREATEST(0, ${loans.totalToRepay}::numeric - ${penaltyAmount})`,
+        remainingBalance: sql`GREATEST(0, ${loans.remainingBalance}::numeric - ${penaltyAmount})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(loans.id, loanId))
+  }
+}
+
+/**
  * Revert an applied or waived penalty back to pending.
  * For applied penalties, subtracts the amount from the loan balance.
  */
@@ -346,35 +377,15 @@ export const revertPenalty = createServerFn()
     }
 
     const previousStatus = penalty.status
-    const penaltyAmount = parseFloat(penalty.amount)
 
-    // Atomic: revert penalty + conditional loan balance update
-    const writes: any[] = [
-      db.update(penalties).set({
-        status: "pending",
-        appliedAt: null,
-        waivedAt: null,
-        decidedBy: null,
-        notes: null,
-      }).where(eq(penalties.id, data.penaltyId)),
-    ]
-
-    if (previousStatus === "applied") {
-      writes.push(
-        db.update(loans).set({
-          totalToRepay: sql`${loans.totalToRepay}::numeric - ${penaltyAmount}`,
-          remainingBalance: sql`${loans.remainingBalance}::numeric - ${penaltyAmount}`,
-          updatedAt: new Date(),
-        }).where(eq(loans.id, penalty.loanId)),
-      )
-    }
+    await revertPenaltyCore(data.penaltyId, penalty.loanId)
 
     await db.batch(writes as any)
 
     const log = createAuditLogger(session.user)
     log("penalty.revert", "penalty", data.penaltyId, {
       loanId: penalty.loanId,
-      amount: penaltyAmount,
+      amount: parseFloat(penalty.amount),
       penaltyType: penalty.penaltyType,
       previousStatus,
     })

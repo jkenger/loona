@@ -86,7 +86,8 @@ export function ReversePaymentDialog({
         <DialogHeader>
           <DialogTitle>Reverse Payment</DialogTitle>
           <DialogDescription>
-            This will undo the payment and restore loan balances. This action cannot be undone.
+            This will undo the payment and restore loan balances.
+            Applied penalties for this installment will also be reverted. This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
 
