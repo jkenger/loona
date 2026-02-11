@@ -1,23 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { useState } from "react"
 import { SkeletonStatsPage } from "@/components/ui/skeleton"
-import { format } from "date-fns"
 import { getAgentDashboard, getAgentUpcomingPayments } from "@/server/agents"
 import { getAgentLoanCreationPermission } from "@/server/loans"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
-import { formatRelativeDate, formatRelativeDateLower } from "@/lib/utils/date"
+import { formatCurrency } from "@/lib/utils"
+import { formatRelativeDate } from "@/lib/utils/date"
+import { RecordPaymentDialog } from "@/components/record-payment-dialog"
+import { PenaltyItems } from "@/components/penalty-items"
 import {
-  CurrencyCircleDollar,
-  Receipt,
-  Wallet,
-  Clock,
-  ArrowRight,
-  Bell,
-  Warning,
   Plus,
+  Warning,
+  CheckCircle,
+  Phone,
+  ArrowRight,
+  CaretDown,
+  Clock,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/agent/")({
@@ -34,10 +35,10 @@ export const Route = createFileRoute("/_dashboard/agent/")({
     return { dashboard, upcoming, canCreateLoans: loanPermissions.length > 0, unauthorized: false }
   },
   pendingComponent: SkeletonStatsPage,
-  component: AgentDashboardPage,
+  component: AgentHomePage,
 })
 
-function AgentDashboardPage() {
+function AgentHomePage() {
   const { dashboard, upcoming, canCreateLoans, unauthorized } = Route.useLoaderData()
 
   if (unauthorized || !dashboard) {
@@ -51,272 +52,345 @@ function AgentDashboardPage() {
     )
   }
 
-  const overduePayments = upcoming.filter((p) => p.status === "overdue")
-  const upcomingPayments = upcoming.filter((p) => p.status !== "overdue").slice(0, 5)
+  const canRecordPayments = dashboard.canRecordPayments
+
+  // Client-side grouping
+  const now = new Date()
+  const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+  const overdue = upcoming
+    .filter((p) => p.status === "overdue")
+    .sort((a, b) => b.daysOverdue - a.daysOverdue)
+
+  const nonOverdue = upcoming.filter((p) => p.status !== "overdue")
+
+  const thisWeek = nonOverdue.filter((p) => new Date(p.dueDate) <= sevenDays)
+
+  const upcomingItems = nonOverdue.filter((p) => new Date(p.dueDate) > sevenDays)
+
+  const allItems = [...overdue, ...thisWeek, ...upcomingItems]
+  const totalAmount = allItems.reduce(
+    (sum, p) => sum + parseFloat(p.amount) - parseFloat(p.paidAmount),
+    0
+  )
+
+  // Collect dialog state
+  const [selectedItem, setSelectedItem] = useState<(typeof upcoming)[0] | null>(null)
+
+  // Upcoming section collapsed by default
+  const [upcomingExpanded, setUpcomingExpanded] = useState(false)
+
+  const isEmpty = overdue.length === 0 && thisWeek.length === 0 && upcomingItems.length === 0
 
   return (
     <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Meta Bar */}
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
-              Agent Portal
-            </span>
-            <span className="text-blue-300/40">·</span>
-            <span>Overview</span>
-            <span className="text-blue-300/40">·</span>
-            <span>{format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
-          </div>
-
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4">
-              <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-blue-200/70">Track your collections and earnings</p>
-            </div>
-            <div className="flex gap-2">
-              {canCreateLoans && (
-                <Link to="/agent/loans/new">
-                  <Button variant="outline" className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20">
-                    <Plus className="h-4 w-4" weight="bold" />
-                    Create Loan
-                  </Button>
-                </Link>
+      {/* Compact header */}
+      <div className="bg-[hsl(215_45%_14%)] text-white pt-5 pb-14">
+        <div className="mx-auto max-w-2xl px-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              {isEmpty ? (
+                <h1 className="text-lg font-semibold">You're all caught up</h1>
+              ) : (
+                <h1 className="text-lg font-semibold">
+                  {allItems.length} payment{allItems.length !== 1 ? "s" : ""} to collect
+                  <span className="text-blue-200/70 font-normal"> — {formatCurrency(totalAmount)}</span>
+                </h1>
               )}
-              <Link to="/agent/payments">
-                <Button className="gap-2">
-                  <Receipt className="h-4 w-4" weight="bold" />
-                  Collect Payment
+            </div>
+            {canCreateLoans && (
+              <Link to="/agent/loans/new">
+                <Button size="sm" variant="outline" className="gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 shrink-0">
+                  <Plus className="h-3.5 w-3.5" weight="bold" />
+                  <span className="hidden sm:inline">Create Loan</span>
+                  <span className="sm:hidden">New</span>
                 </Button>
               </Link>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+      {/* Task list — single column, mobile-first */}
+      <div className="mx-auto max-w-2xl px-4 -mt-7 pb-8 space-y-4">
 
-      {/* Overdue Payments Banner */}
-      {overduePayments.length > 0 && (
-        <div className="rounded-lg border border-destructive/20 bg-card shadow-lg p-4 relative overflow-hidden">
-          <div className="absolute inset-0 bg-destructive/5 pointer-events-none" />
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                <Warning className="h-5 w-5 text-destructive" weight="fill" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm text-destructive">
-                  {overduePayments.length} overdue payment
-                  {overduePayments.length !== 1 ? 's' : ''}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Total overdue: {formatCurrency(overduePayments.reduce((s, p) => s + parseFloat(p.amount), 0))}
-                </p>
-              </div>
+        {/* Empty state */}
+        {isEmpty && (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <CheckCircle className="h-12 w-12 text-primary mb-3" weight="fill" />
+              <p className="text-muted-foreground text-sm">No payments due in the next 30 days.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* OVERDUE section */}
+        {overdue.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <Warning className="h-4 w-4 text-destructive" weight="fill" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-destructive">
+                Overdue
+              </h2>
+              <span className="text-xs text-muted-foreground">({overdue.length})</span>
             </div>
-            <Link to="/agent/payments">
-              <Button size="sm" variant="destructive" className="gap-1.5">
-                Collect Now
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Upcoming Payments Banner */}
-      {upcomingPayments.length > 0 && overduePayments.length === 0 && (
-        <div className="rounded-lg border border-primary/20 bg-card shadow-lg p-4 relative overflow-hidden">
-          <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Bell className="h-5 w-5 text-primary" weight="fill" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">
-                  {upcomingPayments.length} payment
-                  {upcomingPayments.length !== 1 ? 's' : ''} due this week
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {upcomingPayments.slice(0, 3).map((p, i) => (
-                    <span key={p.id}>
-                      {i > 0 && ', '}
-                      {p.contactName} (
-                      {formatCurrency(parseFloat(p.amount) - parseFloat(p.paidAmount))}{' '}
-                      {formatRelativeDateLower(p.dueDate)})
-                    </span>
-                  ))}
-                  {upcomingPayments.length > 3 && (
-                    <span> and {upcomingPayments.length - 3} more</span>
-                  )}
-                </p>
-              </div>
-            </div>
-            <Link to="/agent/payments">
-              <Button size="sm" className="gap-1.5">
-                View Payments
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Stats Cards - 2x2 grid on mobile */}
-      <div className="grid grid-cols-2 gap-2 md:gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1 md:pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">Collected</CardTitle>
-            <Receipt className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-lg md:text-2xl font-bold">{formatCurrencyCompact(dashboard.totalCollected)}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1 md:pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">Earned</CardTitle>
-            <CurrencyCircleDollar className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-lg md:text-2xl font-bold">{formatCurrencyCompact(dashboard.totalCommissionEarned)}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1 md:pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">Pending</CardTitle>
-            <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-lg md:text-2xl font-bold text-primary">{formatCurrencyCompact(dashboard.pendingCommission)}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="p-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 md:p-4 pb-1 md:pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium">Lenders</CardTitle>
-            <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-lg md:text-2xl font-bold">{dashboard.relationships.length}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Lender Relationships - Compact on mobile */}
-      {dashboard.relationships.length > 0 && (
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base md:text-lg">Your Lenders</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-2 md:space-y-3">
-              {dashboard.relationships.map((rel) => (
-                <div
-                  key={rel.id}
-                  className="flex items-center justify-between p-2 md:p-3 rounded border"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm md:text-base truncate">{rel.lenderName}</p>
-                    <p className="text-xs text-muted-foreground truncate hidden sm:block">{rel.lenderEmail}</p>
-                  </div>
-                  <div className="text-right shrink-0 ml-2">
-                    <Badge variant="secondary" className="text-xs">{rel.commissionRate}%</Badge>
-                    <p className="text-xs text-primary font-medium mt-0.5">
-                      {formatCurrencyCompact(rel.pendingCommission)}
-                    </p>
-                  </div>
-                </div>
+            <Card className="border-destructive/30 divide-y">
+              {overdue.map((item) => (
+                <TaskRow
+                  key={item.id}
+                  item={item}
+                  variant="overdue"
+                  canRecordPayments={canRecordPayments}
+                  onCollect={() => setSelectedItem(item)}
+                />
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </Card>
+          </section>
+        )}
 
-      {/* Recent Payments - Compact on mobile */}
-      <Card>
-        <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-base md:text-lg">Recent Collections</CardTitle>
-          <Link
-            to="/agent/loans"
-            className="text-xs md:text-sm font-medium text-primary hover:underline flex items-center gap-1"
-          >
-            All loans
-            <ArrowRight className="h-3 w-3 md:h-4 md:w-4" />
-          </Link>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          {dashboard.recentPayments.length > 0 ? (
-            <div className="space-y-2">
+        {/* THIS WEEK section */}
+        {thisWeek.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <Clock className="h-4 w-4 text-foreground" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                This Week
+              </h2>
+              <span className="text-xs text-muted-foreground">({thisWeek.length})</span>
+            </div>
+            <Card className="divide-y">
+              {thisWeek.map((item) => (
+                <TaskRow
+                  key={item.id}
+                  item={item}
+                  variant="default"
+                  canRecordPayments={canRecordPayments}
+                  onCollect={() => setSelectedItem(item)}
+                />
+              ))}
+            </Card>
+          </section>
+        )}
+
+        {/* UPCOMING section — collapsed by default */}
+        {upcomingItems.length > 0 && (
+          <section>
+            <button
+              onClick={() => setUpcomingExpanded((v) => !v)}
+              className="flex items-center gap-2 mb-2 px-1 w-full text-left"
+            >
+              <CaretDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${upcomingExpanded ? "rotate-0" : "-rotate-90"}`}
+              />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Upcoming
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                {upcomingItems.length} more in next 30 days
+              </span>
+            </button>
+            {upcomingExpanded && (
+              <Card className="divide-y">
+                {upcomingItems.map((item) => (
+                  <TaskRow
+                    key={item.id}
+                    item={item}
+                    variant="default"
+                    canRecordPayments={canRecordPayments}
+                    onCollect={() => setSelectedItem(item)}
+                  />
+                ))}
+              </Card>
+            )}
+          </section>
+        )}
+
+        {/* RECENT ACTIVITY */}
+        {dashboard.recentPayments.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Recent Activity
+              </h2>
+              <Link
+                to="/agent/payments"
+                className="text-xs font-medium text-primary hover:underline flex items-center gap-0.5"
+              >
+                View all history
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <Card className="divide-y">
               {dashboard.recentPayments.slice(0, 5).map((payment) => (
                 <div
                   key={payment.id}
-                  className="flex items-center justify-between py-1.5 md:py-2 border-b last:border-0"
+                  className="flex items-center justify-between px-4 py-3"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">{payment.contactName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatRelativeDate(payment.paidAt)}
+                      {formatRelativeDate(payment.paidAt)} · {payment.method.toUpperCase()}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-2">
-                    <p className="font-semibold text-sm">{formatCurrencyCompact(payment.amount)}</p>
-                    <span className="text-xs text-muted-foreground uppercase">
-                      {payment.method}
-                    </span>
-                  </div>
+                  <p className="text-sm font-semibold text-primary shrink-0 ml-2">
+                    +{formatCurrency(payment.amount)}
+                  </p>
                 </div>
               ))}
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-6 text-sm">
-              No payments recorded yet
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            </Card>
+          </section>
+        )}
 
-      {/* Empty state for no relationships */}
-      {dashboard.relationships.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
-            <CurrencyCircleDollar className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground/50 mb-3" />
-            <h3 className="text-base md:text-lg font-semibold mb-1">No active assignments</h3>
-            <p className="text-muted-foreground text-xs md:text-sm text-center max-w-md px-4">
-              Once a lender adds you as their agent, their loans will appear here.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        {/* No relationships state */}
+        {dashboard.relationships.length === 0 && isEmpty && (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-10">
+              <p className="text-muted-foreground text-sm text-center">
+                Once a lender adds you as their agent, your tasks will appear here.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Record Payment Dialog */}
+      <RecordPaymentDialog
+        open={!!selectedItem}
+        onOpenChange={(open) => { if (!open) setSelectedItem(null) }}
+        loanId={selectedItem?.loanId ?? ""}
+        borrowerName={selectedItem?.contactName ?? ""}
+        scheduleItem={selectedItem}
+        appliedPenalties={
+          selectedItem
+            ? (selectedItem.penalties ?? [])
+                .filter((p) => p.status === "applied")
+                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+            : 0
+        }
+      />
     </div>
   )
 }
 
-function formatCurrency(amount: string | number): string {
-  const num = typeof amount === "string" ? parseFloat(amount) : amount
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num)
+// ---- Task row component ----
+
+interface UpcomingItem {
+  id: string
+  dueDate: string
+  amount: string
+  status: string
+  paidAmount: string
+  loanId: string
+  contactName: string
+  contactId: string
+  contactPhone: string | null
+  penalties: { id: string; penaltyType: string; amount: string; status: string }[]
+  daysOverdue: number
+  penaltyIn: number
 }
 
-function formatCurrencyCompact(amount: string | number): string {
-  const num = typeof amount === "string" ? parseFloat(amount) : amount
-  if (num >= 1000000) {
-    return `₱${(num / 1000000).toFixed(1)}M`
+function TaskRow({
+  item,
+  variant,
+  canRecordPayments,
+  onCollect,
+}: {
+  item: UpcomingItem
+  variant: "overdue" | "default"
+  canRecordPayments: boolean | undefined
+  onCollect: () => void
+}) {
+  const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
+  const appliedPenaltyTotal = (item.penalties ?? [])
+    .filter((p) => p.status === "applied")
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+
+  const isOverdue = variant === "overdue"
+
+  // Due label
+  let dueLabel: string
+  if (isOverdue) {
+    dueLabel =
+      item.daysOverdue === 1
+        ? "1 day overdue"
+        : `${item.daysOverdue} days overdue`
+  } else {
+    dueLabel = `Due ${formatRelativeDate(item.dueDate).toLowerCase()}`
   }
-  if (num >= 1000) {
-    return `₱${(num / 1000).toFixed(num >= 10000 ? 0 : 1)}K`
-  }
-  return `₱${num.toLocaleString()}`
+
+  return (
+    <PenaltyItems
+      penalties={item.penalties ?? []}
+      daysOverdue={item.daysOverdue}
+      penaltyIn={item.penaltyIn}
+      formatCurrency={formatCurrency}
+    >
+      {({ toggleButton, detailPanel }) => (
+        <div className={isOverdue ? "bg-destructive/[0.03]" : ""}>
+          <div className="flex items-center gap-3 px-4 py-3">
+            {/* Left: name + due info */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <Link
+                  to="/agent/contacts/$contactId"
+                  params={{ contactId: item.contactId }}
+                  className="font-medium text-sm truncate hover:underline"
+                >
+                  {item.contactName}
+                </Link>
+                {item.contactPhone && (
+                  <a
+                    href={`tel:${item.contactPhone}`}
+                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span
+                  className={`text-xs ${
+                    isOverdue ? "text-destructive font-medium" : "text-muted-foreground"
+                  }`}
+                >
+                  {dueLabel}
+                </span>
+                {toggleButton}
+              </div>
+            </div>
+
+            {/* Right: amount + collect button */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="text-right">
+                <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
+                {appliedPenaltyTotal > 0 && (
+                  <p className="text-[11px] text-amber-600">
+                    + {formatCurrency(appliedPenaltyTotal)} pen.
+                  </p>
+                )}
+              </div>
+              {canRecordPayments && (
+                <Button
+                  size="sm"
+                  variant={isOverdue ? "destructive" : "default"}
+                  onClick={onCollect}
+                  className="h-9 px-3"
+                >
+                  Collect
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Penalty detail panel */}
+          {detailPanel && (
+            <div className="px-4 pb-3">
+              {detailPanel}
+            </div>
+          )}
+        </div>
+      )}
+    </PenaltyItems>
+  )
 }

@@ -109,9 +109,7 @@ const adminNavigation = [
 // Navigation items for agent portal
 const agentNavigation = [
   { name: "Home", href: "/agent", icon: House, exact: true },
-  { name: "My Payments", href: "/agent/payments", icon: Receipt, exact: false },
-  { name: "My Commissions", href: "/agent/commissions", icon: Wallet, exact: false },
-  { name: "Program", href: "/agent/commission-program", icon: ClipboardText, exact: false, badge: "New" },
+  { name: "Earnings", href: "/agent/earnings", icon: Wallet, exact: false },
 ]
 
 function DashboardLayout() {

@@ -36,6 +36,7 @@ import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/co
 import { Route as DashboardContactsContactIdRouteImport } from './routes/_dashboard/contacts/$contactId'
 import { Route as DashboardAgentsCommissionSettingsRouteImport } from './routes/_dashboard/agents/commission-settings'
 import { Route as DashboardAgentPaymentsRouteImport } from './routes/_dashboard/agent/payments'
+import { Route as DashboardAgentEarningsRouteImport } from './routes/_dashboard/agent/earnings'
 import { Route as DashboardAgentCommissionsRouteImport } from './routes/_dashboard/agent/commissions'
 import { Route as DashboardAgentCommissionProgramRouteImport } from './routes/_dashboard/agent/commission-program'
 import { Route as DashboardAdminUsersRouteImport } from './routes/_dashboard/admin/users'
@@ -186,6 +187,11 @@ const DashboardAgentPaymentsRoute = DashboardAgentPaymentsRouteImport.update({
   path: '/agent/payments',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAgentEarningsRoute = DashboardAgentEarningsRouteImport.update({
+  id: '/agent/earnings',
+  path: '/agent/earnings',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAgentCommissionsRoute =
   DashboardAgentCommissionsRouteImport.update({
     id: '/agent/commissions',
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof DashboardAdminUsersRoute
   '/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
+  '/agent/earnings': typeof DashboardAgentEarningsRoute
   '/agent/payments': typeof DashboardAgentPaymentsRoute
   '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/contacts/$contactId': typeof DashboardContactsContactIdRoute
@@ -316,6 +323,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof DashboardAdminUsersRoute
   '/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
+  '/agent/earnings': typeof DashboardAgentEarningsRoute
   '/agent/payments': typeof DashboardAgentPaymentsRoute
   '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/contacts/$contactId': typeof DashboardContactsContactIdRoute
@@ -359,6 +367,7 @@ export interface FileRoutesById {
   '/_dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/_dashboard/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/_dashboard/agent/commissions': typeof DashboardAgentCommissionsRoute
+  '/_dashboard/agent/earnings': typeof DashboardAgentEarningsRoute
   '/_dashboard/agent/payments': typeof DashboardAgentPaymentsRoute
   '/_dashboard/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/_dashboard/contacts/$contactId': typeof DashboardContactsContactIdRoute
@@ -401,6 +410,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/agent/commission-program'
     | '/agent/commissions'
+    | '/agent/earnings'
     | '/agent/payments'
     | '/agents/commission-settings'
     | '/contacts/$contactId'
@@ -441,6 +451,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/agent/commission-program'
     | '/agent/commissions'
+    | '/agent/earnings'
     | '/agent/payments'
     | '/agents/commission-settings'
     | '/contacts/$contactId'
@@ -483,6 +494,7 @@ export interface FileRouteTypes {
     | '/_dashboard/admin/users'
     | '/_dashboard/agent/commission-program'
     | '/_dashboard/agent/commissions'
+    | '/_dashboard/agent/earnings'
     | '/_dashboard/agent/payments'
     | '/_dashboard/agents/commission-settings'
     | '/_dashboard/contacts/$contactId'
@@ -712,6 +724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentPaymentsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/agent/earnings': {
+      id: '/_dashboard/agent/earnings'
+      path: '/agent/earnings'
+      fullPath: '/agent/earnings'
+      preLoaderRoute: typeof DashboardAgentEarningsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/agent/commissions': {
       id: '/_dashboard/agent/commissions'
       path: '/agent/commissions'
@@ -828,6 +847,7 @@ interface DashboardRouteChildren {
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardAgentCommissionProgramRoute: typeof DashboardAgentCommissionProgramRoute
   DashboardAgentCommissionsRoute: typeof DashboardAgentCommissionsRoute
+  DashboardAgentEarningsRoute: typeof DashboardAgentEarningsRoute
   DashboardAgentPaymentsRoute: typeof DashboardAgentPaymentsRoute
   DashboardAgentsCommissionSettingsRoute: typeof DashboardAgentsCommissionSettingsRoute
   DashboardContactsContactIdRoute: typeof DashboardContactsContactIdRoute
@@ -859,6 +879,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardAgentCommissionProgramRoute: DashboardAgentCommissionProgramRoute,
   DashboardAgentCommissionsRoute: DashboardAgentCommissionsRoute,
+  DashboardAgentEarningsRoute: DashboardAgentEarningsRoute,
   DashboardAgentPaymentsRoute: DashboardAgentPaymentsRoute,
   DashboardAgentsCommissionSettingsRoute:
     DashboardAgentsCommissionSettingsRoute,
