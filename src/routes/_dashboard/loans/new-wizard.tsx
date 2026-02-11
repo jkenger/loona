@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 import { createContactAndLoan } from "@/server/loans"
 import { getContacts } from "@/server/contacts"
+import { getCashPosition } from "@/server/lender-settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,6 +50,7 @@ import {
   ArrowSquareOut,
   Plus,
   Info,
+  Warning,
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
@@ -78,17 +80,20 @@ export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
       session: { user: { role: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { contacts: [], unauthorized: true }
+      return { contacts: [], cashPosition: null, unauthorized: true }
     }
-    const contacts = await getContacts()
-    return { contacts, unauthorized: false }
+    const [contacts, cashPosition] = await Promise.all([
+      getContacts(),
+      getCashPosition().catch(() => null),
+    ])
+    return { contacts, cashPosition, unauthorized: false }
   },
   pendingComponent: SkeletonFormPage,
   component: NewLoanWizard,
 })
 
 function NewLoanWizard() {
-  const { contacts, unauthorized } = Route.useLoaderData()
+  const { contacts, cashPosition, unauthorized } = Route.useLoaderData()
   const { contactId: preselectedContactId } = Route.useSearch()
 
   const hasPreselected = !!preselectedContactId && contacts.some((c) => c.id === preselectedContactId)
@@ -1119,6 +1124,34 @@ function NewLoanWizard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Cash Position Warning */}
+            {cashPosition && cashPosition.initialCapital > 0 && (() => {
+              const loanAmount = parseFloat(principal)
+              const available = cashPosition.cashAvailable
+              if (loanAmount > available) {
+                const shortfall = loanAmount - available
+                return (
+                  <div className="lg:col-span-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 flex gap-3">
+                    <Warning className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" weight="fill" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-600">Insufficient cash position</p>
+                      <p className="text-muted-foreground mt-1">
+                        You're about to disburse{" "}
+                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(loanAmount)}{" "}
+                        but your available cash is only{" "}
+                        {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(available)}.{" "}
+                        You're short by{" "}
+                        <span className="font-medium text-amber-600">
+                          {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(shortfall)}
+                        </span>.
+                      </p>
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            })()}
 
             {/* Action Buttons — Full Width */}
             <div className="lg:col-span-2">

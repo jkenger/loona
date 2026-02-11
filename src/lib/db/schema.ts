@@ -61,6 +61,8 @@ export const commissionStatusEnum = pgEnum("commission_status", [
 export const penaltyTypeEnum = pgEnum("penalty_type", ["late_fee", "daily_interest"])
 export const penaltyStatusEnum = pgEnum("penalty_status", ["pending", "applied", "waived"])
 
+export const blogPostStatusEnum = pgEnum("blog_post_status", ["draft", "published"])
+
 // ============================================================================
 // Auth Tables (Better Auth)
 // ============================================================================
@@ -364,6 +366,56 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
+// Blog Categories
+export const blogCategories = pgTable("blog_categories", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+// Blog Tags
+export const blogTags = pgTable("blog_tags", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+// Blog Posts
+export const blogPosts = pgTable("blog_posts", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  authorId: text("author_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  categoryId: text("category_id").references(() => blogCategories.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  excerpt: text("excerpt"),
+  content: text("content"), // Tiptap JSON stored as text
+  status: blogPostStatusEnum("status").notNull().default("draft"),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+// Blog Post Tags (many-to-many)
+export const blogPostTags = pgTable(
+  "blog_post_tags",
+  {
+    postId: text("post_id")
+      .notNull()
+      .references(() => blogPosts.id, { onDelete: "cascade" }),
+    tagId: text("tag_id")
+      .notNull()
+      .references(() => blogTags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    unique("unique_post_tag").on(table.postId, table.tagId),
+  ]
+)
+
 // ============================================================================
 // Relations
 // ============================================================================
@@ -386,6 +438,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   commissionSettings: one(commissionSettings),
   penaltySettings: one(penaltySettings),
   lenderSettings: one(lenderSettings),
+  blogPosts: many(blogPosts),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -517,6 +570,37 @@ export const penaltiesRelations = relations(penalties, ({ one }) => ({
   decidedByUser: one(user, { fields: [penalties.decidedBy], references: [user.id] }),
 }))
 
+export const blogCategoriesRelations = relations(blogCategories, ({ many }) => ({
+  posts: many(blogPosts),
+}))
+
+export const blogTagsRelations = relations(blogTags, ({ many }) => ({
+  postTags: many(blogPostTags),
+}))
+
+export const blogPostsRelations = relations(blogPosts, ({ one, many }) => ({
+  author: one(user, {
+    fields: [blogPosts.authorId],
+    references: [user.id],
+  }),
+  category: one(blogCategories, {
+    fields: [blogPosts.categoryId],
+    references: [blogCategories.id],
+  }),
+  postTags: many(blogPostTags),
+}))
+
+export const blogPostTagsRelations = relations(blogPostTags, ({ one }) => ({
+  post: one(blogPosts, {
+    fields: [blogPostTags.postId],
+    references: [blogPosts.id],
+  }),
+  tag: one(blogTags, {
+    fields: [blogPostTags.tagId],
+    references: [blogTags.id],
+  }),
+}))
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -550,3 +634,8 @@ export type PenaltyRow = typeof penalties.$inferSelect
 
 export type LenderSettingsRow = typeof lenderSettings.$inferSelect
 export type NewLenderSettingsRow = typeof lenderSettings.$inferInsert
+
+export type BlogCategory = typeof blogCategories.$inferSelect
+export type BlogTag = typeof blogTags.$inferSelect
+export type BlogPost = typeof blogPosts.$inferSelect
+export type BlogPostTag = typeof blogPostTags.$inferSelect

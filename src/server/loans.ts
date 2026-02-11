@@ -12,6 +12,21 @@ import {
   type PenaltyConfig,
 } from "@/lib/constants/penalty-defaults"
 
+// Valid loan status transitions
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  pending_disbursement: ["active"],
+  pending_approval: ["active", "rejected"],
+  active: ["completed"],
+  completed: ["active"], // via reversePayment
+}
+
+export function assertTransition(current: string, next: string) {
+  const allowed = VALID_TRANSITIONS[current]
+  if (!allowed || !allowed.includes(next)) {
+    throw new Error(`Invalid status transition: ${current} → ${next}`)
+  }
+}
+
 // Validation schemas
 const createLoanSchema = z.object({
   contactId: z.string().min(1, "Contact is required"),
@@ -303,9 +318,7 @@ export const disburseLoan = createServerFn()
       throw new Error("Loan not found")
     }
 
-    if (loan.status !== "pending_disbursement") {
-      throw new Error("Loan is not pending disbursement")
-    }
+    assertTransition(loan.status, "active")
 
     const [updated] = await db
       .update(loans)
@@ -899,8 +912,14 @@ export const approveLoan = createServerFn()
       throw new Error("Loan not found")
     }
 
-    if (loan.status !== "pending_approval") {
-      throw new Error("This loan is not pending approval")
+    assertTransition(loan.status, "active")
+
+    // Guard against duplicate schedule generation
+    const existingSchedule = await db.query.paymentSchedule.findFirst({
+      where: eq(paymentSchedule.loanId, data.loanId),
+    })
+    if (existingSchedule) {
+      throw new Error("Payment schedule already generated for this loan")
     }
 
     const now = new Date()
@@ -935,13 +954,11 @@ export const approveLoan = createServerFn()
       loan.paymentFrequency as any
     )
 
-    await db.insert(paymentSchedule).values(scheduleItems)
-
-    const [updated] = await db
-      .update(loans)
-      .set(updateFields)
-      .where(eq(loans.id, data.loanId))
-      .returning()
+    // Atomic: insert schedule + update loan status in one batch
+    const [, [updated]] = await db.batch([
+      db.insert(paymentSchedule).values(scheduleItems),
+      db.update(loans).set(updateFields).where(eq(loans.id, data.loanId)).returning(),
+    ])
 
     log("loan.approve", "loan", data.loanId, {
       contactName: loan.contact.name,
@@ -978,9 +995,7 @@ export const rejectLoan = createServerFn()
       throw new Error("Loan not found")
     }
 
-    if (loan.status !== "pending_approval") {
-      throw new Error("This loan is not pending approval")
-    }
+    assertTransition(loan.status, "rejected")
 
     const [updated] = await db
       .update(loans)
