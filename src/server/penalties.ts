@@ -228,26 +228,20 @@ export const applyPenalty = createServerFn()
       )
     }
 
-    // Apply: update penalty record
-    await db
-      .update(penalties)
-      .set({
+    // Atomic: apply penalty + update loan balance
+    await db.batch([
+      db.update(penalties).set({
         status: "applied",
         appliedAt: new Date(),
         decidedBy: session.user.id,
         notes: data.notes || null,
-      })
-      .where(eq(penalties.id, data.penaltyId))
-
-    // Update loan balances
-    await db
-      .update(loans)
-      .set({
+      }).where(eq(penalties.id, data.penaltyId)),
+      db.update(loans).set({
         totalToRepay: sql`${loans.totalToRepay}::numeric + ${penaltyAmount}`,
         remainingBalance: sql`${loans.remainingBalance}::numeric + ${penaltyAmount}`,
         updatedAt: new Date(),
-      })
-      .where(eq(loans.id, penalty.loanId))
+      }).where(eq(loans.id, penalty.loanId)),
+    ])
 
     const log = createAuditLogger(session.user)
     log("penalty.apply", "penalty", data.penaltyId, {
@@ -316,6 +310,37 @@ export const waivePenalty = createServerFn()
   })
 
 /**
+ * Core revert logic — no auth check, caller is responsible.
+ * Reverts an applied or waived penalty back to pending.
+ * For applied penalties, subtracts the amount from the loan balance using GREATEST(0, ...).
+ * Returns silently if the penalty is already pending.
+ */
+export async function revertPenaltyCore(penaltyId: string, loanId: string): Promise<void> {
+  const penalty = await db.query.penalties.findFirst({
+    where: eq(penalties.id, penaltyId),
+  })
+  if (!penalty || penalty.status === "pending") return
+
+  const penaltyAmount = parseFloat(penalty.amount)
+
+  await db
+    .update(penalties)
+    .set({ status: "pending", appliedAt: null, waivedAt: null, decidedBy: null, notes: null })
+    .where(eq(penalties.id, penaltyId))
+
+  if (penalty.status === "applied") {
+    await db
+      .update(loans)
+      .set({
+        totalToRepay: sql`GREATEST(0, ${loans.totalToRepay}::numeric - ${penaltyAmount})`,
+        remainingBalance: sql`GREATEST(0, ${loans.remainingBalance}::numeric - ${penaltyAmount})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(loans.id, loanId))
+  }
+}
+
+/**
  * Revert an applied or waived penalty back to pending.
  * For applied penalties, subtracts the amount from the loan balance.
  */
@@ -352,36 +377,15 @@ export const revertPenalty = createServerFn()
     }
 
     const previousStatus = penalty.status
-    const penaltyAmount = parseFloat(penalty.amount)
 
-    // Revert penalty record back to pending
-    await db
-      .update(penalties)
-      .set({
-        status: "pending",
-        appliedAt: null,
-        waivedAt: null,
-        decidedBy: null,
-        notes: null,
-      })
-      .where(eq(penalties.id, data.penaltyId))
+    await revertPenaltyCore(data.penaltyId, penalty.loanId)
 
-    // If it was applied, subtract from loan balances
-    if (previousStatus === "applied") {
-      await db
-        .update(loans)
-        .set({
-          totalToRepay: sql`${loans.totalToRepay}::numeric - ${penaltyAmount}`,
-          remainingBalance: sql`${loans.remainingBalance}::numeric - ${penaltyAmount}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(loans.id, penalty.loanId))
-    }
+    await db.batch(writes as any)
 
     const log = createAuditLogger(session.user)
     log("penalty.revert", "penalty", data.penaltyId, {
       loanId: penalty.loanId,
-      amount: penaltyAmount,
+      amount: parseFloat(penalty.amount),
       penaltyType: penalty.penaltyType,
       previousStatus,
     })
