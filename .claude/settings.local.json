@@ -32,8 +32,14 @@
       "Bash(ls:*)",
       "Bash(git checkout:*)",
       "Bash(git status:*)",
-      "Bash(xargs:*)",
-      "Bash(npm install:*)"
+      "Bash(git branch:*)",
+      "Bash(npx shadcn@latest add tooltip:*)",
+      "WebFetch(domain:www.fastforward.life)",
+      "WebFetch(domain:www.shopify.com)",
+      "WebFetch(domain:www.myoptimind.com)",
+      "Bash(git stash:*)",
+      "Bash(git pull:*)",
+      "Bash(npm run db:seed:*)"
     ]
   }
 }
