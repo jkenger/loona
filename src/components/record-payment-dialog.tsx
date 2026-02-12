@@ -200,6 +200,8 @@ export function RecordPaymentDialog({
                 <DatePicker
                   value={paymentDate}
                   onChange={(date) => date && setPaymentDate(date)}
+                  disabledDates={{ after: new Date() }}
+                  disabledTooltip="Payment date cannot be in the future"
                 />
               </div>
 
