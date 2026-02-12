@@ -196,7 +196,7 @@ export const createAgent = createServerFn()
         to: emailLower,
         ...email,
       }).catch((err) => {
-        console.error('[Agent] Failed to send invite email:', err)
+        console.error('[Email] Agent invite failed for', emailLower, err)
       })
     }
 

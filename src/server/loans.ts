@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, loans, paymentSchedule, contacts, agents, penaltySettings } from "@/lib/db"
-import { eq, desc, and, sql } from "drizzle-orm"
+import { db, loans, paymentSchedule, contacts, agents, penaltySettings, commissionSettings } from "@/lib/db"
+import { eq, desc, and, sql, inArray } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
@@ -11,6 +11,7 @@ import {
   getRemainingPenaltyBudget,
   type PenaltyConfig,
 } from "@/lib/constants/penalty-defaults"
+import { parseCommissionConfig } from "@/lib/constants/commission-defaults"
 
 // Valid loan status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -708,11 +709,38 @@ export const getAgentLoanCreationPermission = createServerFn().handler(async () 
     },
   })
 
-  return agentRelationships.map((r) => ({
-    agentId: r.id,
-    lenderId: r.lenderId,
-    lenderName: r.lender.name,
-  }))
+  // Enrich with portfolio cap info
+  const results = await Promise.all(
+    agentRelationships.map(async (r) => {
+      const settingsRow = await db.query.commissionSettings.findFirst({
+        where: eq(commissionSettings.lenderId, r.lenderId),
+      })
+      const config = parseCommissionConfig(settingsRow?.config ?? null)
+      const agentTier = r.tier ?? 1
+      const tierConfig = config.tiers.find((t) => t.tier === agentTier)
+        ?? config.tiers[0]
+
+      const [countResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(loans)
+        .where(
+          and(
+            eq(loans.assignedAgentId, r.id),
+            inArray(loans.status, ["active", "pending_approval", "pending_disbursement"])
+          )
+        )
+
+      return {
+        agentId: r.id,
+        lenderId: r.lenderId,
+        lenderName: r.lender.name,
+        portfolioCap: tierConfig?.portfolioCap ?? 10,
+        currentLoanCount: countResult?.count ?? 0,
+      }
+    })
+  )
+
+  return results
 })
 
 // Schema for agent creating a loan with agentId
@@ -774,6 +802,33 @@ export const createLoanAsAgent = createServerFn()
 
     if (!agent) {
       throw new Error("You do not have permission to create loans")
+    }
+
+    // Enforce portfolio cap
+    const settingsRow = await db.query.commissionSettings.findFirst({
+      where: eq(commissionSettings.lenderId, agent.lenderId),
+    })
+    const commissionConfig = parseCommissionConfig(settingsRow?.config ?? null)
+    const agentTier = agent.tier ?? 1
+    const tierConfig = commissionConfig.tiers.find((t) => t.tier === agentTier)
+      ?? commissionConfig.tiers[0]
+
+    if (tierConfig) {
+      const [countResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(loans)
+        .where(
+          and(
+            eq(loans.assignedAgentId, agent.id),
+            inArray(loans.status, ["active", "pending_approval", "pending_disbursement"])
+          )
+        )
+      const currentCount = countResult?.count ?? 0
+      if (currentCount >= tierConfig.portfolioCap) {
+        throw new Error(
+          `You've reached your portfolio limit of ${tierConfig.portfolioCap} loans. Contact your lender to increase your limit or wait for existing loans to complete.`
+        )
+      }
     }
 
     let contactId: string

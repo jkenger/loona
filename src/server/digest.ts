@@ -3,15 +3,15 @@
  * Queries payments recorded by agents in the last 24 hours and emails each
  * lender a summary, grouped by agent.
  */
-import { db, payments, loans, contacts, agents, user } from "@/lib/db"
-import { and, gte, isNotNull, isNull, eq } from "drizzle-orm"
-import { aliasedTable } from "drizzle-orm"
-import { sendEmail, agentActivityDigestEmail } from "@/lib/email"
+import { and, gte, isNotNull, isNull, eq } from 'drizzle-orm'
+import { aliasedTable } from 'drizzle-orm'
+import { db, payments, loans, contacts, agents, user } from '@/lib/db'
+import { sendEmail, agentActivityDigestEmail } from '@/lib/email'
 
 export async function sendAgentActivityDigests() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
-  const agentUser = aliasedTable(user, "agentUser")
+  const agentUser = aliasedTable(user, 'agentUser')
 
   // Query all non-reversed agent-recorded payments from the last 24 hours
   const rows = await db
@@ -47,7 +47,10 @@ export async function sendAgentActivityDigests() {
     {
       lenderName: string
       lenderEmail: string
-      agents: Map<string, { agentName: string; payments: number; total: number }>
+      agents: Map<
+        string,
+        { agentName: string; payments: number; total: number }
+      >
     }
   >()
 
@@ -76,15 +79,15 @@ export async function sendAgentActivityDigests() {
     agentData.total += parseFloat(row.amount)
   }
 
-  const dashboardBase = process.env.BETTER_AUTH_URL || "https://loona.app"
-  const dateStr = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  const dashboardBase = process.env.BETTER_AUTH_URL || 'https://loona.app'
+  const dateStr = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   })
 
   const formatPHP = (amount: number) =>
-    `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   let lendersNotified = 0
 
@@ -96,7 +99,10 @@ export async function sendAgentActivityDigests() {
     }))
 
     const grandTotal = formatPHP(
-      Array.from(lenderData.agents.values()).reduce((sum, a) => sum + a.total, 0),
+      Array.from(lenderData.agents.values()).reduce(
+        (sum, a) => sum + a.total,
+        0,
+      ),
     )
 
     const email = agentActivityDigestEmail({
@@ -107,12 +113,15 @@ export async function sendAgentActivityDigests() {
       dashboardUrl: `${dashboardBase}/dashboard`,
     })
 
-    await sendEmail({
-      to: lenderData.lenderEmail,
-      ...email,
-    })
-
-    lendersNotified++
+    try {
+      await sendEmail({
+        to: lenderData.lenderEmail,
+        ...email,
+      })
+      lendersNotified++
+    } catch (err) {
+      console.error('[Email] Digest failed for', lenderData.lenderEmail, err)
+    }
   }
 
   return { lendersNotified, totalPayments: rows.length }

@@ -151,6 +151,22 @@ function AgentNewLoanWizard() {
 
   const selectedPermission = permissions.find((p) => p.agentId === selectedAgentId)
 
+  // Check portfolio cap for the selected permission
+  const isAtCap = selectedPermission
+    ? selectedPermission.currentLoanCount >= selectedPermission.portfolioCap
+    : false
+
+  if (isAtCap && selectedPermission) {
+    return (
+      <AccessDenied
+        title="Portfolio Limit Reached"
+        message={`You've reached your portfolio limit of ${selectedPermission.portfolioCap} loans. Contact your lender to increase your limit or wait for existing loans to complete.`}
+        homeLink="/agent/loans"
+        homeLinkLabel="Back to Loans"
+      />
+    )
+  }
+
   // Filter contacts to show only those belonging to the selected lender
   const availableContacts = contacts.filter(
     (c) => c.lenderId === selectedPermission?.lenderId
@@ -363,6 +379,16 @@ function AgentNewLoanWizard() {
             Your lender must approve it before it becomes active.
           </p>
         </div>
+
+        {/* Portfolio cap info */}
+        {selectedPermission && (
+          <div className="mb-4 p-3 rounded-lg bg-muted/50 border flex items-center gap-3">
+            <Info className="h-5 w-5 text-muted-foreground shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              {selectedPermission.currentLoanCount} of {selectedPermission.portfolioCap} loan slots used
+            </p>
+          </div>
+        )}
 
         {/* Lender Selection (if agent works for multiple lenders) */}
         {permissions.length > 1 && (

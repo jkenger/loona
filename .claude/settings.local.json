@@ -39,7 +39,8 @@
       "WebFetch(domain:www.myoptimind.com)",
       "Bash(git stash:*)",
       "Bash(git pull:*)",
-      "Bash(npm run db:seed:*)"
+      "Bash(npm run db:seed:*)",
+      "Bash(gh run view:*)"
     ]
   }
 }
