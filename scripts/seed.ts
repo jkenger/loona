@@ -1,14 +1,12 @@
 /**
  * Seed script for Loona
  *
- * Creates test data including:
- * - 1 Lender account
- * - 1 Agent account (assigned to lender)
- * - 10 Contacts (borrowers)
- * - 15 Loans with various statuses
- * - Payment schedules for all loans
- * - Payments for active/completed loans
- * - Commissions for agent-recorded payments
+ * Creates lender-focused demo data for project showcase:
+ * - 1 Lender account (Ken Gervacio)
+ * - 1 Agent account (Juan Dela Cruz)
+ * - 12 Contacts (Filipino borrowers)
+ * - 15 Loans (8 active, 2 overdue, 3 completed, 2 pending)
+ * - Payment schedules, payments, and commissions
  *
  * Run with: npm run db:seed
  */
@@ -16,101 +14,185 @@
 import "dotenv/config"
 import { drizzle } from "drizzle-orm/neon-http"
 import { neon } from "@neondatabase/serverless"
-import { hash } from "bcryptjs"
+import { hashPassword } from "better-auth/crypto"
 import { eq } from "drizzle-orm"
 import * as schema from "../src/lib/db/schema"
 
 const {
   user,
   account,
+  session,
+  verification,
   contacts,
   loans,
   paymentSchedule,
   payments,
   agents,
   commissions,
+  commissionSettings,
+  lenderSettings,
+  penaltySettings,
+  penalties,
+  auditLogs,
 } = schema
 
 const sql = neon(process.env.DATABASE_URL!)
 const db = drizzle(sql, { schema })
 
 // ============================================================================
-// Test Data
+// Constants
 // ============================================================================
 
 const TEST_PASSWORD = "password123"
+const TODAY = new Date()
 
 const LENDER = {
-  id: "lender-001",
-  name: "Maria Santos",
-  email: "maria@example.com",
+  id: "lender-ken-001",
+  name: "Ken Gervacio",
+  email: "johnkgervacio@gmail.com",
 }
 
 const AGENT = {
-  id: "agent-001",
+  id: "agent-juan-001",
   name: "Juan Dela Cruz",
   email: "juan@example.com",
 }
 
-const CONTACTS = [
-  { name: "Ana Reyes", phone: "09171234567", city: "Manila", notes: "Reliable borrower" },
-  { name: "Pedro Garcia", phone: "09181234567", city: "Quezon City", email: "pedro@email.com" },
-  { name: "Rosa Martinez", phone: "09191234567", city: "Makati" },
-  { name: "Miguel Santos", phone: "09201234567", city: "Pasig", facebookProfile: "https://facebook.com/miguel" },
-  { name: "Elena Cruz", phone: "09211234567", city: "Taguig", notes: "First-time borrower" },
-  { name: "Carlos Reyes", phone: "09221234567", city: "Mandaluyong" },
-  { name: "Sofia Garcia", phone: "09231234567", city: "Paranaque", email: "sofia@email.com" },
-  { name: "Antonio Lopez", phone: "09241234567", city: "Las Pinas" },
-  { name: "Isabella Torres", phone: "09251234567", city: "Muntinlupa" },
-  { name: "Roberto Villanueva", phone: "09261234567", city: "Caloocan", notes: "Business owner" },
-]
-
-const LOAN_CONFIGS = [
-  // Active loans with various terms
-  { contactIdx: 0, principal: 10000, rate: 5, term: 6, frequency: "monthly", status: "active", paidMonths: 2 },
-  { contactIdx: 1, principal: 25000, rate: 4, term: 12, frequency: "monthly", status: "active", paidMonths: 5, purpose: "Business", hasCollateral: true, collateral: "Motorcycle - Honda Click 150i, 2022" },
-  { contactIdx: 2, principal: 5000, rate: 3, term: 3, frequency: "biweekly", status: "active", paidMonths: 1 },
-  { contactIdx: 3, principal: 15000, rate: 5, term: 6, frequency: "semimonthly", status: "active", paidMonths: 3, purpose: "Medical", hasCoMaker: true, coMaker: { name: "Linda Santos", phone: "09271234567", relationship: "Spouse" } },
-  { contactIdx: 4, principal: 8000, rate: 4, term: 4, frequency: "weekly", status: "active", paidMonths: 2 },
-
-  // Completed loans
-  { contactIdx: 0, principal: 5000, rate: 5, term: 3, frequency: "monthly", status: "completed", paidMonths: 3 },
-  { contactIdx: 5, principal: 20000, rate: 4, term: 6, frequency: "monthly", status: "completed", paidMonths: 6, purpose: "Tuition" },
-  { contactIdx: 6, principal: 12000, rate: 3, term: 4, frequency: "biweekly", status: "completed", paidMonths: 8 },
-
-  // Pending disbursement
-  { contactIdx: 7, principal: 30000, rate: 5, term: 12, frequency: "monthly", status: "pending_disbursement", paidMonths: 0, purpose: "Business", hasCollateral: true, collateral: "Land title - 100sqm lot in Bulacan" },
-  { contactIdx: 8, principal: 7500, rate: 4, term: 3, frequency: "semimonthly", status: "pending_disbursement", paidMonths: 0 },
-
-  // More active loans for variety
-  { contactIdx: 9, principal: 50000, rate: 3, term: 24, frequency: "monthly", status: "active", paidMonths: 8, purpose: "Business", hasCollateral: true, collateral: "Vehicle - Toyota Vios 2020, OR/CR available", hasCoMaker: true, coMaker: { name: "Maria Villanueva", phone: "09281234567", relationship: "Wife" } },
-  { contactIdx: 1, principal: 3000, rate: 5, term: 2, frequency: "weekly", status: "active", paidMonths: 4, purpose: "Emergency" },
-  { contactIdx: 3, principal: 18000, rate: 4, term: 6, frequency: "monthly", status: "active", paidMonths: 1, purpose: "Rent" },
-  { contactIdx: 5, principal: 10000, rate: 5, term: 4, frequency: "biweekly", status: "active", paidMonths: 3 },
-  { contactIdx: 7, principal: 6000, rate: 3, term: 3, frequency: "monthly", status: "active", paidMonths: 0, purpose: "Utilities" },
+const BORROWERS = [
+  { name: "Ana Reyes", phone: "09171234567", city: "Manila", email: "ana.reyes@gmail.com", notes: "Reliable borrower, always on time" },
+  { name: "Pedro Garcia", phone: "09181234567", city: "Quezon City", facebookProfile: "https://facebook.com/pedrogarcia" },
+  { name: "Rosa Martinez", phone: "09191234567", city: "Makati", email: "rosa.martinez@yahoo.com" },
+  { name: "Miguel Santos", phone: "09201234567", city: "Pasig", notes: "Sari-sari store owner" },
+  { name: "Elena Cruz", phone: "09211234567", city: "Taguig", email: "elena.cruz@gmail.com", notes: "First-time borrower" },
+  { name: "Carlos Reyes", phone: "09221234567", city: "Mandaluyong", facebookProfile: "https://facebook.com/carlosreyes" },
+  { name: "Sofia Garcia", email: "sofia.garcia@gmail.com", city: "Paranaque" },
+  { name: "Antonio Lopez", phone: "09241234567", city: "Las Pinas", notes: "Referred by Pedro Garcia" },
+  { name: "Isabella Torres", phone: "09251234567", city: "Muntinlupa", email: "isabella.t@gmail.com" },
+  { name: "Roberto Villanueva", phone: "09261234567", city: "Caloocan", notes: "Trucking business owner" },
+  { name: "Maria Fernandez", phone: "09271234567", city: "Marikina" },
+  { name: "Jose Ramos", phone: "09281234567", city: "San Juan", email: "jose.ramos@yahoo.com", notes: "Government employee" },
 ]
 
 // ============================================================================
-// Helper Functions
+// Loan Configurations
+// ============================================================================
+
+interface LoanConfig {
+  contactIdx: number
+  principal: number
+  rate: number
+  termMonths: number
+  frequency: "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
+  status: "active" | "completed" | "pending_disbursement"
+  paidItems: number
+  startDaysAgo: number
+  assignToAgent: boolean
+  purpose?: string
+  collateral?: string
+  coMaker?: { name: string; phone: string; relationship: string }
+}
+
+// 15 loans: 10 active (2 with overdue items), 3 completed, 2 pending
+// ~60% assigned to agent (9 of 15)
+const LOAN_CONFIGS: LoanConfig[] = [
+  // ── Active loans (8 regular) ──────────────────────────────────────────
+  {
+    contactIdx: 0, principal: 10000, rate: 5, termMonths: 6, frequency: "monthly",
+    status: "active", paidItems: 3, startDaysAgo: 95, assignToAgent: true,
+    purpose: "Home improvement",
+  },
+  {
+    contactIdx: 1, principal: 25000, rate: 4, termMonths: 12, frequency: "monthly",
+    status: "active", paidItems: 5, startDaysAgo: 160, assignToAgent: true,
+    purpose: "Business capital", collateral: "Motorcycle - Honda Click 150i, 2022",
+  },
+  {
+    contactIdx: 3, principal: 15000, rate: 5, termMonths: 6, frequency: "semimonthly",
+    status: "active", paidItems: 6, startDaysAgo: 95, assignToAgent: false,
+    purpose: "Medical expenses",
+    coMaker: { name: "Linda Santos", phone: "09351234567", relationship: "Spouse" },
+  },
+  {
+    contactIdx: 9, principal: 50000, rate: 3, termMonths: 12, frequency: "monthly",
+    status: "active", paidItems: 8, startDaysAgo: 250, assignToAgent: true,
+    purpose: "Truck repair", collateral: "Vehicle - Isuzu Elf 2019, OR/CR available",
+    coMaker: { name: "Maria Villanueva", phone: "09361234567", relationship: "Wife" },
+  },
+  {
+    contactIdx: 1, principal: 20000, rate: 5, termMonths: 6, frequency: "biweekly",
+    status: "active", paidItems: 4, startDaysAgo: 65, assignToAgent: true,
+    purpose: "Inventory restocking",
+  },
+  {
+    contactIdx: 5, principal: 7000, rate: 4, termMonths: 3, frequency: "monthly",
+    status: "active", paidItems: 1, startDaysAgo: 40, assignToAgent: false,
+  },
+  {
+    contactIdx: 8, principal: 18000, rate: 5, termMonths: 6, frequency: "monthly",
+    status: "active", paidItems: 5, startDaysAgo: 155, assignToAgent: true,
+  },
+  {
+    contactIdx: 11, principal: 6000, rate: 3, termMonths: 3, frequency: "monthly",
+    status: "active", paidItems: 2, startDaysAgo: 65, assignToAgent: false,
+    purpose: "Tuition",
+  },
+
+  // ── Active loans with overdue items (2) ───────────────────────────────
+  // Rosa: biweekly, 2 paid then stopped → 1 item overdue
+  {
+    contactIdx: 2, principal: 5000, rate: 3, termMonths: 4, frequency: "biweekly",
+    status: "active", paidItems: 2, startDaysAgo: 55, assignToAgent: true,
+  },
+  // Elena: monthly, 1 paid then stopped → 2 items overdue
+  {
+    contactIdx: 4, principal: 8000, rate: 4, termMonths: 4, frequency: "monthly",
+    status: "active", paidItems: 1, startDaysAgo: 105, assignToAgent: true,
+  },
+
+  // ── Completed loans (3) ───────────────────────────────────────────────
+  {
+    contactIdx: 0, principal: 5000, rate: 5, termMonths: 3, frequency: "monthly",
+    status: "completed", paidItems: 3, startDaysAgo: 200, assignToAgent: true,
+  },
+  {
+    contactIdx: 6, principal: 12000, rate: 3, termMonths: 4, frequency: "biweekly",
+    status: "completed", paidItems: 8, startDaysAgo: 180, assignToAgent: false,
+  },
+  {
+    contactIdx: 10, principal: 8000, rate: 4, termMonths: 2, frequency: "monthly",
+    status: "completed", paidItems: 2, startDaysAgo: 120, assignToAgent: true,
+  },
+
+  // ── Pending disbursement (2) ──────────────────────────────────────────
+  {
+    contactIdx: 7, principal: 30000, rate: 5, termMonths: 12, frequency: "monthly",
+    status: "pending_disbursement", paidItems: 0, startDaysAgo: 0, assignToAgent: false,
+    purpose: "Business expansion", collateral: "Land title - 100sqm lot in Bulacan",
+  },
+  {
+    contactIdx: 11, principal: 15000, rate: 4, termMonths: 6, frequency: "semimonthly",
+    status: "pending_disbursement", paidItems: 0, startDaysAgo: 0, assignToAgent: false,
+    purpose: "Emergency fund",
+  },
+]
+
+// ============================================================================
+// Helpers
 // ============================================================================
 
 function generateId(): string {
   return crypto.randomUUID()
 }
 
-function calculatePaymentsCount(termMonths: number, frequency: string): number {
-  switch (frequency) {
-    case "daily": return termMonths * 30
-    case "weekly": return termMonths * 4
-    case "biweekly": return termMonths * 2
-    case "semimonthly": return termMonths * 2
-    case "monthly":
-    default: return termMonths
+function getPaymentsCount(termMonths: number, frequency: string): number {
+  const multiplier: Record<string, number> = {
+    daily: 30, weekly: 4, biweekly: 2, semimonthly: 2, monthly: 1,
   }
+  return termMonths * (multiplier[frequency] ?? 1)
 }
 
-function getNextPaymentDate(currentDate: Date, frequency: string): Date {
-  const next = new Date(currentDate)
+function addPaymentInterval(date: Date, frequency: string): Date {
+  const next = new Date(date)
   switch (frequency) {
     case "daily":
       next.setDate(next.getDate() + 1)
@@ -136,15 +218,44 @@ function getNextPaymentDate(currentDate: Date, frequency: string): Date {
   return next
 }
 
-function randomDate(daysAgo: number): Date {
-  const date = new Date()
-  date.setDate(date.getDate() - daysAgo)
-  return date
+function daysAgo(n: number): Date {
+  const d = new Date(TODAY)
+  d.setDate(d.getDate() - n)
+  d.setHours(9, 0, 0, 0)
+  return d
 }
 
-function randomPaymentMethod(): "cash" | "gcash" | "maya" | "bank" {
-  const methods = ["cash", "gcash", "maya", "bank"] as const
-  return methods[Math.floor(Math.random() * methods.length)]
+const PAYMENT_METHODS = ["cash", "gcash", "maya", "bank"] as const
+
+function pickMethod(seed: number): "cash" | "gcash" | "maya" | "bank" {
+  return PAYMENT_METHODS[seed % PAYMENT_METHODS.length]
+}
+
+// ============================================================================
+// Clear Database
+// ============================================================================
+
+async function clearDatabase() {
+  console.log("Clearing database...")
+
+  // Delete in reverse dependency order; blog + waitlist tables left alone
+  await db.delete(commissions)
+  await db.delete(payments)
+  await db.delete(penalties)
+  await db.delete(paymentSchedule)
+  await db.delete(loans)
+  await db.delete(contacts)
+  await db.delete(agents)
+  await db.delete(commissionSettings)
+  await db.delete(lenderSettings)
+  await db.delete(penaltySettings)
+  await db.delete(auditLogs)
+  await db.delete(session)
+  await db.delete(account)
+  await db.delete(verification)
+  await db.delete(user)
+
+  console.log("  Done (blog tables preserved)")
 }
 
 // ============================================================================
@@ -154,47 +265,46 @@ function randomPaymentMethod(): "cash" | "gcash" | "maya" | "bank" {
 async function seedUsers() {
   console.log("Creating users...")
 
-  const hashedPassword = await hash(TEST_PASSWORD, 10)
+  const hashedPassword = await hashPassword(TEST_PASSWORD)
 
-  // Create lender
   await db.insert(user).values({
     id: LENDER.id,
     name: LENDER.name,
     email: LENDER.email,
     emailVerified: true,
     role: "lender",
-  }).onConflictDoNothing()
+    hasCompletedOnboarding: true,
+  })
 
   await db.insert(account).values({
     id: generateId(),
-    accountId: LENDER.email,
+    accountId: LENDER.id,
     providerId: "credential",
     userId: LENDER.id,
     password: hashedPassword,
-  }).onConflictDoNothing()
+  })
 
-  // Create agent
   await db.insert(user).values({
     id: AGENT.id,
     name: AGENT.name,
     email: AGENT.email,
     emailVerified: true,
     role: "agent",
-  }).onConflictDoNothing()
+  })
 
   await db.insert(account).values({
     id: generateId(),
-    accountId: AGENT.email,
+    accountId: AGENT.id,
     providerId: "credential",
     userId: AGENT.id,
     password: hashedPassword,
-  }).onConflictDoNothing()
+  })
 
-  console.log(`  Created lender: ${LENDER.email}`)
-  console.log(`  Created agent: ${AGENT.email}`)
+  console.log(`  Lender: ${LENDER.email}`)
+  console.log(`  Agent:  ${AGENT.email}`)
 }
 
-async function seedAgentRelationship() {
+async function seedAgent(): Promise<string> {
   console.log("Creating agent relationship...")
 
   const agentId = generateId()
@@ -204,199 +314,187 @@ async function seedAgentRelationship() {
     lenderId: LENDER.id,
     commissionRate: "5.00",
     status: "active",
+    tier: 1,
+    canRecordPayments: true,
+    canCreateLoans: true,
     totalCollected: "0",
     totalCommissionEarned: "0",
     totalCommissionPaid: "0",
-  }).onConflictDoNothing()
+  })
 
-  console.log(`  Created agent relationship with 5% commission`)
+  console.log("  Tier 1, 5% commission, canRecordPayments + canCreateLoans")
   return agentId
 }
 
-async function seedContacts() {
+async function seedContacts(): Promise<string[]> {
   console.log("Creating contacts...")
 
-  const contactIds: string[] = []
-
-  for (const contact of CONTACTS) {
+  const ids: string[] = []
+  for (const b of BORROWERS) {
     const id = generateId()
-    contactIds.push(id)
-
+    ids.push(id)
     await db.insert(contacts).values({
       id,
       lenderId: LENDER.id,
-      name: contact.name,
-      phone: contact.phone,
-      email: contact.email || null,
-      city: contact.city,
-      facebookProfile: contact.facebookProfile || null,
-      notes: contact.notes || null,
+      name: b.name,
+      phone: b.phone ?? null,
+      email: b.email ?? null,
+      city: b.city,
+      facebookProfile: (b as any).facebookProfile ?? null,
+      notes: b.notes ?? null,
     })
   }
 
-  console.log(`  Created ${CONTACTS.length} contacts`)
-  return contactIds
+  console.log(`  ${BORROWERS.length} contacts`)
+  return ids
 }
 
 async function seedLoansAndPayments(contactIds: string[], agentId: string) {
   console.log("Creating loans, schedules, and payments...")
 
-  let totalLoans = 0
-  let totalPayments = 0
-  let totalCommissions = 0
+  let loanCount = 0
+  let paymentCount = 0
+  let commissionCount = 0
 
-  for (const config of LOAN_CONFIGS) {
-    const contactId = contactIds[config.contactIdx]
+  for (let li = 0; li < LOAN_CONFIGS.length; li++) {
+    const cfg = LOAN_CONFIGS[li]
+    const contactId = contactIds[cfg.contactIdx]
     const loanId = generateId()
 
-    // Calculate loan terms
-    const principal = config.principal
-    const totalInterest = principal * (config.rate / 100) * config.term
-    const totalToRepay = principal + totalInterest
-    const paymentsCount = calculatePaymentsCount(config.term, config.frequency)
+    // Financial calculations
+    const totalInterest = cfg.principal * (cfg.rate / 100) * cfg.termMonths
+    const totalToRepay = cfg.principal + totalInterest
+    const paymentsCount = getPaymentsCount(cfg.termMonths, cfg.frequency)
     const paymentAmount = totalToRepay / paymentsCount
 
-    // Calculate paid amounts
-    const paidPayments = config.paidMonths > 0
-      ? Math.min(config.paidMonths * (paymentsCount / config.term), paymentsCount)
-      : 0
-    const amountPaid = config.status === "completed"
+    const amountPaid = cfg.status === "completed"
       ? totalToRepay
-      : paidPayments * paymentAmount
+      : cfg.paidItems * paymentAmount
     const remainingBalance = totalToRepay - amountPaid
 
-    // Start date (older for completed loans, recent for active)
-    const daysAgo = config.status === "completed"
-      ? config.term * 30 + 30
-      : Math.floor(Math.random() * 60) + 30
-    const startDate = randomDate(daysAgo)
-    const maturityDate = new Date(startDate)
-    maturityDate.setMonth(maturityDate.getMonth() + config.term)
+    const interestPerPayment = totalInterest / paymentsCount
+    const interestEarned = cfg.status === "completed"
+      ? totalInterest
+      : cfg.paidItems * interestPerPayment
 
-    // Create loan
+    // Dates
+    const startDate = cfg.startDaysAgo > 0 ? daysAgo(cfg.startDaysAgo) : null
+    let maturityDate: Date | null = null
+    if (startDate) {
+      maturityDate = new Date(startDate)
+      maturityDate.setMonth(maturityDate.getMonth() + cfg.termMonths)
+    }
+
     await db.insert(loans).values({
       id: loanId,
       lenderId: LENDER.id,
       contactId,
-      principal: principal.toFixed(2),
-      interestRate: config.rate.toFixed(2),
-      termMonths: config.term,
-      paymentFrequency: config.frequency as any,
+      principal: cfg.principal.toFixed(2),
+      interestRate: cfg.rate.toFixed(2),
+      termMonths: cfg.termMonths,
+      paymentFrequency: cfg.frequency,
       paymentAmount: paymentAmount.toFixed(2),
       totalToRepay: totalToRepay.toFixed(2),
       amountPaid: amountPaid.toFixed(2),
+      interestEarned: interestEarned.toFixed(2),
       remainingBalance: remainingBalance.toFixed(2),
-      status: config.status as any,
-      startDate: config.status !== "pending_disbursement" ? startDate : null,
-      maturityDate: config.status !== "pending_disbursement" ? maturityDate : null,
-      completedAt: config.status === "completed" ? maturityDate : null,
-      purpose: config.purpose || null,
-      collateralDescription: config.hasCollateral ? config.collateral : null,
-      coMakerName: config.hasCoMaker ? config.coMaker?.name : null,
-      coMakerPhone: config.hasCoMaker ? config.coMaker?.phone : null,
-      coMakerRelationship: config.hasCoMaker ? config.coMaker?.relationship : null,
-      assignedAgentId: Math.random() > 0.5 ? agentId : null, // Randomly assign some to agent
+      status: cfg.status,
+      startDate,
+      maturityDate,
+      completedAt: cfg.status === "completed" ? maturityDate : null,
+      purpose: cfg.purpose ?? null,
+      collateralDescription: cfg.collateral ?? null,
+      coMakerName: cfg.coMaker?.name ?? null,
+      coMakerPhone: cfg.coMaker?.phone ?? null,
+      coMakerRelationship: cfg.coMaker?.relationship ?? null,
+      assignedAgentId: cfg.assignToAgent ? agentId : null,
     })
+    loanCount++
 
-    totalLoans++
+    // Skip schedule for pending loans
+    if (cfg.status === "pending_disbursement" || !startDate) continue
 
-    // Create payment schedule
-    if (config.status !== "pending_disbursement") {
-      let scheduleDate = new Date(startDate)
+    let scheduleDate = new Date(startDate)
 
-      for (let i = 0; i < paymentsCount; i++) {
-        scheduleDate = getNextPaymentDate(scheduleDate, config.frequency)
-        const scheduleId = generateId()
+    for (let i = 0; i < paymentsCount; i++) {
+      scheduleDate = addPaymentInterval(scheduleDate, cfg.frequency)
+      const scheduleId = generateId()
+      const isPaid = i < cfg.paidItems
+      const isOverdue = !isPaid && new Date(scheduleDate) < TODAY
 
-        const isPaid = i < paidPayments
-        const isOverdue = !isPaid && scheduleDate < new Date()
+      await db.insert(paymentSchedule).values({
+        id: scheduleId,
+        loanId,
+        dueDate: new Date(scheduleDate),
+        amount: paymentAmount.toFixed(2),
+        status: isPaid ? "paid" : isOverdue ? "overdue" : "pending",
+        paidAmount: isPaid ? paymentAmount.toFixed(2) : "0",
+        paidAt: isPaid ? new Date(scheduleDate) : null,
+      })
 
-        await db.insert(paymentSchedule).values({
-          id: scheduleId,
+      if (isPaid) {
+        const paymentId = generateId()
+        // ~40% of all payments recorded by agent:
+        // 60% of loans are agent-assigned; within those, ~67% are agent-recorded
+        const isAgentPayment = cfg.assignToAgent && (li + i) % 3 < 2
+
+        await db.insert(payments).values({
+          id: paymentId,
           loanId,
-          dueDate: new Date(scheduleDate),
+          scheduleItemId: scheduleId,
           amount: paymentAmount.toFixed(2),
-          status: isPaid ? "paid" : isOverdue ? "overdue" : "pending",
-          paidAmount: isPaid ? paymentAmount.toFixed(2) : "0",
-          paidAt: isPaid ? new Date(scheduleDate) : null,
+          method: pickMethod(li * 7 + i * 3),
+          paidAt: new Date(scheduleDate),
+          recordedByAgentId: isAgentPayment ? agentId : null,
+          notes: (li + i) % 8 === 0 ? "On time" : null,
         })
+        paymentCount++
 
-        // Create payment records for paid items
-        if (isPaid) {
-          const paymentId = generateId()
-          const isAgentPayment = Math.random() > 0.6 // 40% recorded by agent
-
-          await db.insert(payments).values({
-            id: paymentId,
-            loanId,
-            scheduleItemId: scheduleId,
-            amount: paymentAmount.toFixed(2),
-            method: randomPaymentMethod(),
-            paidAt: new Date(scheduleDate),
-            recordedByAgentId: isAgentPayment ? agentId : null,
-            notes: Math.random() > 0.7 ? "On time payment" : null,
+        if (isAgentPayment) {
+          const commissionAmt = paymentAmount * 0.05
+          await db.insert(commissions).values({
+            id: generateId(),
+            agentId,
+            paymentId,
+            paymentAmount: paymentAmount.toFixed(2),
+            commissionRate: "5.00",
+            commissionAmount: commissionAmt.toFixed(2),
+            status: "pending",
           })
-
-          totalPayments++
-
-          // Create commission for agent-recorded payments
-          if (isAgentPayment) {
-            const commissionAmount = paymentAmount * 0.05 // 5% commission
-
-            await db.insert(commissions).values({
-              id: generateId(),
-              agentId,
-              paymentId,
-              paymentAmount: paymentAmount.toFixed(2),
-              commissionRate: "5.00",
-              commissionAmount: commissionAmount.toFixed(2),
-              status: Math.random() > 0.5 ? "paid" : "pending",
-              paidAt: Math.random() > 0.5 ? new Date() : null,
-              paidBy: Math.random() > 0.5 ? LENDER.id : null,
-            })
-
-            totalCommissions++
-          }
+          commissionCount++
         }
       }
     }
   }
 
-  console.log(`  Created ${totalLoans} loans`)
-  console.log(`  Created ${totalPayments} payments`)
-  console.log(`  Created ${totalCommissions} commissions`)
+  console.log(`  ${loanCount} loans`)
+  console.log(`  ${paymentCount} payments`)
+  console.log(`  ${commissionCount} commissions`)
 }
 
-async function updateAgentTotals(agentId: string) {
-  console.log("Updating agent totals...")
+async function recomputeAgentTotals(agentId: string) {
+  console.log("Recomputing agent totals...")
 
-  // Calculate totals from commissions
-  const agentCommissions = await db.query.commissions.findMany({
+  const rows = await db.query.commissions.findMany({
     where: (c, { eq }) => eq(c.agentId, agentId),
   })
 
-  const totalCollected = agentCommissions.reduce(
-    (sum, c) => sum + parseFloat(c.paymentAmount),
-    0
-  )
-  const totalCommissionEarned = agentCommissions.reduce(
-    (sum, c) => sum + parseFloat(c.commissionAmount),
-    0
-  )
-  const totalCommissionPaid = agentCommissions
+  const totalCollected = rows.reduce((s, c) => s + parseFloat(c.paymentAmount), 0)
+  const totalEarned = rows.reduce((s, c) => s + parseFloat(c.commissionAmount), 0)
+  const totalPaid = rows
     .filter((c) => c.status === "paid")
-    .reduce((sum, c) => sum + parseFloat(c.commissionAmount), 0)
+    .reduce((s, c) => s + parseFloat(c.commissionAmount), 0)
 
   await db.update(agents)
     .set({
       totalCollected: totalCollected.toFixed(2),
-      totalCommissionEarned: totalCommissionEarned.toFixed(2),
-      totalCommissionPaid: totalCommissionPaid.toFixed(2),
+      totalCommissionEarned: totalEarned.toFixed(2),
+      totalCommissionPaid: totalPaid.toFixed(2),
     })
     .where(eq(agents.id, agentId))
 
-  console.log(`  Total collected: ₱${totalCollected.toLocaleString()}`)
-  console.log(`  Total commission earned: ₱${totalCommissionEarned.toLocaleString()}`)
+  console.log(`  Collected: P${totalCollected.toLocaleString()}`)
+  console.log(`  Commission earned: P${totalEarned.toLocaleString()}`)
 }
 
 // ============================================================================
@@ -404,22 +502,23 @@ async function updateAgentTotals(agentId: string) {
 // ============================================================================
 
 async function main() {
-  console.log("\n🌱 Seeding Loona database...\n")
+  console.log("\nSeeding Loona database...\n")
 
   try {
+    await clearDatabase()
     await seedUsers()
-    const agentId = await seedAgentRelationship()
+    const agentId = await seedAgent()
     const contactIds = await seedContacts()
     await seedLoansAndPayments(contactIds, agentId)
-    await updateAgentTotals(agentId)
+    await recomputeAgentTotals(agentId)
 
-    console.log("\n✅ Seed completed successfully!\n")
+    console.log("\nSeed completed!\n")
     console.log("Test accounts:")
     console.log(`  Lender: ${LENDER.email} / ${TEST_PASSWORD}`)
     console.log(`  Agent:  ${AGENT.email} / ${TEST_PASSWORD}`)
     console.log("")
   } catch (error) {
-    console.error("\n❌ Seed failed:", error)
+    console.error("\nSeed failed:", error)
     process.exit(1)
   }
 }
