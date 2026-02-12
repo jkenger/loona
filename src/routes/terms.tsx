@@ -150,7 +150,7 @@ function TermsPage() {
             If you have any questions about these Terms, please contact us at:
           </p>
           <ul>
-            <li>Email: support@loona.app</li>
+            <li>Email: support@loona.ph</li>
           </ul>
 
           <hr />

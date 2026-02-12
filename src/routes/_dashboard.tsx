@@ -600,7 +600,7 @@ function DashboardLayout() {
             <span>
               You're using the beta version of Loona.{" "}
               <a
-                href="mailto:feedback@loona.app"
+                href="mailto:feedback@loona.ph"
                 className="underline underline-offset-2 hover:no-underline"
               >
                 Send feedback

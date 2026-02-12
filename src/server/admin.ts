@@ -612,7 +612,7 @@ export const getComplianceStats = createServerFn().handler(async () => {
         status: "configured" as const,
         label: "Contact Information",
         description: "Support email configured",
-        detail: "support@loona.app",
+        detail: "support@loona.ph",
       },
     },
   }

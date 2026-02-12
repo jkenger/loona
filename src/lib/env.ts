@@ -17,6 +17,6 @@ export function validateEnv() {
   }
 
   if (!process.env.BETTER_AUTH_URL) {
-    console.warn("[env] BETTER_AUTH_URL not set — defaulting to https://loona.app")
+    console.warn("[env] BETTER_AUTH_URL not set — defaulting to https://loona-lld4.onrender.com")
   }
 }

@@ -111,7 +111,7 @@ function PrivacyPage() {
             If you have any questions about this Privacy Policy or our data practices, please contact us at:
           </p>
           <ul>
-            <li>Email: privacy@loona.app</li>
+            <li>Email: privacy@loona.ph</li>
           </ul>
 
           <hr />

@@ -79,7 +79,7 @@ export async function sendAgentActivityDigests() {
     agentData.total += parseFloat(row.amount)
   }
 
-  const dashboardBase = process.env.BETTER_AUTH_URL || 'https://loona.app'
+  const dashboardBase = process.env.BETTER_AUTH_URL || 'https://loona-lld4.onrender.com'
   const dateStr = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',

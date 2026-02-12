@@ -71,7 +71,7 @@ export function welcomeEmail(name: string) {
   </ul>
 
   <div style="text-align: center; margin: 32px 0;">
-    <a href="${process.env.BETTER_AUTH_URL || 'https://loona.app'}/login" style="background-color: #1a8cff; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Get Started</a>
+    <a href="${process.env.BETTER_AUTH_URL || 'https://loona-lld4.onrender.com'}/login" style="background-color: #1a8cff; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Get Started</a>
   </div>
 
   <p style="color: #666; font-size: 14px;">If you have any questions, feel free to reach out to our support team.</p>
@@ -96,7 +96,7 @@ With Loona, you can:
 - Manage borrower contacts
 - Generate reports and insights
 
-Get started: ${process.env.BETTER_AUTH_URL || 'https://loona.app'}/login
+Get started: ${process.env.BETTER_AUTH_URL || 'https://loona-lld4.onrender.com'}/login
 
 If you have any questions, feel free to reach out to our support team.
   `
@@ -149,7 +149,7 @@ export function agentInviteEmail(params: {
   </div>
 
   <div style="text-align: center; margin: 32px 0;">
-    <a href="${process.env.BETTER_AUTH_URL || 'https://loona.app'}/login" style="background-color: #1a8cff; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Login to Loona</a>
+    <a href="${process.env.BETTER_AUTH_URL || 'https://loona-lld4.onrender.com'}/login" style="background-color: #1a8cff; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Login to Loona</a>
   </div>
 
   <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
@@ -177,7 +177,7 @@ Temporary Password: ${password}
 
 Please change your password after your first login.
 
-Login here: ${process.env.BETTER_AUTH_URL || 'https://loona.app'}/login
+Login here: ${process.env.BETTER_AUTH_URL || 'https://loona-lld4.onrender.com'}/login
 
 This email was sent by Loona on behalf of ${lenderName}.
   `
@@ -391,7 +391,7 @@ This link expires in 15 minutes. If you didn't request this, you can safely igno
 }
 
 export function waitlistApprovedEmail(params: { email: string }) {
-  const loginUrl = `${process.env.BETTER_AUTH_URL || 'https://loona.app'}/login`
+  const loginUrl = `${process.env.BETTER_AUTH_URL || 'https://loona-lld4.onrender.com'}/login`
   const subject = "You're in! Your Loona account is ready"
 
   const html = `
