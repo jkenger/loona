@@ -246,6 +246,101 @@ If you didn't request a password reset, you can safely ignore this email. Your p
   return { subject, html, text }
 }
 
+export function agentActivityDigestEmail(params: {
+  lenderName: string
+  date: string
+  agents: Array<{
+    name: string
+    paymentCount: number
+    totalAmount: string
+  }>
+  grandTotal: string
+  dashboardUrl: string
+}) {
+  const { lenderName, date, agents, grandTotal, dashboardUrl } = params
+  const subject = `Agent Activity — ${date}`
+
+  const agentRows = agents
+    .map(
+      (a) => `
+      <tr>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #eee;">${a.name}</td>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #eee; text-align: center;">${a.paymentCount}</td>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #eee; text-align: right;">${a.totalAmount}</td>
+      </tr>`,
+    )
+    .join('')
+
+  const agentTextRows = agents.map((a) => `  ${a.name}: ${a.paymentCount} payment(s), ${a.totalAmount}`).join('\n')
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+    <p style="color: #666; margin: 8px 0 0 0;">Agent Activity Digest</p>
+  </div>
+
+  <h2 style="color: #1a1a1a; margin-bottom: 16px;">Agent Activity — ${date}</h2>
+
+  <p>Hi ${lenderName},</p>
+
+  <p>Here's a summary of payments recorded by your agents today.</p>
+
+  <table style="width: 100%; border-collapse: collapse; margin: 24px 0;">
+    <thead>
+      <tr style="background-color: #f5f5f5;">
+        <th style="padding: 10px 12px; text-align: left; font-weight: 600;">Agent</th>
+        <th style="padding: 10px 12px; text-align: center; font-weight: 600;">Payments</th>
+        <th style="padding: 10px 12px; text-align: right; font-weight: 600;">Amount Collected</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${agentRows}
+      <tr style="background-color: #f5f5f5; font-weight: 600;">
+        <td style="padding: 10px 12px;" colspan="2">Total</td>
+        <td style="padding: 10px 12px; text-align: right;">${grandTotal}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${dashboardUrl}" style="background-color: #1a8cff; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Review in Dashboard</a>
+  </div>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+  <p style="color: #999; font-size: 12px; text-align: center;">
+    This daily digest was sent by Loona. You're receiving this because agents recorded payments on your behalf.
+  </p>
+</body>
+</html>
+  `
+
+  const text = `
+Agent Activity — ${date}
+
+Hi ${lenderName},
+
+Here's a summary of payments recorded by your agents today.
+
+${agentTextRows}
+
+Total: ${grandTotal}
+
+Review in dashboard: ${dashboardUrl}
+
+This daily digest was sent by Loona.
+  `
+
+  return { subject, html, text }
+}
+
 export function paymentReminderEmail(params: {
   borrowerName: string
   lenderName: string

@@ -30,6 +30,7 @@ import { Route as DashboardAgentsIndexRouteImport } from './routes/_dashboard/ag
 import { Route as DashboardAgentIndexRouteImport } from './routes/_dashboard/agent/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/_dashboard/admin/index'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
+import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
 import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard/loans/new-wizard'
@@ -158,6 +159,11 @@ const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
 const ApiCronOverdueRoute = ApiCronOverdueRouteImport.update({
   id: '/api/cron/overdue',
   path: '/api/cron/overdue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronDigestRoute = ApiCronDigestRouteImport.update({
+  id: '/api/cron/digest',
+  path: '/api/cron/digest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -331,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/admin/': typeof DashboardAdminIndexRoute
   '/agent/': typeof DashboardAgentIndexRoute
@@ -378,6 +385,7 @@ export interface FileRoutesByTo {
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/admin': typeof DashboardAdminIndexRoute
   '/agent': typeof DashboardAgentIndexRoute
@@ -428,6 +436,7 @@ export interface FileRoutesById {
   '/_dashboard/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/_dashboard/admin/': typeof DashboardAdminIndexRoute
   '/_dashboard/agent/': typeof DashboardAgentIndexRoute
@@ -477,6 +486,7 @@ export interface FileRouteTypes {
     | '/loans/new-wizard'
     | '/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/admin/'
     | '/agent/'
@@ -524,6 +534,7 @@ export interface FileRouteTypes {
     | '/loans/new-wizard'
     | '/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/admin'
     | '/agent'
@@ -573,6 +584,7 @@ export interface FileRouteTypes {
     | '/_dashboard/loans/new-wizard'
     | '/_dashboard/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/_dashboard/admin/'
     | '/_dashboard/agent/'
@@ -606,6 +618,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
 }
 
@@ -756,6 +769,13 @@ declare module '@tanstack/react-router' {
       path: '/api/cron/overdue'
       fullPath: '/api/cron/overdue'
       preLoaderRoute: typeof ApiCronOverdueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/digest': {
+      id: '/api/cron/digest'
+      path: '/api/cron/digest'
+      fullPath: '/api/cron/digest'
+      preLoaderRoute: typeof ApiCronDigestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -1047,6 +1067,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
 }
 export const routeTree = rootRouteImport
