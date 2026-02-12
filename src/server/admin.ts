@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, user, account, session, contacts, loans, auditLogs } from "@/lib/db"
+import { db, user, account, session, contacts, loans, auditLogs, waitlist } from "@/lib/db"
 import { eq, sql, ilike, or, and, gte, gt, desc, count } from "drizzle-orm"
 import { requireAdmin } from "./session"
 import { logAudit } from "./audit"
+import { sendEmail, waitlistApprovedEmail } from "@/lib/email"
 import { z } from "zod"
 import { ROLES } from "@/lib/constants/roles"
 import { randomBytes } from "crypto"
@@ -616,3 +617,125 @@ export const getComplianceStats = createServerFn().handler(async () => {
     },
   }
 })
+
+// ============================================================================
+// Waitlist Management
+// ============================================================================
+
+export const getWaitlistEntries = createServerFn()
+  .inputValidator(
+    z.object({
+      search: z.string().optional(),
+      limit: z.number().min(1).max(100).default(20),
+      offset: z.number().min(0).default(0),
+    })
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin()
+
+    const conditions = []
+
+    if (data.search) {
+      conditions.push(ilike(waitlist.email, `%${data.search}%`))
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined
+
+    const [entries, [{ total }]] = await Promise.all([
+      db
+        .select({
+          id: waitlist.id,
+          email: waitlist.email,
+          approvedAt: waitlist.approvedAt,
+          createdAt: waitlist.createdAt,
+        })
+        .from(waitlist)
+        .where(where)
+        .orderBy(desc(waitlist.createdAt))
+        .limit(data.limit)
+        .offset(data.offset),
+      db.select({ total: count() }).from(waitlist).where(where),
+    ])
+
+    return {
+      entries: entries.map((e) => ({
+        ...e,
+        approvedAt: e.approvedAt?.toISOString() ?? null,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      total,
+      limit: data.limit,
+      offset: data.offset,
+    }
+  })
+
+export const approveWaitlistEntry = createServerFn()
+  .inputValidator(z.object({ id: z.string() }))
+  .handler(async ({ data }) => {
+    const adminSession = await requireAdmin()
+
+    const [entry] = await db
+      .select()
+      .from(waitlist)
+      .where(eq(waitlist.id, data.id))
+      .limit(1)
+
+    if (!entry) {
+      throw new Error("Waitlist entry not found")
+    }
+
+    if (entry.approvedAt) {
+      throw new Error("Already approved")
+    }
+
+    await db
+      .update(waitlist)
+      .set({ approvedAt: new Date() })
+      .where(eq(waitlist.id, data.id))
+
+    // Send approval email
+    const emailContent = waitlistApprovedEmail({ email: entry.email })
+    sendEmail({ to: entry.email, ...emailContent }).catch((err) => {
+      console.error('[Email] Waitlist approval email failed for', entry.email, err)
+    })
+
+    await logAudit({
+      userId: adminSession.user.id,
+      userEmail: adminSession.user.email,
+      action: "admin.approve_waitlist",
+      entityType: "waitlist",
+      entityId: data.id,
+      metadata: { email: entry.email },
+    })
+
+    return { success: true }
+  })
+
+export const deleteWaitlistEntry = createServerFn()
+  .inputValidator(z.string())
+  .handler(async ({ data: id }) => {
+    const adminSession = await requireAdmin()
+
+    const [entry] = await db
+      .select()
+      .from(waitlist)
+      .where(eq(waitlist.id, id))
+      .limit(1)
+
+    if (!entry) {
+      throw new Error("Waitlist entry not found")
+    }
+
+    await db.delete(waitlist).where(eq(waitlist.id, id))
+
+    await logAudit({
+      userId: adminSession.user.id,
+      userEmail: adminSession.user.email,
+      action: "admin.delete_waitlist",
+      entityType: "waitlist",
+      entityId: id,
+      metadata: { email: entry.email },
+    })
+
+    return { success: true }
+  })

@@ -9,6 +9,9 @@ import { Spinner, Envelope, Lock, ArrowRight, CheckCircle, PaperPlaneTilt } from
 import { LoonaBrand, AnimatedTagline } from "@/components/ui/loona-brand"
 
 export const Route = createFileRoute("/_auth/login")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    error: (search.error as string) || undefined,
+  }),
   component: LoginPage,
 })
 
@@ -23,8 +26,17 @@ function GoogleIcon({ className }: { className?: string }) {
   )
 }
 
+function getErrorMessage(error?: string): string | null {
+  if (!error) return null
+  if (error === "UNABLE_TO_CREATE_USER" || error === "unable_to_create_user") {
+    return "Your account hasn't been approved yet. Please check your email for an invite, or join the waitlist if you haven't already."
+  }
+  return "Something went wrong during sign-in. Please try again."
+}
+
 function LoginPage() {
   const router = useRouter()
+  const { error: urlError } = Route.useSearch()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -32,6 +44,8 @@ function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
+
+  const urlErrorMessage = getErrorMessage(urlError)
 
   const handleGoogleSignIn = async () => {
     setError("")
@@ -150,6 +164,13 @@ function LoginPage() {
           delay={0.5}
         />
       </div>
+
+      {/* URL Error Banner (e.g., waitlist rejection from OAuth callback) */}
+      {urlErrorMessage && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-4 rounded-xl">
+          {urlErrorMessage}
+        </div>
+      )}
 
       {/* Form Card */}
       <div className="bg-card border border-border rounded-2xl shadow-sm p-8">

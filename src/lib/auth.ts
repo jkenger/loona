@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { admin, magicLink } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
+import { eq, and, isNotNull } from "drizzle-orm"
 import { db } from "./db"
 import * as schema from "./db/schema"
 import { sendEmail, passwordResetEmail, welcomeEmail, magicLinkEmail } from "./email"
@@ -19,6 +20,22 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        before: async (user) => {
+          const [entry] = await db
+            .select()
+            .from(schema.waitlist)
+            .where(
+              and(
+                eq(schema.waitlist.email, user.email),
+                isNotNull(schema.waitlist.approvedAt),
+              ),
+            )
+            .limit(1)
+
+          if (!entry) {
+            return false
+          }
+        },
         after: async (user) => {
           const emailContent = welcomeEmail(user.name || 'there')
           sendEmail({ to: user.email, ...emailContent }).catch((err) => {

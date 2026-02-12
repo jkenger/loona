@@ -43,6 +43,8 @@ type AuditAction =
   | "admin.unban_user"
   | "admin.set_role"
   | "admin.create_user"
+  | "admin.approve_waitlist"
+  | "admin.delete_waitlist"
   // Blog
   | "blog.create"
   | "blog.update"
@@ -50,7 +52,7 @@ type AuditAction =
   | "blog.unpublish"
   | "blog.delete"
 
-type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "commission_settings" | "penalty" | "penalty_settings" | "lender_settings" | "user" | "blog_post" | "blog_category" | "blog_tag"
+type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "commission_settings" | "penalty" | "penalty_settings" | "lender_settings" | "user" | "waitlist" | "blog_post" | "blog_category" | "blog_tag"
 
 interface AuditLogParams {
   userId: string

@@ -42,6 +42,7 @@ import { Route as DashboardAgentPaymentsRouteImport } from './routes/_dashboard/
 import { Route as DashboardAgentEarningsRouteImport } from './routes/_dashboard/agent/earnings'
 import { Route as DashboardAgentCommissionsRouteImport } from './routes/_dashboard/agent/commissions'
 import { Route as DashboardAgentCommissionProgramRouteImport } from './routes/_dashboard/agent/commission-program'
+import { Route as DashboardAdminWaitlistRouteImport } from './routes/_dashboard/admin/waitlist'
 import { Route as DashboardAdminUsersRouteImport } from './routes/_dashboard/admin/users'
 import { Route as DashboardAdminComplianceRouteImport } from './routes/_dashboard/admin/compliance'
 import { Route as DashboardAdminAuditLogsRouteImport } from './routes/_dashboard/admin/audit-logs'
@@ -226,6 +227,11 @@ const DashboardAgentCommissionProgramRoute =
     path: '/agent/commission-program',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminWaitlistRoute = DashboardAdminWaitlistRouteImport.update({
+  id: '/admin/waitlist',
+  path: '/admin/waitlist',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/admin/compliance': typeof DashboardAdminComplianceRoute
   '/admin/users': typeof DashboardAdminUsersRoute
+  '/admin/waitlist': typeof DashboardAdminWaitlistRoute
   '/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/agent/earnings': typeof DashboardAgentEarningsRoute
@@ -374,6 +381,7 @@ export interface FileRoutesByTo {
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/admin/compliance': typeof DashboardAdminComplianceRoute
   '/admin/users': typeof DashboardAdminUsersRoute
+  '/admin/waitlist': typeof DashboardAdminWaitlistRoute
   '/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/agent/earnings': typeof DashboardAgentEarningsRoute
@@ -425,6 +433,7 @@ export interface FileRoutesById {
   '/_dashboard/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
   '/_dashboard/admin/compliance': typeof DashboardAdminComplianceRoute
   '/_dashboard/admin/users': typeof DashboardAdminUsersRoute
+  '/_dashboard/admin/waitlist': typeof DashboardAdminWaitlistRoute
   '/_dashboard/agent/commission-program': typeof DashboardAgentCommissionProgramRoute
   '/_dashboard/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/_dashboard/agent/earnings': typeof DashboardAgentEarningsRoute
@@ -475,6 +484,7 @@ export interface FileRouteTypes {
     | '/admin/audit-logs'
     | '/admin/compliance'
     | '/admin/users'
+    | '/admin/waitlist'
     | '/agent/commission-program'
     | '/agent/commissions'
     | '/agent/earnings'
@@ -523,6 +533,7 @@ export interface FileRouteTypes {
     | '/admin/audit-logs'
     | '/admin/compliance'
     | '/admin/users'
+    | '/admin/waitlist'
     | '/agent/commission-program'
     | '/agent/commissions'
     | '/agent/earnings'
@@ -573,6 +584,7 @@ export interface FileRouteTypes {
     | '/_dashboard/admin/audit-logs'
     | '/_dashboard/admin/compliance'
     | '/_dashboard/admin/users'
+    | '/_dashboard/admin/waitlist'
     | '/_dashboard/agent/commission-program'
     | '/_dashboard/agent/commissions'
     | '/_dashboard/agent/earnings'
@@ -855,6 +867,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentCommissionProgramRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/admin/waitlist': {
+      id: '/_dashboard/admin/waitlist'
+      path: '/admin/waitlist'
+      fullPath: '/admin/waitlist'
+      preLoaderRoute: typeof DashboardAdminWaitlistRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/admin/users': {
       id: '/_dashboard/admin/users'
       path: '/admin/users'
@@ -983,6 +1002,7 @@ interface DashboardRouteChildren {
   DashboardAdminAuditLogsRoute: typeof DashboardAdminAuditLogsRoute
   DashboardAdminComplianceRoute: typeof DashboardAdminComplianceRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
+  DashboardAdminWaitlistRoute: typeof DashboardAdminWaitlistRoute
   DashboardAgentCommissionProgramRoute: typeof DashboardAgentCommissionProgramRoute
   DashboardAgentCommissionsRoute: typeof DashboardAgentCommissionsRoute
   DashboardAgentEarningsRoute: typeof DashboardAgentEarningsRoute
@@ -1019,6 +1039,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminAuditLogsRoute: DashboardAdminAuditLogsRoute,
   DashboardAdminComplianceRoute: DashboardAdminComplianceRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
+  DashboardAdminWaitlistRoute: DashboardAdminWaitlistRoute,
   DashboardAgentCommissionProgramRoute: DashboardAgentCommissionProgramRoute,
   DashboardAgentCommissionsRoute: DashboardAgentCommissionsRoute,
   DashboardAgentEarningsRoute: DashboardAgentEarningsRoute,

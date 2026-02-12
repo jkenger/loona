@@ -390,6 +390,59 @@ This link expires in 15 minutes. If you didn't request this, you can safely igno
   return { subject, html, text }
 }
 
+export function waitlistApprovedEmail(params: { email: string }) {
+  const loginUrl = `${process.env.BETTER_AUTH_URL || 'https://loona.app'}/login`
+  const subject = "You're in! Your Loona account is ready"
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+    <p style="color: #666; margin: 8px 0 0 0;">Loan Management Made Simple</p>
+  </div>
+
+  <h2 style="color: #1a1a1a; margin-bottom: 16px;">You're in!</h2>
+
+  <p>Great news — you've been approved for early access to Loona.</p>
+
+  <p>You can now sign in with Google and start managing your lending activities.</p>
+
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${loginUrl}" style="background-color: #1a8cff; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Sign in to Loona</a>
+  </div>
+
+  <p style="color: #666; font-size: 14px;">If you have any questions, feel free to reach out to our support team.</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+  <p style="color: #999; font-size: 12px; text-align: center;">
+    This email was sent by Loona. You're receiving this because you signed up for the waitlist with ${params.email}.
+  </p>
+</body>
+</html>
+  `
+
+  const text = `
+You're in!
+
+Great news — you've been approved for early access to Loona.
+
+You can now sign in with Google and start managing your lending activities.
+
+Sign in here: ${loginUrl}
+
+If you have any questions, feel free to reach out to our support team.
+  `
+
+  return { subject, html, text }
+}
+
 export function paymentReminderEmail(params: {
   borrowerName: string
   lenderName: string

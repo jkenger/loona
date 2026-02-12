@@ -363,6 +363,7 @@ export const auditLogs = pgTable("audit_logs", {
 export const waitlist = pgTable("waitlist", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   email: text("email").notNull().unique(),
+  approvedAt: timestamp("approved_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 

@@ -37,6 +37,7 @@ import {
   X,
   Article,
   Newspaper,
+  Envelope,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -123,6 +124,7 @@ const adminNavigation = [
   { name: "Users", href: "/admin/users", icon: UserList, exact: false },
   { name: "Compliance", href: "/admin/compliance", icon: ShieldCheck, exact: false },
   { name: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardText, exact: false },
+  { name: "Waitlist", href: "/admin/waitlist", icon: Envelope, exact: false },
   { name: "Blog", href: "/admin/blog", icon: Article, exact: false },
 ]
 
