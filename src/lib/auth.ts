@@ -1,10 +1,10 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { admin } from "better-auth/plugins"
+import { admin, magicLink } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { db } from "./db"
 import * as schema from "./db/schema"
-import { sendEmail, passwordResetEmail, welcomeEmail } from "./email"
+import { sendEmail, passwordResetEmail, welcomeEmail, magicLinkEmail } from "./email"
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -28,6 +28,16 @@ export const auth = betterAuth({
       },
     },
   },
+  ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ? {
+        socialProviders: {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        },
+      }
+    : {}),
   emailAndPassword: {
     enabled: true,
     resetPasswordTokenExpiresIn: 3600, // 1 hour — must match passwordResetEmail template text
@@ -70,6 +80,17 @@ export const auth = betterAuth({
   },
   plugins: [
     admin({ defaultRole: "lender", adminRoles: ["admin"] }),
+    magicLink({
+      sendMagicLink: async ({ email, url }) => {
+        try {
+          const emailContent = magicLinkEmail({ email, url })
+          await sendEmail({ to: email, ...emailContent })
+        } catch (err) {
+          console.error('[Email] Magic link failed for', email, err)
+        }
+      },
+      expiresIn: 900, // 15 minutes
+    }),
     tanstackStartCookies(), // Must be last plugin
   ],
 })

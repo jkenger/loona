@@ -40,7 +40,15 @@
       "Bash(git stash:*)",
       "Bash(git pull:*)",
       "Bash(npm run db:seed:*)",
-      "Bash(gh run view:*)"
+      "Bash(gh run view:*)",
+      "WebFetch(domain:render.com)",
+      "Bash(nslookup:*)",
+      "WebFetch(domain:resend.com)",
+      "WebFetch(domain:clients.web.com.ph)",
+      "WebFetch(domain:community.cloudflare.com)",
+      "WebFetch(domain:www.better-auth.com)",
+      "WebFetch(domain:tanstack.com)",
+      "Bash(/dev/null --include=*.d.ts)"
     ]
   }
 }

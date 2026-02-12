@@ -1,9 +1,9 @@
 import { createAuthClient } from "better-auth/react"
-import { adminClient } from "better-auth/client/plugins"
+import { adminClient, magicLinkClient } from "better-auth/client/plugins"
 
 export const authClient = createAuthClient({
   // No baseURL - uses current origin automatically (works for any deployment)
-  plugins: [adminClient()],
+  plugins: [adminClient(), magicLinkClient()],
 })
 
 export const {
