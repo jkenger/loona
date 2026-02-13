@@ -25,10 +25,19 @@ function GoogleIcon({ className }: { className?: string }) {
   )
 }
 
+function isEmbeddedBrowser(): boolean {
+  if (typeof navigator === "undefined") return false
+  const ua = navigator.userAgent || ""
+  return /FBAN|FBAV|Instagram|Line\/|Twitter|MicroMessenger|; wv\)/i.test(ua)
+}
+
 function getErrorMessage(error?: string): string | null {
   if (!error) return null
   if (error === "UNABLE_TO_CREATE_USER" || error === "unable_to_create_user") {
     return "Your account hasn't been approved yet. Please check your email for an invite, or join the waitlist if you haven't already."
+  }
+  if (error === "disallowed_useragent") {
+    return "Google sign-in doesn't work in this browser. Please open this page in Chrome, Safari, or your default browser."
   }
   return "Something went wrong during sign-in. Please try again."
 }
@@ -42,6 +51,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const inAppBrowser = isEmbeddedBrowser()
 
   const urlErrorMessage = getErrorMessage(urlError)
 
@@ -112,12 +122,19 @@ function LoginPage() {
           </p>
         </div>
 
+        {/* Embedded browser warning */}
+        {inAppBrowser && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-xl mb-4">
+            Google sign-in doesn't work in in-app browsers. Please tap <strong>"Open in browser"</strong> (usually in the ⋮ or share menu) to use Chrome or Safari.
+          </div>
+        )}
+
         {/* Primary: Google Sign In */}
         <Button
           type="button"
           variant="outline"
           className="w-full h-11 gap-3 font-medium"
-          disabled={googleLoading}
+          disabled={googleLoading || inAppBrowser}
           onClick={handleGoogleSignIn}
         >
           {googleLoading ? (

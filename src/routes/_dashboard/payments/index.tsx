@@ -537,7 +537,7 @@ function PaymentsPage() {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              {format(new Date(payment.paidAt), "MMM d")} · {payment.method.toUpperCase()}
+                              {format(new Date(payment.paidAt), "MMM d, h:mm a")} · {payment.method.toUpperCase()}
                             </p>
                             {isReversed && payment.reversalReason && (
                               <p className="text-xs text-destructive/70 mt-0.5 truncate">

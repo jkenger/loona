@@ -13,6 +13,7 @@ import {
 } from "@/lib/db"
 import { eq, desc, and, sql, lte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
+import { assertTransition } from "./loans"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
 import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
@@ -55,7 +56,7 @@ export const getPayments = createServerFn().handler(async () => {
     .innerJoin(loans, eq(payments.loanId, loans.id))
     .innerJoin(contacts, eq(loans.contactId, contacts.id))
     .where(eq(loans.lenderId, session.user.id))
-    .orderBy(desc(payments.paidAt))
+    .orderBy(desc(payments.paidAt), desc(payments.createdAt))
     .limit(100)
 
   return result.map((p) => ({
@@ -523,7 +524,10 @@ export const reversePayment = createServerFn()
       )
     }
 
-    // 6. Audit log
+    // 6. Execute all writes
+    await Promise.all(writes)
+
+    // 7. Audit log
     const log = createAuditLogger(session.user)
     log("payment.reverse", "payment", data.paymentId, {
       loanId: payment.loanId,
