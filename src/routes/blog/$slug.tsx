@@ -5,11 +5,28 @@ import { getPublishedPost } from "@/server/blog"
 import { TiptapRenderer } from "@/components/blog/tiptap-renderer"
 import { ArrowLeft, CalendarBlank, UserCircle } from "@phosphor-icons/react"
 import { format } from "date-fns"
+import { buildMeta, SITE_URL, SITE_NAME } from "@/lib/constants/seo"
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => {
     const post = await getPublishedPost({ data: { slug: params.slug } })
     return { post }
+  },
+  head: ({ loaderData }) => {
+    const post = loaderData?.post
+    if (!post) {
+      return buildMeta({
+        title: 'Post Not Found | Loona Blog',
+        description: 'This blog post could not be found.',
+        url: `${SITE_URL}/blog`,
+      })
+    }
+    return buildMeta({
+      title: `${post.title} | Loona Blog`,
+      description: post.excerpt || `Read ${post.title} on the Loona Blog.`,
+      url: `${SITE_URL}/blog/${post.slug}`,
+      ogType: 'article',
+    })
   },
   component: BlogPostPage,
 })
@@ -50,8 +67,32 @@ function BlogPostPage() {
     )
   }
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.excerpt || '',
+    url: `${SITE_URL}/blog/${post.slug}`,
+    mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
+    datePublished: (post.publishedAt || post.createdAt).toISOString(),
+    dateModified: post.updatedAt.toISOString(),
+    author: {
+      '@type': 'Person',
+      name: post.author?.name || SITE_NAME,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  }
+
   return (
     <div className="min-h-screen bg-gradient-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header */}
       <header className="bg-slate-900 text-white">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">

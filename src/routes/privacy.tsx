@@ -1,8 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { CaretLeft } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { buildMeta, SITE_URL } from '@/lib/constants/seo'
 
 export const Route = createFileRoute('/privacy')({
+  head: () => buildMeta({
+    title: 'Privacy Policy | Loona',
+    description: 'How Loona collects, uses, and protects your personal information.',
+    url: `${SITE_URL}/privacy`,
+  }),
   component: PrivacyPage,
 })
 

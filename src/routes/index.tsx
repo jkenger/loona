@@ -8,8 +8,14 @@ import { LoonaBrand, AnimatedTagline, FloatingCircle } from "@/components/ui/loo
 import { getServerSession } from "@/server/session"
 import { getDashboardPath } from "@/lib/constants/roles"
 import { joinWaitlist } from "@/server/waitlist"
+import { buildMeta, SITE_DESCRIPTION, SITE_URL } from "@/lib/constants/seo"
 
 export const Route = createFileRoute("/")({
+  head: () => buildMeta({
+    title: 'Loona - Loan Management Made Simple',
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+  }),
   beforeLoad: async () => {
     const session = await getServerSession()
     if (session) {

@@ -1,8 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { CaretLeft } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { buildMeta, SITE_URL } from '@/lib/constants/seo'
 
 export const Route = createFileRoute('/terms')({
+  head: () => buildMeta({
+    title: 'Terms of Service | Loona',
+    description: 'Terms and conditions for using the Loona loan management platform.',
+    url: `${SITE_URL}/terms`,
+  }),
   component: TermsPage,
 })
 

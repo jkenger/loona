@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, Link, useRouter, useNavigate, useLocation, Outlet } from "@tanstack/react-router"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { getServerSession } from "@/server/session"
 import { getOnboardingStatus } from "@/server/onboarding"
 import { getAgentPermissions } from "@/server/agent-portal"
@@ -178,6 +178,26 @@ function DashboardLayout() {
 
   const hasCapitalSet = cashPosition && cashPosition.initialCapital > 0
 
+  // Track whether user has unseen blog posts
+  const [hasNewPosts, setHasNewPosts] = useState(false)
+  useEffect(() => {
+    if (latestPosts.length === 0) return
+    const newestDate = latestPosts[0]?.publishedAt
+    if (!newestDate) return
+    const lastSeen = localStorage.getItem("loona:whats-new-seen")
+    if (!lastSeen || new Date(newestDate).getTime() > new Date(lastSeen).getTime()) {
+      setHasNewPosts(true)
+    }
+  }, [latestPosts])
+
+  const markPostsSeen = useCallback(() => {
+    const newestDate = latestPosts[0]?.publishedAt
+    if (newestDate) {
+      localStorage.setItem("loona:whats-new-seen", new Date(newestDate).toISOString())
+    }
+    setHasNewPosts(false)
+  }, [latestPosts])
+
   const formatPHP = (amount: number) =>
     new Intl.NumberFormat("en-PH", {
       style: "currency",
@@ -260,9 +280,15 @@ function DashboardLayout() {
             <div className="flex items-center gap-3">
               {/* What's New Popover (hidden on admin portal) */}
               {!isOnAdminPortal && (
-                <Popover>
-                  <PopoverTrigger className="flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/15 transition-colors">
+                <Popover onOpenChange={(open) => { if (open) markPostsSeen() }}>
+                  <PopoverTrigger className="relative flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/15 transition-colors">
                     <Newspaper className="h-4 w-4 text-white" />
+                    {hasNewPosts && (
+                      <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+                      </span>
+                    )}
                   </PopoverTrigger>
                   <PopoverContent align="end" className="z-[60] w-80 p-0">
                     <div className="px-4 pt-3 pb-2 border-b">

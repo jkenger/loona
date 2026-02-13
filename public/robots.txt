@@ -1,3 +1,15 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /agent
+Disallow: /agents
+Disallow: /contacts
+Disallow: /loans
+Disallow: /payments
+Disallow: /settings
+Disallow: /api
+Disallow: /splash
+Disallow: /welcome
+
+Sitemap: https://loona.ph/api/sitemap

@@ -7,8 +7,14 @@ import { getPublishedPosts, getPublicCategories } from '@/server/blog'
 import { getServerSession } from '@/server/session'
 import { CaretLeft, CaretRight, CalendarBlank } from '@phosphor-icons/react'
 import { format } from 'date-fns'
+import { buildMeta, SITE_URL } from '@/lib/constants/seo'
 
 export const Route = createFileRoute('/blog/')({
+  head: () => buildMeta({
+    title: 'Blog | Loona',
+    description: 'Updates, tips, and insights about lending and financial management.',
+    url: `${SITE_URL}/blog`,
+  }),
   loader: async () => {
     const [postsData, categories, session] = await Promise.all([
       getPublishedPosts({ data: { limit: 12, offset: 0 } }),

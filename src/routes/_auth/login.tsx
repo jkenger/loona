@@ -6,8 +6,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner, Envelope, Lock, ArrowRight } from "@phosphor-icons/react"
 import { LoonaBrand, AnimatedTagline } from "@/components/ui/loona-brand"
+import { buildMeta, SITE_URL } from "@/lib/constants/seo"
 
 export const Route = createFileRoute("/_auth/login")({
+  head: () => buildMeta({
+    title: 'Sign In | Loona',
+    description: 'Sign in to your Loona account to manage loans and payments.',
+    url: `${SITE_URL}/login`,
+  }),
   validateSearch: (search: Record<string, unknown>) => ({
     error: (search.error as string) || undefined,
   }),
