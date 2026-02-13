@@ -10,6 +10,7 @@ import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Plus, MagnifyingGlass, User, Phone, Envelope } from "@phosphor-icons/react"
 import { useState } from "react"
 import { format } from "date-fns"
+import { Stagger, StaggerItem } from "@/components/ui/stagger"
 
 export const Route = createFileRoute("/_dashboard/contacts/")({
   loader: async ({ context }) => {
@@ -125,8 +126,9 @@ function ContactsPage() {
       </div>
 
       {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+      <Stagger className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
         {/* Search */}
+        <StaggerItem>
         <Card className="shadow-lg">
           <CardContent className="p-4">
             <div className="relative max-w-sm">
@@ -140,8 +142,10 @@ function ContactsPage() {
             </div>
           </CardContent>
         </Card>
+        </StaggerItem>
 
         {/* Contacts Grid */}
+        <StaggerItem>
         {filteredContacts.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredContacts.map((contact) => (
@@ -205,7 +209,8 @@ function ContactsPage() {
             </CardContent>
           </Card>
         )}
-      </div>
+        </StaggerItem>
+      </Stagger>
     </div>
   )
 }

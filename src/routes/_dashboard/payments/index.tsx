@@ -25,6 +25,7 @@ import { formatRelativeDate } from "@/lib/utils/date"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
+import { Stagger, StaggerItem } from "@/components/ui/stagger"
 
 export const Route = createFileRoute("/_dashboard/payments/")({
   loader: async ({ context }) => {
@@ -216,10 +217,10 @@ function PaymentsPage() {
       </div>
 
       {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+      <Stagger className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <StaggerItem className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className="shadow-sm">
             <CardContent className="p-3 md:p-4">
               <div className="flex items-center justify-between">
@@ -263,10 +264,10 @@ function PaymentsPage() {
               <p className="text-xs text-muted-foreground">This month</p>
             </CardContent>
           </Card>
-        </div>
+        </StaggerItem>
 
         {/* Two Column Layout */}
-        <div className="grid lg:grid-cols-2 gap-6">
+        <StaggerItem className="grid lg:grid-cols-2 gap-6">
           {/* Left Column: Track - Overdue & Upcoming */}
           <div className="space-y-6">
             {/* Overdue Section */}
@@ -592,8 +593,8 @@ function PaymentsPage() {
             </CardContent>
           </Card>
           </div>
-        </div>
-      </div>
+        </StaggerItem>
+      </Stagger>
 
       {/* Record Payment Dialog */}
       <RecordPaymentDialog

@@ -19,6 +19,7 @@ import {
 } from "@phosphor-icons/react"
 import { useState, useMemo } from "react"
 import { format } from "date-fns"
+import { Stagger, StaggerItem } from "@/components/ui/stagger"
 
 export const Route = createFileRoute("/_dashboard/loans/")({
   loader: async ({ context }) => {
@@ -212,8 +213,9 @@ function LoansPage() {
       </div>
 
       {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+      <Stagger className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
         {/* Filters Card */}
+        <StaggerItem>
         <Card className="shadow-lg">
           <CardContent className="p-4 space-y-4">
             {/* Search */}
@@ -268,8 +270,10 @@ function LoansPage() {
             </div>
           </CardContent>
         </Card>
+        </StaggerItem>
 
         {/* Results summary */}
+        <StaggerItem>
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <p>
             {filteredLoans.length} loan{filteredLoans.length !== 1 ? "s" : ""}
@@ -280,8 +284,10 @@ function LoansPage() {
             <p>Page {page} of {totalPages}</p>
           )}
         </div>
+        </StaggerItem>
 
         {/* Loans List */}
+        <StaggerItem>
         {paginatedLoans.length > 0 ? (
           <>
             <div className="space-y-4">
@@ -453,7 +459,8 @@ function LoansPage() {
             </CardContent>
           </Card>
         )}
-      </div>
+        </StaggerItem>
+      </Stagger>
     </div>
   )
 }

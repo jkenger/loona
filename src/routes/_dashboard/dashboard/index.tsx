@@ -37,6 +37,7 @@ import {
 } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { formatRelativeDateLower } from '@/lib/utils/date'
+import { Stagger, StaggerItem } from '@/components/ui/stagger'
 
 export const Route = createFileRoute('/_dashboard/dashboard/')({
   loader: async ({ context }) => {
@@ -146,9 +147,9 @@ function DashboardPage() {
       </div>
 
       {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
+      <Stagger className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
         {/* Hero KPIs */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StaggerItem className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Net Profit */}
           <Popover>
             <PopoverTrigger
@@ -377,10 +378,11 @@ function DashboardPage() {
               </div>
             </PopoverContent>
           </Popover>
-        </div>
+        </StaggerItem>
 
         {/* Overdue Payments Banner */}
         {summary.overdueCount > 0 && (
+          <StaggerItem>
           <div className="rounded-lg border border-destructive/20 bg-card shadow-lg p-4 relative overflow-hidden">
             <div className="absolute inset-0 bg-destructive/5 pointer-events-none" />
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
@@ -406,10 +408,12 @@ function DashboardPage() {
               </Link>
             </div>
           </div>
+          </StaggerItem>
         )}
 
         {/* Upcoming Payments Banner */}
         {stats.upcomingPayments.length > 0 && summary.overdueCount === 0 && (
+          <StaggerItem>
           <div className="rounded-lg border border-primary/20 bg-card shadow-lg p-4 relative overflow-hidden">
             <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
@@ -448,10 +452,11 @@ function DashboardPage() {
               </Link>
             </div>
           </div>
+          </StaggerItem>
         )}
 
         {/* Monthly Performance */}
-        <div className="space-y-4">
+        <StaggerItem className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Monthly Performance</h2>
             <div className="flex items-center gap-2">
@@ -538,10 +543,10 @@ function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </StaggerItem>
 
         {/* Calendar and Sidebar */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <StaggerItem className="grid gap-6 lg:grid-cols-3">
           {/* Payment Calendar */}
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader className="p-4 pb-2">
@@ -669,8 +674,8 @@ function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-        </div>
-      </div>
+        </StaggerItem>
+      </Stagger>
     </div>
   )
 }
