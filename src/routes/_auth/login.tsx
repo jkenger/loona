@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { signIn } from "@/lib/auth-client"
-import { getDashboardPath } from "@/lib/constants/roles"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -54,7 +53,7 @@ function LoginPage() {
     try {
       await signIn.social({
         provider: "google",
-        callbackURL: "/dashboard",
+        callbackURL: "/splash",
       })
     } catch {
       setError("Something went wrong. Please try again.")
@@ -70,7 +69,7 @@ function LoginPage() {
     try {
       const result = await signIn.magicLink({
         email,
-        callbackURL: "/dashboard",
+        callbackURL: "/splash",
       })
 
       if (result.error) {
@@ -104,9 +103,7 @@ function LoginPage() {
         return
       }
 
-      const user = result.data?.user as { role?: string } | undefined
-      const role = user?.role
-      router.navigate({ to: getDashboardPath(role) })
+      router.navigate({ to: "/splash" })
     } catch {
       setError("Something went wrong. Please try again.")
       setLoading(false)

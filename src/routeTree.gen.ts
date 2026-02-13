@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SplashRouteImport } from './routes/splash'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as AuthRouteImport } from './routes/_auth'
@@ -67,6 +68,11 @@ const WelcomeRoute = WelcomeRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplashRoute = SplashRouteImport.update({
+  id: '/splash',
+  path: '/splash',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -321,6 +327,7 @@ const DashboardAdminBlogPostIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
+  '/splash': typeof SplashRoute
   '/terms': typeof TermsRoute
   '/welcome': typeof WelcomeRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
@@ -370,6 +377,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
+  '/splash': typeof SplashRoute
   '/terms': typeof TermsRoute
   '/welcome': typeof WelcomeRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
@@ -422,6 +430,7 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_dashboard': typeof DashboardRouteWithChildren
   '/privacy': typeof PrivacyRoute
+  '/splash': typeof SplashRoute
   '/terms': typeof TermsRoute
   '/welcome': typeof WelcomeRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -473,6 +482,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/privacy'
+    | '/splash'
     | '/terms'
     | '/welcome'
     | '/forgot-password'
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/privacy'
+    | '/splash'
     | '/terms'
     | '/welcome'
     | '/forgot-password'
@@ -573,6 +584,7 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/_dashboard'
     | '/privacy'
+    | '/splash'
     | '/terms'
     | '/welcome'
     | '/_auth/forgot-password'
@@ -625,6 +637,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
   PrivacyRoute: typeof PrivacyRoute
+  SplashRoute: typeof SplashRoute
   TermsRoute: typeof TermsRoute
   WelcomeRoute: typeof WelcomeRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -648,6 +661,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/splash': {
+      id: '/splash'
+      path: '/splash'
+      fullPath: '/splash'
+      preLoaderRoute: typeof SplashRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -1083,6 +1103,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
   PrivacyRoute: PrivacyRoute,
+  SplashRoute: SplashRoute,
   TermsRoute: TermsRoute,
   WelcomeRoute: WelcomeRoute,
   BlogSlugRoute: BlogSlugRoute,
