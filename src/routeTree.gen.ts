@@ -18,7 +18,6 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
-import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
@@ -32,6 +31,7 @@ import { Route as DashboardAgentIndexRouteImport } from './routes/_dashboard/age
 import { Route as DashboardAdminIndexRouteImport } from './routes/_dashboard/admin/index'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
+import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
 import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard/loans/new-wizard'
@@ -103,11 +103,6 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthSignupRoute = AuthSignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => AuthRoute,
-} as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -171,6 +166,11 @@ const ApiCronOverdueRoute = ApiCronOverdueRouteImport.update({
 const ApiCronDigestRoute = ApiCronDigestRouteImport.update({
   id: '/api/cron/digest',
   path: '/api/cron/digest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthErrorRoute = ApiAuthErrorRouteImport.update({
+  id: '/api/auth/error',
+  path: '/api/auth/error',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -333,7 +333,6 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
-  '/signup': typeof AuthSignupRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
@@ -351,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/admin/': typeof DashboardAdminIndexRoute
@@ -383,7 +383,6 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
-  '/signup': typeof AuthSignupRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog': typeof BlogIndexRoute
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
@@ -401,6 +400,7 @@ export interface FileRoutesByTo {
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/admin': typeof DashboardAdminIndexRoute
@@ -436,7 +436,6 @@ export interface FileRoutesById {
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
-  '/_auth/signup': typeof AuthSignupRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/_dashboard/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
@@ -454,6 +453,7 @@ export interface FileRoutesById {
   '/_dashboard/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/_dashboard/admin/': typeof DashboardAdminIndexRoute
@@ -488,7 +488,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/signup'
     | '/blog/$slug'
     | '/blog/'
     | '/admin/audit-logs'
@@ -506,6 +505,7 @@ export interface FileRouteTypes {
     | '/loans/new-wizard'
     | '/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/admin/'
@@ -538,7 +538,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/signup'
     | '/blog/$slug'
     | '/blog'
     | '/admin/audit-logs'
@@ -556,6 +555,7 @@ export interface FileRouteTypes {
     | '/loans/new-wizard'
     | '/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/admin'
@@ -590,7 +590,6 @@ export interface FileRouteTypes {
     | '/_auth/forgot-password'
     | '/_auth/login'
     | '/_auth/reset-password'
-    | '/_auth/signup'
     | '/blog/$slug'
     | '/blog/'
     | '/_dashboard/admin/audit-logs'
@@ -608,6 +607,7 @@ export interface FileRouteTypes {
     | '/_dashboard/loans/new-wizard'
     | '/_dashboard/settings/penalty-settings'
     | '/api/auth/$'
+    | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/_dashboard/admin/'
@@ -643,6 +643,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiAuthErrorRoute: typeof ApiAuthErrorRoute
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
 }
@@ -711,13 +712,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_auth/signup': {
-      id: '/_auth/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof AuthSignupRouteImport
-      parentRoute: typeof AuthRoute
     }
     '/_auth/reset-password': {
       id: '/_auth/reset-password'
@@ -808,6 +802,13 @@ declare module '@tanstack/react-router' {
       path: '/api/cron/digest'
       fullPath: '/api/cron/digest'
       preLoaderRoute: typeof ApiCronDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/error': {
+      id: '/api/auth/error'
+      path: '/api/auth/error'
+      fullPath: '/api/auth/error'
+      preLoaderRoute: typeof ApiAuthErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -1006,14 +1007,12 @@ interface AuthRouteChildren {
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
-  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
-  AuthSignupRoute: AuthSignupRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -1109,6 +1108,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiAuthErrorRoute: ApiAuthErrorRoute,
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
 }

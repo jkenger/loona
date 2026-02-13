@@ -1,11 +1,11 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { admin, magicLink } from "better-auth/plugins"
+import { admin } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { eq, and, isNotNull } from "drizzle-orm"
 import { db } from "./db"
 import * as schema from "./db/schema"
-import { sendEmail, passwordResetEmail, welcomeEmail, magicLinkEmail } from "./email"
+import { sendEmail, passwordResetEmail, welcomeEmail } from "./email"
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -97,17 +97,6 @@ export const auth = betterAuth({
   },
   plugins: [
     admin({ defaultRole: "lender", adminRoles: ["admin"] }),
-    magicLink({
-      sendMagicLink: async ({ email, url }) => {
-        try {
-          const emailContent = magicLinkEmail({ email, url })
-          await sendEmail({ to: email, ...emailContent })
-        } catch (err) {
-          console.error('[Email] Magic link failed for', email, err)
-        }
-      },
-      expiresIn: 900, // 15 minutes
-    }),
     tanstackStartCookies(), // Must be last plugin
   ],
 })

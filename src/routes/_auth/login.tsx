@@ -4,7 +4,7 @@ import { signIn } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Spinner, Envelope, Lock, ArrowRight, CheckCircle, PaperPlaneTilt } from "@phosphor-icons/react"
+import { Spinner, Envelope, Lock, ArrowRight } from "@phosphor-icons/react"
 import { LoonaBrand, AnimatedTagline } from "@/components/ui/loona-brand"
 
 export const Route = createFileRoute("/_auth/login")({
@@ -41,7 +41,6 @@ function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
 
   const urlErrorMessage = getErrorMessage(urlError)
@@ -58,31 +57,6 @@ function LoginPage() {
     } catch {
       setError("Something went wrong. Please try again.")
       setGoogleLoading(false)
-    }
-  }
-
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-
-    try {
-      const result = await signIn.magicLink({
-        email,
-        callbackURL: "/splash",
-      })
-
-      if (result.error) {
-        setError(result.error.message || "Failed to send login link")
-        setLoading(false)
-        return
-      }
-
-      setMagicLinkSent(true)
-    } catch {
-      setError("Something went wrong. Please try again.")
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -108,46 +82,6 @@ function LoginPage() {
       setError("Something went wrong. Please try again.")
       setLoading(false)
     }
-  }
-
-  if (magicLinkSent) {
-    return (
-      <div className="space-y-8">
-        {/* Header - visible on mobile only */}
-        <div className="lg:hidden text-center">
-          <LoonaBrand size="lg" variant="gradient" animated />
-          <AnimatedTagline
-            text="Loan Management Made Simple"
-            className="text-muted-foreground text-sm mt-1"
-            delay={0.5}
-          />
-        </div>
-
-        {/* Success Card */}
-        <div className="bg-card border border-border rounded-2xl shadow-sm p-8 text-center">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-primary" weight="fill" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight mb-2">Check your email</h2>
-          <p className="text-muted-foreground mb-6">
-            We've sent a login link to <strong className="text-foreground">{email}</strong>
-          </p>
-          <p className="text-sm text-muted-foreground mb-6">
-            The link will expire in 15 minutes. If you don't see the email, check your spam folder.
-          </p>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => {
-              setMagicLinkSent(false)
-              setEmail("")
-            }}
-          >
-            Try a different email
-          </Button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -199,154 +133,101 @@ function LoginPage() {
           )}
         </Button>
 
-        {/* Divider */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">or</span>
-          </div>
-        </div>
-
-        {/* Secondary / Tertiary: Magic link or Password form */}
-        {showPasswordForm ? (
-          <form onSubmit={handlePasswordLogin} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Email address
-              </Label>
-              <div className="relative">
-                <Envelope className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-11"
-                  required
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </Label>
-                <Link
-                  to="/forgot-password"
-                  className="text-xs text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 h-11"
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full h-11 bg-gradient-primary hover:opacity-90 transition-opacity"
-              disabled={loading}
+        {/* Password form toggle */}
+        {!showPasswordForm ? (
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            <button
+              type="button"
+              onClick={() => setShowPasswordForm(true)}
+              className="text-primary hover:underline font-medium"
             >
-              {loading ? (
-                <>
-                  <Spinner className="h-4 w-4 animate-spin mr-2" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  Sign in
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </>
-              )}
-            </Button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              <button
-                type="button"
-                onClick={() => { setShowPasswordForm(false); setError("") }}
-                className="text-primary hover:underline font-medium"
-              >
-                Sign in with magic link instead
-              </button>
-            </p>
-          </form>
+              Sign in with password instead
+            </button>
+          </p>
         ) : (
-          <form onSubmit={handleMagicLink} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Email address
-              </Label>
-              <div className="relative">
-                <Envelope className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-11"
-                  required
-                  autoComplete="email"
-                />
+          <>
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">or</span>
               </div>
             </div>
 
-            {error && (
-              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">
-                {error}
+            <form onSubmit={handlePasswordLogin} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email address
+                </Label>
+                <div className="relative">
+                  <Envelope className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11"
+                    required
+                    autoComplete="email"
+                  />
+                </div>
               </div>
-            )}
 
-            <Button
-              type="submit"
-              className="w-full h-11 bg-gradient-primary hover:opacity-90 transition-opacity"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Spinner className="h-4 w-4 animate-spin mr-2" />
-                  Sending link...
-                </>
-              ) : (
-                <>
-                  Send login link
-                  <PaperPlaneTilt className="h-4 w-4 ml-2" />
-                </>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium">
+                    Password
+                  </Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 h-11"
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">
+                  {error}
+                </div>
               )}
-            </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
-              <button
-                type="button"
-                onClick={() => { setShowPasswordForm(true); setError("") }}
-                className="text-primary hover:underline font-medium"
+              <Button
+                type="submit"
+                className="w-full h-11 bg-gradient-primary hover:opacity-90 transition-opacity"
+                disabled={loading}
               >
-                Sign in with password instead
-              </button>
-            </p>
-          </form>
+                {loading ? (
+                  <>
+                    <Spinner className="h-4 w-4 animate-spin mr-2" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    Sign in
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </form>
+          </>
         )}
       </div>
 

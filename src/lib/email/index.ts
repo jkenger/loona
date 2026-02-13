@@ -341,55 +341,6 @@ This daily digest was sent by Loona.
   return { subject, html, text }
 }
 
-export function magicLinkEmail(params: { email: string; url: string }) {
-  const subject = 'Your Loona login link'
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; margin-bottom: 32px;">
-    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
-    <p style="color: #666; margin: 8px 0 0 0;">Loan Management Made Simple</p>
-  </div>
-
-  <h2 style="color: #1a1a1a; margin-bottom: 16px;">Sign in to Loona</h2>
-
-  <p>Click the button below to sign in to your account. If you don't have an account yet, one will be created for you.</p>
-
-  <div style="text-align: center; margin: 32px 0;">
-    <a href="${params.url}" style="background-color: #1a8cff; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Sign in to Loona</a>
-  </div>
-
-  <p style="color: #666; font-size: 14px;">This link expires in 15 minutes. If you didn't request this, you can safely ignore this email.</p>
-
-  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
-
-  <p style="color: #999; font-size: 12px; text-align: center;">
-    If the button doesn't work, copy and paste this link into your browser:<br>
-    <a href="${params.url}" style="color: #1a8cff; word-break: break-all;">${params.url}</a>
-  </p>
-</body>
-</html>
-  `
-
-  const text = `
-Sign in to Loona
-
-Click the link below to sign in to your account:
-
-${params.url}
-
-This link expires in 15 minutes. If you didn't request this, you can safely ignore this email.
-  `
-
-  return { subject, html, text }
-}
-
 export function waitlistApprovedEmail(params: { email: string }) {
   const loginUrl = `${process.env.BETTER_AUTH_URL || 'https://loona-lld4.onrender.com'}/login`
   const subject = "You're in! Your Loona account is ready"
