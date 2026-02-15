@@ -191,6 +191,14 @@
     pointer-events: none;
   }
 
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Glow effect for focus states */
   .glow-primary {
     box-shadow: 0 0 20px hsl(145 40% 42% / 0.3);

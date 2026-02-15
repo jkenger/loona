@@ -800,6 +800,54 @@ function PromissoryNotePage() {
             </div>
           </div>
 
+          {/* Facilitating Agent */}
+          {loan.assignedAgent && (
+            <div style={{ marginBottom: "40px" }}>
+              <p
+                style={{
+                  fontSize: "11px",
+                  color: c.muted,
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  marginBottom: "16px",
+                }}
+              >
+                {lang === "en"
+                  ? "Facilitating Agent:"
+                  : "Facilitating Agent:"}
+              </p>
+              <div style={{ maxWidth: "300px" }}>
+                <div
+                  style={{
+                    borderBottom: `1px solid ${c.borderSignature}`,
+                    height: "40px",
+                    marginBottom: "8px",
+                  }}
+                ></div>
+                <p style={{ fontSize: "13px", fontWeight: 500 }}>
+                  {loan.assignedAgent.name}
+                </p>
+                <p style={{ fontSize: "11px", color: c.muted }}>
+                  {lang === "en"
+                    ? "Agent / Loan Facilitator"
+                    : "Ahente / Tagapagpadali ng Pautang"}
+                </p>
+                <div style={{ marginTop: "16px" }}>
+                  <div
+                    style={{
+                      borderBottom: `1px solid ${c.borderSignature}`,
+                      width: "150px",
+                      marginBottom: "8px",
+                    }}
+                  ></div>
+                  <p style={{ fontSize: "11px", color: c.muted }}>
+                    {lang === "en" ? "Date" : "Petsa"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
             <p
               style={{

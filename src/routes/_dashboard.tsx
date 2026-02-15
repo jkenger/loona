@@ -51,6 +51,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover"
+import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 
 export const Route = createFileRoute("/_dashboard")({
   beforeLoad: async ({ location }) => {
@@ -164,6 +165,8 @@ function DashboardLayout() {
       : isLender
         ? lenderNavigation
         : []
+  const portal: "lender" | "agent" | "admin" = isOnAdminPortal && isAdmin ? "admin" : isOnAgentPortal && isAgent ? "agent" : "lender"
+
   const homeLink = isOnAdminPortal && isAdmin
     ? "/admin"
     : isOnAgentPortal && isAgent
@@ -526,65 +529,6 @@ function DashboardLayout() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  {isLender && !isOnAdminPortal && !isOnAgentPortal && (
-                    <div className="md:hidden">
-                      <div className="px-2 py-1.5">
-                        <p className="text-xs font-medium text-muted-foreground">Navigation</p>
-                      </div>
-                      {lenderNavigation.map((item) => (
-                        <DropdownMenuItem
-                          key={item.href}
-                          onClick={() => navigate({ to: item.href })}
-                          className="flex items-center cursor-pointer"
-                        >
-                          <item.icon className="h-4 w-4 mr-2" />
-                          <span>{item.name}</span>
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                    </div>
-                  )}
-                  {isAdmin && isOnAdminPortal && (
-                    <div className="md:hidden">
-                      <div className="px-2 py-1.5">
-                        <p className="text-xs font-medium text-muted-foreground">Navigation</p>
-                      </div>
-                      {adminNavigation.map((item) => (
-                        <DropdownMenuItem
-                          key={item.href}
-                          onClick={() => navigate({ to: item.href })}
-                          className="flex items-center cursor-pointer"
-                        >
-                          <item.icon className="h-4 w-4 mr-2" />
-                          <span>{item.name}</span>
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                    </div>
-                  )}
-                  {isAgent && isOnAgentPortal && (
-                    <div className="md:hidden">
-                      <div className="px-2 py-1.5">
-                        <p className="text-xs font-medium text-muted-foreground">Navigation</p>
-                      </div>
-                      {agentNavigation.map((item) => (
-                        <DropdownMenuItem
-                          key={item.href}
-                          onClick={() => navigate({ to: item.href })}
-                          className="flex items-center cursor-pointer"
-                        >
-                          <item.icon className="h-4 w-4 mr-2" />
-                          <span>{item.name}</span>
-                          {"badge" in item && (item as { badge?: string }).badge && (
-                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none bg-primary text-primary-foreground">
-                              {(item as { badge?: string }).badge}
-                            </span>
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                    </div>
-                  )}
                   <DropdownMenuItem
                     onClick={() => navigate({ to: "/settings" })}
                     className="cursor-pointer"
@@ -658,9 +602,12 @@ function DashboardLayout() {
       )}
 
       {/* Page content - full width, pages control their own constraints */}
-      <main className="relative">
+      <main className="relative pb-20 md:pb-0">
         <Outlet />
       </main>
+
+      {/* Mobile bottom nav */}
+      <MobileBottomNav portal={portal} />
     </div>
   )
 }

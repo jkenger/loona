@@ -256,6 +256,36 @@ function DisclosurePage() {
               </div>
             </div>
 
+            {/* Facilitating Agent */}
+            {loan.assignedAgent && (
+              <div
+                className="mb-8"
+                style={{
+                  padding: "12px 16px",
+                  backgroundColor: c.mutedBg,
+                  borderRadius: "6px",
+                  fontSize: "13px",
+                }}
+              >
+                <h2
+                  className="font-semibold uppercase mb-2"
+                  style={{ fontSize: "11px", color: c.muted }}
+                >
+                  {lang === "en"
+                    ? "Facilitating Agent / Loan Officer"
+                    : "Facilitating Agent / Opisyal ng Pautang"}
+                </h2>
+                <p className="font-medium" style={{ fontSize: "14px" }}>
+                  {loan.assignedAgent.name}
+                </p>
+                {loan.assignedAgent.email && (
+                  <p style={{ fontSize: "12px", color: c.muted }}>
+                    {loan.assignedAgent.email}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Credit Terms Table */}
             <div className="mb-8">
               <h2
