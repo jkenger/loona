@@ -50,11 +50,19 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-4 rounded-none p-4 text-xs/relaxed ring-1 duration-100 sm:max-w-sm fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none",
+          // Base
+          "bg-background ring-foreground/10 ring-1 flex flex-col gap-4 p-4 text-xs/relaxed outline-none fixed z-50 w-full",
+          // Mobile: bottom sheet
+          "inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl",
+          // Desktop: centered dialog
+          "sm:inset-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-sm sm:max-h-[85vh] sm:rounded-lg",
+          // Animations
+          "data-open:animate-in data-closed:animate-out duration-200 data-closed:fade-out-0 data-open:fade-in-0 data-closed:slide-out-to-bottom-4 data-open:slide-in-from-bottom-4",
           className
         )}
         {...props}
       >
+        <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted-foreground/20 sm:hidden" />
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close

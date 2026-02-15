@@ -870,7 +870,7 @@ function LoanDetailPage() {
 
       {/* Approve Loan Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Approve Loan</DialogTitle>
             <DialogDescription>
@@ -965,7 +965,7 @@ function LoanDetailPage() {
 
       {/* Reject Loan Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Reject Loan</DialogTitle>
             <DialogDescription>

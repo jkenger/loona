@@ -117,7 +117,7 @@ export function RecordPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             {paymentStep === "form" ? "Record Payment" : "Confirm Payment"}
@@ -132,125 +132,127 @@ export function RecordPaymentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {scheduleItem && paymentStep === "form" && (
-          <div className="space-y-4">
-            {/* Schedule item info */}
-            <div className="p-3 rounded bg-muted/50 text-sm space-y-1">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount Due</span>
-                <span className="font-medium">{formatCurrency(scheduleItem.amount)}</span>
-              </div>
-              {parseFloat(scheduleItem.paidAmount) > 0 && (
+        <div className="overflow-y-auto min-h-0 flex-1 -mx-4 px-4">
+          {scheduleItem && paymentStep === "form" && (
+            <div className="space-y-4">
+              {/* Schedule item info */}
+              <div className="p-3 rounded bg-muted/50 text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Already Paid</span>
-                  <span className="font-medium text-primary">{formatCurrency(scheduleItem.paidAmount)}</span>
+                  <span className="text-muted-foreground">Amount Due</span>
+                  <span className="font-medium">{formatCurrency(scheduleItem.amount)}</span>
                 </div>
-              )}
-              <div className="flex justify-between border-t pt-1 mt-1">
-                <span className="text-muted-foreground">Remaining</span>
-                <span className="font-semibold">
-                  {formatCurrency(parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount))}
-                </span>
-              </div>
-              {appliedPenalties > 0 && (() => {
-                const remaining = parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount)
-                return (
-                  <>
-                    <div className="flex justify-between text-amber-600">
-                      <span>Applied Penalties</span>
-                      <span className="font-medium">+{formatCurrency(appliedPenalties)}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-1 mt-1 font-semibold">
-                      <span>Total Due</span>
-                      <span>{formatCurrency(remaining + appliedPenalties)}</span>
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="paymentAmount">Payment Amount</Label>
-                <CurrencyInput
-                  id="paymentAmount"
-                  value={paymentAmount}
-                  onValueChange={setPaymentAmount}
-                  placeholder="1,000"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
-                  <SelectTrigger>
-                    {METHOD_LABELS[paymentMethod]}
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="gcash">GCash</SelectItem>
-                    <SelectItem value="maya">Maya</SelectItem>
-                    <SelectItem value="bank">Bank Transfer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Payment Date</Label>
-                <DatePicker
-                  value={paymentDate}
-                  onChange={(date) => date && setPaymentDate(date)}
-                  disabledDates={{ after: new Date() }}
-                  disabledTooltip="Payment date cannot be in the future"
-                />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="paymentNotes">Notes (optional)</Label>
-                <Input
-                  id="paymentNotes"
-                  placeholder="Any additional notes..."
-                  value={paymentNotes}
-                  onChange={(e) => setPaymentNotes(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {scheduleItem && paymentStep === "confirm" && (
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-              <div className="text-center pb-3 border-b">
-                <p className="text-2xl font-bold text-primary">{formatCurrency(paymentAmount)}</p>
-                <p className="text-sm text-muted-foreground">Payment Amount</p>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Borrower</span>
-                  <span className="font-medium">{borrowerName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Payment Date</span>
-                  <span className="font-medium">{format(paymentDate, "MMMM d, yyyy")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Method</span>
-                  <span className="font-medium">{METHOD_LABELS[paymentMethod]}</span>
-                </div>
-                {paymentNotes && (
+                {parseFloat(scheduleItem.paidAmount) > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Notes</span>
-                    <span className="font-medium text-right max-w-[180px] truncate">{paymentNotes}</span>
+                    <span className="text-muted-foreground">Already Paid</span>
+                    <span className="font-medium text-primary">{formatCurrency(scheduleItem.paidAmount)}</span>
                   </div>
                 )}
+                <div className="flex justify-between border-t pt-1 mt-1">
+                  <span className="text-muted-foreground">Remaining</span>
+                  <span className="font-semibold">
+                    {formatCurrency(parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount))}
+                  </span>
+                </div>
+                {appliedPenalties > 0 && (() => {
+                  const remaining = parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount)
+                  return (
+                    <>
+                      <div className="flex justify-between text-amber-600">
+                        <span>Applied Penalties</span>
+                        <span className="font-medium">+{formatCurrency(appliedPenalties)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1 mt-1 font-semibold">
+                        <span>Total Due</span>
+                        <span>{formatCurrency(remaining + appliedPenalties)}</span>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="paymentAmount">Payment Amount</Label>
+                  <CurrencyInput
+                    id="paymentAmount"
+                    value={paymentAmount}
+                    onValueChange={setPaymentAmount}
+                    placeholder="1,000"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="paymentMethod">Payment Method</Label>
+                  <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
+                    <SelectTrigger>
+                      {METHOD_LABELS[paymentMethod]}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="gcash">GCash</SelectItem>
+                      <SelectItem value="maya">Maya</SelectItem>
+                      <SelectItem value="bank">Bank Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Payment Date</Label>
+                  <DatePicker
+                    value={paymentDate}
+                    onChange={(date) => date && setPaymentDate(date)}
+                    disabledDates={{ after: new Date() }}
+                    disabledTooltip="Payment date cannot be in the future"
+                  />
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="paymentNotes">Notes (optional)</Label>
+                  <Input
+                    id="paymentNotes"
+                    placeholder="Any additional notes..."
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground text-center">
-              Please review the details above before confirming.
-            </p>
-          </div>
-        )}
+          )}
+
+          {scheduleItem && paymentStep === "confirm" && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                <div className="text-center pb-3 border-b">
+                  <p className="text-2xl font-bold text-primary">{formatCurrency(paymentAmount)}</p>
+                  <p className="text-sm text-muted-foreground">Payment Amount</p>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Borrower</span>
+                    <span className="font-medium">{borrowerName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment Date</span>
+                    <span className="font-medium">{format(paymentDate, "MMMM d, yyyy")}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Method</span>
+                    <span className="font-medium">{METHOD_LABELS[paymentMethod]}</span>
+                  </div>
+                  {paymentNotes && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Notes</span>
+                      <span className="font-medium text-right max-w-[180px] truncate">{paymentNotes}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Please review the details above before confirming.
+              </p>
+            </div>
+          )}
+        </div>
 
         <DialogFooter>
           {paymentStep === "form" ? (

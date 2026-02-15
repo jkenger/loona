@@ -912,7 +912,7 @@ function AgentsPage() {
 
       {/* Add Agent Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Agent</DialogTitle>
             <DialogDescription>
