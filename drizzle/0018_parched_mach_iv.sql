@@ -1,0 +1,1 @@
+ALTER TABLE "playbook_sections" ADD COLUMN "content_tl" text;

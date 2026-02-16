@@ -51,8 +51,10 @@ type AuditAction =
   | "blog.publish"
   | "blog.unpublish"
   | "blog.delete"
+  // Playbook
+  | "playbook.updateSection"
 
-type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "commission_settings" | "penalty" | "penalty_settings" | "lender_settings" | "user" | "waitlist" | "blog_post" | "blog_category" | "blog_tag"
+type EntityType = "contact" | "loan" | "payment" | "agent" | "commission" | "commission_settings" | "penalty" | "penalty_settings" | "lender_settings" | "user" | "waitlist" | "blog_post" | "blog_category" | "blog_tag" | "playbook_section"
 
 interface AuditLogParams {
   userId: string

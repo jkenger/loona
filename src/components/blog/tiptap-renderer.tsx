@@ -19,7 +19,7 @@ export function TiptapRenderer({ content }: TiptapRendererProps) {
     editable: false,
     editorProps: {
       attributes: {
-        class: "prose prose-lg dark:prose-invert max-w-none",
+        class: "prose prose-sm dark:prose-invert max-w-none font-sans",
       },
     },
   })

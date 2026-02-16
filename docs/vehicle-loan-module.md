@@ -1,100 +1,62 @@
-# Vehicle Loan Module + Codebase Reorganization
+# Vehicle Loan Module
 
 ## Context
 
-Loona currently handles personal loans only. The lender needs a separate **vehicle loan** portfolio with its own borrower pool and vehicle-specific data (make, model, year, plate). Before adding the new module, we reorganize the codebase into module-based folders so both portfolios have a clean home.
+Loona currently handles personal loans only. One specific business user needs a **vehicle loan** portfolio with vehicle-specific data (make, model, year, plate). This is not a feature every lender needs — most personal/micro lenders will never use it. The module must be fully isolated so the core personal loan path stays clean for public launch.
 
 ## Design Decisions
 
 - **Fully separate tables** — `vehicleContacts`, `vehicleLoans`, `vehiclePaymentSchedule`, `vehiclePayments`
-- **Basic vehicle fields on loan** — `vehicleMake`, `vehicleModel`, `vehicleYear`, `vehiclePlateNumber`
-- **Separate contact pool** — vehicle borrowers distinct from personal loan contacts
+- **Separate contact pool** — vehicle borrowers are distinct from personal loan contacts (different portfolio, different business)
+- **Lender feature flag** — `vehicleLoansEnabled` in `lenderSettings` config. Nav items + routes only appear when enabled. Off by default.
 - **Reuse existing enums** — `loanStatusEnum`, `paymentFrequencyEnum`, `paymentMethodEnum`, `scheduleStatusEnum`
-- **Reorganize first** — server files into `shared/`, `personal/`, `vehicle/` folders; routes into `/personal/` and `/vehicle/` prefixes
+- **No file moves** — existing server files and routes stay where they are; vehicle code is purely additive
+- **No URL changes** — existing routes (`/loans`, `/contacts`, `/payments`) are untouched
+- **Shared utilities** — extract `calculatePaymentsCount` + `generateScheduleDates` from `loans.ts` so vehicle code doesn't duplicate date logic
 - **Skip for V1** — penalties, commissions, agent portal, documents, overdue cron, dashboard stats for vehicle loans
 
+### Why separate tables?
+
+Vehicle loans are a niche feature for one business. Mixing a `loanType` discriminator into the core `loans` table means every lender carries schema they don't use, core queries gain filters they don't need, and the feature can't be cleanly removed later. Separate tables keep the personal loan path pristine — zero changes to existing queries, zero risk to public users.
+
+The tradeoff is some duplicated server functions. Shared utility extraction (`loan-utils.ts`) minimizes this — the core calculation and schedule logic is written once, and the vehicle server functions are thin wrappers around those utilities.
+
 ---
 
-## Phase 0: Codebase Reorganization
+## Phase 1: Feature Flag
 
-### 0a. Server directory restructure
+### `src/lib/constants/lender-defaults.ts`
 
-Create folders: `src/server/shared/`, `src/server/personal/`
-
-**Move to `src/server/shared/`:**
-
-| File            | Imported by                                               |
-| --------------- | --------------------------------------------------------- |
-| `session.ts`    | ~15 files (all server files + route layouts + auth pages) |
-| `audit.ts`      | ~10 server files                                          |
-| `dashboard.ts`  | dashboard/index.tsx                                       |
-| `onboarding.ts` | \_dashboard.tsx, welcome.tsx                              |
-| `admin.ts`      | admin routes                                              |
-
-**Move to `src/server/personal/`:**
-
-| File                     | Imported by                        |
-| ------------------------ | ---------------------------------- |
-| `loans.ts`               | 9 route files + agent pages        |
-| `contacts.ts`            | 6 route files                      |
-| `payments.ts`            | 4 files (routes + components)      |
-| `penalties.ts`           | penalty-items.tsx component        |
-| `penalty-settings.ts`    | 3 route files                      |
-| `penalty-generation.ts`  | payments.ts, overdue-processing.ts |
-| `commissions.ts`         | agent pages                        |
-| `commission-settings.ts` | 3 route files                      |
-| `agents.ts`              | 9 route files                      |
-| `agent-portal.ts`        | \_dashboard.tsx, agents.ts         |
-| `overdue-processing.ts`  | cron endpoint                      |
-
-**Import updates needed:**
-
-- Server-to-server: relative paths change (e.g., `"./session"` -> `"../shared/session"`)
-- Route-to-server: alias paths change (e.g., `"@/server/loans"` -> `"@/server/personal/loans"`)
-- ~48 files total need import path updates
-
-### 0b. Route directory restructure
-
-Move personal loan routes under `/personal/` prefix:
-
-```
-src/routes/_dashboard/personal/
-  contacts/index.tsx, new.tsx, $contactId.tsx    (was: _dashboard/contacts/)
-  loans/index.tsx, new-wizard.tsx, $loanId/...   (was: _dashboard/loans/)
-  payments/index.tsx                              (was: _dashboard/payments/)
-```
-
-**Navigation link updates** — all `to="/loans"` -> `to="/personal/loans"`, etc:
-
-- ~18 occurrences of `/loans` links across 8 files
-- ~10 occurrences of `/contacts` links across 6 files
-- ~4 occurrences of `/payments` links
-
-**Unchanged routes** (stay at current level):
-
-- `dashboard/` — main dashboard (cross-portfolio)
-- `agents/` — agent management (cross-portfolio)
-- `settings/` — lender settings (cross-portfolio)
-- `agent/` — agent portal
-- `admin/` — admin portal
-
-**`_dashboard.tsx` nav update:**
+Add `vehicleLoansEnabled` to the lender config:
 
 ```ts
-{ name: "Contacts", href: "/personal/contacts", ... },
-{ name: "Loans", href: "/personal/loans", ... },
-{ name: "Payments", href: "/personal/payments", ... },
+export interface LenderConfig {
+  initialCapital: number
+  vehicleLoansEnabled: boolean
+}
+
+export const lenderConfigSchema = z.object({
+  initialCapital: z.number().min(0).max(999_999_999),
+  vehicleLoansEnabled: z.boolean(),
+})
+
+export const DEFAULT_LENDER_CONFIG: LenderConfig = {
+  initialCapital: 0,
+  vehicleLoansEnabled: false,
+}
 ```
 
-### 0c. Verification
+### `src/routes/_dashboard.tsx`
 
-- `npx tsc --noEmit` — no type errors after all moves
-- All existing pages load at new URLs
-- `routeTree.gen.ts` auto-regenerates
+Read the flag from route context. Conditionally include "Vehicle" nav items only when `vehicleLoansEnabled` is `true`.
+
+### `src/routes/_dashboard/settings/index.tsx`
+
+Add a toggle in lender settings: "Enable Vehicle Loans". Saves to `lenderSettings.config`.
 
 ---
 
-## Phase 1: Schema & Migration
+## Phase 2: Schema & Migration
 
 **File:** `src/lib/db/schema.ts`
 
@@ -102,102 +64,197 @@ src/routes/_dashboard/personal/
 
 **`vehicleContacts`** — mirrors `contacts`, no `createdByAgentId`
 
-- id, lenderId (FK -> user), name, phone, email, address, city, facebookProfile, notes, createdAt, updatedAt
+| Column          | Type        | Required | Notes              |
+| --------------- | ----------- | -------- | ------------------ |
+| id              | text (UUID) | yes      | PK                 |
+| lenderId        | text (FK)   | yes      | -> user.id, cascade |
+| name            | text        | yes      |                    |
+| phone           | text        | no       |                    |
+| email           | text        | no       |                    |
+| address         | text        | no       |                    |
+| city            | text        | no       |                    |
+| facebookProfile | text        | no       |                    |
+| notes           | text        | no       |                    |
+| createdAt       | timestamp   | yes      | defaultNow         |
+| updatedAt       | timestamp   | yes      | defaultNow         |
 
-**`vehicleLoans`** — mirrors `loans` + 4 vehicle columns
+**`vehicleLoans`** — mirrors `loans` + 4 vehicle columns, no agent fields
 
-- id, lenderId (FK -> user), vehicleContactId (FK -> vehicleContacts)
-- **Vehicle:** vehicleMake (text, required), vehicleModel (text, required), vehicleYear (int, optional), vehiclePlateNumber (text, optional)
-- **Terms:** principal, interestRate, termMonths, paymentFrequency, paymentAmount, totalToRepay
-- **Denormalized:** amountPaid (default "0"), remainingBalance
-- **Optional:** purpose, collateralDescription, coMakerName/Phone/Relationship
-- **Status:** status (loanStatusEnum, default "active"), startDate, maturityDate, completedAt
-- **Agent (future):** createdByAgentId, assignedAgentId
-- createdAt, updatedAt
+| Column              | Type              | Required | Notes                            |
+| ------------------- | ----------------- | -------- | -------------------------------- |
+| id                  | text (UUID)       | yes      | PK                               |
+| lenderId            | text (FK)         | yes      | -> user.id, cascade              |
+| vehicleContactId    | text (FK)         | yes      | -> vehicleContacts.id, restrict  |
+| vehicleMake         | text              | yes      | e.g., "Honda"                    |
+| vehicleModel        | text              | yes      | e.g., "Click 150i"              |
+| vehicleYear         | integer           | no       | e.g., 2022                       |
+| vehiclePlateNumber  | text              | no       | e.g., "ABC 1234"                |
+| principal           | decimal(12,2)     | yes      |                                  |
+| interestRate        | decimal(5,2)      | yes      | % per month                      |
+| termMonths          | integer           | yes      |                                  |
+| paymentFrequency    | paymentFrequencyEnum | yes   | default "monthly"                |
+| paymentAmount       | decimal(12,2)     | yes      | calculated                       |
+| totalToRepay        | decimal(12,2)     | yes      | calculated                       |
+| amountPaid          | decimal(12,2)     | yes      | default "0"                      |
+| interestEarned      | decimal(12,2)     | yes      | default "0"                      |
+| remainingBalance    | decimal(12,2)     | yes      |                                  |
+| purpose             | text              | no       |                                  |
+| collateralDescription | text            | no       |                                  |
+| coMakerName         | text              | no       |                                  |
+| coMakerPhone        | text              | no       |                                  |
+| coMakerRelationship | text              | no       |                                  |
+| status              | loanStatusEnum    | yes      | default "active"                 |
+| startDate           | timestamp         | no       |                                  |
+| maturityDate        | timestamp         | no       |                                  |
+| completedAt         | timestamp         | no       |                                  |
+| createdAt           | timestamp         | yes      | defaultNow                       |
+| updatedAt           | timestamp         | yes      | defaultNow                       |
 
 **`vehiclePaymentSchedule`** — mirrors `paymentSchedule`
 
-- id, vehicleLoanId (FK -> vehicleLoans), dueDate, amount, status (scheduleStatusEnum), paidAmount, paidAt, createdAt
+| Column         | Type              | Required | Notes                          |
+| -------------- | ----------------- | -------- | ------------------------------ |
+| id             | text (UUID)       | yes      | PK                             |
+| vehicleLoanId  | text (FK)         | yes      | -> vehicleLoans.id, cascade    |
+| dueDate        | timestamp         | yes      |                                |
+| amount         | decimal(12,2)     | yes      |                                |
+| status         | scheduleStatusEnum | yes     | default "pending"              |
+| paidAmount     | decimal(12,2)     | yes      | default "0"                    |
+| paidAt         | timestamp         | no       |                                |
+| createdAt      | timestamp         | yes      | defaultNow                     |
 
-**`vehiclePayments`** — mirrors `payments`
+**`vehiclePayments`** — mirrors `payments`, no agent/commission fields
 
-- id, vehicleLoanId (FK -> vehicleLoans), scheduleItemId (FK -> vehiclePaymentSchedule)
-- amount, method (paymentMethodEnum), paidAt, notes
-- Reversal: reversedAt, reversedBy, reversalReason
-- createdAt
+| Column          | Type              | Required | Notes                          |
+| --------------- | ----------------- | -------- | ------------------------------ |
+| id              | text (UUID)       | yes      | PK                             |
+| vehicleLoanId   | text (FK)         | yes      | -> vehicleLoans.id, cascade    |
+| scheduleItemId  | text (FK)         | no       | -> vehiclePaymentSchedule.id   |
+| amount          | decimal(12,2)     | yes      |                                |
+| method          | paymentMethodEnum  | yes     | default "cash"                 |
+| paidAt          | timestamp         | yes      | defaultNow                     |
+| notes           | text              | no       |                                |
+| reversedAt      | timestamp         | no       |                                |
+| reversedBy      | text (FK)         | no       | -> user.id                     |
+| reversalReason  | text              | no       |                                |
+| createdAt       | timestamp         | yes      | defaultNow                     |
 
 ### Relations
 
-- `vehicleContactsRelations` -> lender (one), vehicleLoans (many)
-- `vehicleLoansRelations` -> lender (one), vehicleContact (one), schedule (many), payments (many)
-- `vehiclePaymentScheduleRelations` -> vehicleLoan (one)
-- `vehiclePaymentsRelations` -> vehicleLoan (one), scheduleItem (one)
-- Update `userRelations` to add `vehicleContacts: many()`, `vehicleLoans: many()`
+```ts
+export const vehicleContactsRelations = relations(vehicleContacts, ({ one, many }) => ({
+  lender: one(user, { fields: [vehicleContacts.lenderId], references: [user.id] }),
+  vehicleLoans: many(vehicleLoans),
+}))
+
+export const vehicleLoansRelations = relations(vehicleLoans, ({ one, many }) => ({
+  lender: one(user, { fields: [vehicleLoans.lenderId], references: [user.id] }),
+  vehicleContact: one(vehicleContacts, { fields: [vehicleLoans.vehicleContactId], references: [vehicleContacts.id] }),
+  schedule: many(vehiclePaymentSchedule),
+  payments: many(vehiclePayments),
+}))
+
+export const vehiclePaymentScheduleRelations = relations(vehiclePaymentSchedule, ({ one, many }) => ({
+  vehicleLoan: one(vehicleLoans, { fields: [vehiclePaymentSchedule.vehicleLoanId], references: [vehicleLoans.id] }),
+  payments: many(vehiclePayments),
+}))
+
+export const vehiclePaymentsRelations = relations(vehiclePayments, ({ one }) => ({
+  vehicleLoan: one(vehicleLoans, { fields: [vehiclePayments.vehicleLoanId], references: [vehicleLoans.id] }),
+  scheduleItem: one(vehiclePaymentSchedule, { fields: [vehiclePayments.scheduleItemId], references: [vehiclePaymentSchedule.id] }),
+}))
+```
+
+Update `userRelations` — add `vehicleContacts: many(vehicleContacts)`, `vehicleLoans: many(vehicleLoans)`.
 
 ### Types
 
-Export `VehicleContact`, `VehicleLoan`, `VehiclePaymentScheduleItem`, `VehiclePayment` (+ `New*` insert types).
+```ts
+export type VehicleContact = typeof vehicleContacts.$inferSelect
+export type NewVehicleContact = typeof vehicleContacts.$inferInsert
+export type VehicleLoan = typeof vehicleLoans.$inferSelect
+export type NewVehicleLoan = typeof vehicleLoans.$inferInsert
+export type VehiclePaymentScheduleItem = typeof vehiclePaymentSchedule.$inferSelect
+export type NewVehiclePaymentScheduleItem = typeof vehiclePaymentSchedule.$inferInsert
+export type VehiclePayment = typeof vehiclePayments.$inferSelect
+export type NewVehiclePayment = typeof vehiclePayments.$inferInsert
+```
 
 ### Migration
 
-`npx drizzle-kit generate` then `npx drizzle-kit migrate`
+```
+npx drizzle-kit generate
+npx drizzle-kit migrate
+```
 
 ---
 
-## Phase 2: Shared Utility Extraction
+## Phase 3: Shared Utility Extraction
 
-**New file:** `src/server/shared/loan-utils.ts`
+**New file:** `src/server/loan-utils.ts`
 
-Extract from `src/server/personal/loans.ts`:
+Extract from `src/server/loans.ts` (lines 338-402):
 
-- `calculatePaymentsCount(termMonths, frequency)` -> returns number
-- `generateScheduleDates(startDate, paymentsCount, paymentAmount, frequency)` -> returns `{ dueDate, amount }[]`
+```ts
+export function calculatePaymentsCount(
+  termMonths: number,
+  frequency: "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
+): number
 
-Both `personal/loans.ts` and `vehicle/loans.ts` import these, then map results to add their respective FK.
+export function generateScheduleDates(
+  startDate: Date,
+  paymentsCount: number,
+  paymentAmount: number,
+  frequency: "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
+): Array<{ dueDate: Date; amount: string }>
+```
+
+`loans.ts` imports these instead of its inline copies. `vehicle/loans.ts` also imports them. This is the only change to `loans.ts` — a pure refactor, no behavior change.
 
 ---
 
-## Phase 3: Vehicle Server Functions
+## Phase 4: Vehicle Server Functions
 
 ### `src/server/vehicle/contacts.ts`
 
-| Function                       | Pattern source                                                                           |
-| ------------------------------ | ---------------------------------------------------------------------------------------- |
-| `getVehicleContacts()`         | `getContacts()` — joins vehicleLoans for loan counts                                     |
-| `getVehicleContact(id)`        | `getContact()` — with vehicleLoans + schedule                                            |
-| `searchVehicleContacts(query)` | `searchContacts()` — name/phone/email ilike                                              |
+| Function                       | Pattern source                          |
+| ------------------------------ | --------------------------------------- |
+| `getVehicleContacts()`         | `getContacts()` — joins vehicleLoans for loan counts |
+| `getVehicleContact(id)`        | `getContact()` — with vehicleLoans + schedule |
+| `searchVehicleContacts(query)` | `searchContacts()` — name/phone/email ilike |
 | `createVehicleContact(data)`   | `createContact()` — Zod: name (req), phone, email, address, city, facebookProfile, notes |
-| `updateVehicleContact(data)`   | `updateContact()` — partial update                                                       |
-| `deleteVehicleContact(id)`     | `deleteContact()` — blocked if has vehicle loans                                         |
+| `updateVehicleContact(data)`   | `updateContact()` — partial update |
+| `deleteVehicleContact(id)`     | `deleteContact()` — blocked if has vehicle loans |
 
 ### `src/server/vehicle/loans.ts`
 
-| Function                            | Pattern source                                                                                     |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `getVehicleLoans()`                 | `getLoans()` — joins vehicleContacts for borrower name                                             |
-| `getVehicleLoan(id)`                | `getLoan()` — with contact, schedule, payments (no penalties)                                      |
-| `createVehicleContactAndLoan(data)` | `createContactAndLoan()` — discriminated union: new/existing contact + vehicle fields + loan terms |
-| `deleteVehicleLoan(id)`             | Same pattern — blocked if has payments                                                             |
+| Function                            | Pattern source                          |
+| ----------------------------------- | --------------------------------------- |
+| `getVehicleLoans()`                 | `getLoans()` — joins vehicleContacts for borrower name, includes vehicle info |
+| `getVehicleLoan(id)`                | `getLoan()` — with contact, schedule, payments (no penalties) |
+| `createVehicleContactAndLoan(data)` | `createContactAndLoan()` — discriminated union: new/existing contact + vehicle fields + loan terms. Uses `calculatePaymentsCount` + `generateScheduleDates` from `loan-utils.ts`. |
+| `deleteVehicleLoan(id)`             | `deleteLoan()` — blocked if has payments |
 
 Vehicle-specific Zod fields: `vehicleMake` (required), `vehicleModel` (required), `vehicleYear` (optional), `vehiclePlateNumber` (optional)
 
 ### `src/server/vehicle/payments.ts`
 
-| Function                       | Pattern source                                          |
-| ------------------------------ | ------------------------------------------------------- |
-| `getVehiclePayments()`         | `getPayments()` — joins vehicleLoans + vehicleContacts  |
-| `getUpcomingVehiclePayments()` | `getUpcomingPayments()` — next 30 days, no penalty data |
-| `recordVehiclePayment(data)`   | `recordPayment()` — no commission creation              |
-| `reverseVehiclePayment(data)`  | `reversePayment()` — no commission reversal             |
+| Function                       | Pattern source                          |
+| ------------------------------ | --------------------------------------- |
+| `getVehiclePayments()`         | `getPayments()` — joins vehicleLoans + vehicleContacts |
+| `getUpcomingVehiclePayments()` | `getUpcomingPayments()` — next 30 days  |
+| `recordVehiclePayment(data)`   | `recordPayment()` — no commission creation |
+| `reverseVehiclePayment(data)`  | `reversePayment()` — no commission reversal |
 
-### `src/server/shared/audit.ts`
+### `src/server/audit.ts`
 
 Add audit actions: `vehicle_contact.create/update/delete`, `vehicle_loan.create/delete`, `vehicle_payment.record/reverse`
+
 Add entity types: `vehicle_contact`, `vehicle_loan`, `vehicle_payment`
 
 ---
 
-## Phase 4: RecordPaymentDialog Refactor
+## Phase 5: RecordPaymentDialog Refactor
 
 **File:** `src/components/record-payment-dialog.tsx`
 
@@ -210,71 +267,99 @@ onRecordPayment?: (data: {
 }) => Promise<unknown>
 ```
 
-If provided -> use callback. If not -> fall back to existing `recordPayment()` import. **Zero breaking changes** to existing callers.
+If provided, use the callback. If not, fall back to existing `recordPayment()` import. **Zero breaking changes** to existing callers. Vehicle loan detail passes `recordVehiclePayment` as the callback.
 
 ---
 
-## Phase 5: Vehicle Routes & UI
+## Phase 6: Vehicle Routes & UI
 
-### Vehicle Contacts (`src/routes/_dashboard/vehicle/contacts/`)
+### Route structure
 
-| File             | Clone of                           | Key differences                                                            |
-| ---------------- | ---------------------------------- | -------------------------------------------------------------------------- |
-| `index.tsx`      | `personal/contacts/index.tsx`      | Uses `getVehicleContacts()`, links to `/vehicle/contacts/*`                |
-| `new.tsx`        | `personal/contacts/new.tsx`        | Uses `createVehicleContact()`, redirects to `/vehicle/contacts/$contactId` |
-| `$contactId.tsx` | `personal/contacts/$contactId.tsx` | Uses vehicle contact server fns, "New Vehicle Loan" links to wizard        |
+```
+src/routes/_dashboard/vehicle/
+  contacts/
+    index.tsx              — vehicle contact list
+    new.tsx                — create vehicle contact
+    $contactId.tsx         — vehicle contact detail
+  loans/
+    index.tsx              — vehicle loan list
+    new-wizard.tsx         — 5-step creation wizard
+    $loanId/
+      index.tsx            — vehicle loan detail
+```
 
-### Vehicle Loans (`src/routes/_dashboard/vehicle/loans/`)
+### Vehicle Contacts
 
-| File                | Clone of                           | Key differences                                                                                                                                |
-| ------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.tsx`         | `personal/loans/index.tsx`         | Uses `getVehicleLoans()`, shows vehicle info (make/model/plate) on cards                                                                       |
-| `new-wizard.tsx`    | `personal/loans/new-wizard.tsx`    | **5 steps**: Borrower -> Vehicle Info -> Loan Terms -> Review -> Done. Vehicle step has make/model/year/plate fields. No documents on success. |
-| `$loanId/index.tsx` | `personal/loans/$loanId/index.tsx` | Uses `getVehicleLoan()`, vehicle info card at top, RecordPaymentDialog with callback, no penalties/approval/documents                          |
+| File             | Clone of                 | Key differences                            |
+| ---------------- | ------------------------ | ------------------------------------------ |
+| `index.tsx`      | `contacts/index.tsx`     | Uses `getVehicleContacts()`, vehicle links  |
+| `new.tsx`        | `contacts/new.tsx`       | Uses `createVehicleContact()`              |
+| `$contactId.tsx` | `contacts/$contactId.tsx`| Uses vehicle contact/loan server fns       |
+
+### Vehicle Loans
+
+| File                | Clone of                 | Key differences                            |
+| ------------------- | ------------------------ | ------------------------------------------ |
+| `index.tsx`         | `loans/index.tsx`        | Uses `getVehicleLoans()`, shows make/model/plate on cards |
+| `new-wizard.tsx`    | `loans/new-wizard.tsx`   | **5 steps**: Borrower -> Vehicle Info -> Loan Terms -> Review -> Done. Vehicle step has make/model/year/plate fields. |
+| `$loanId/index.tsx` | `loans/$loanId/index.tsx`| Vehicle info card at top. RecordPaymentDialog with `onRecordPayment` callback. No penalties/approval/documents. |
 
 ---
 
-## Phase 6: Navigation
+## Phase 7: Navigation & Settings UI
 
 **File:** `src/routes/_dashboard.tsx`
 
-Import `Car` from `@phosphor-icons/react`. Final `lenderNavigation`:
+Import `Car` from `@phosphor-icons/react`. Build `lenderNavigation` dynamically based on feature flag:
 
 ```ts
-{ name: "Dashboard", href: "/dashboard", icon: House, exact: true },
-{ name: "Contacts", href: "/personal/contacts", icon: Users },
-{ name: "Loans", href: "/personal/loans", icon: CurrencyCircleDollar },
-{ name: "Payments", href: "/personal/payments", icon: Receipt },
-{ name: "V-Contacts", href: "/vehicle/contacts", icon: Car },
-{ name: "V-Loans", href: "/vehicle/loans", icon: Car },
-{ name: "Agents", href: "/agents", icon: UsersThree },
+const lenderNavigation = [
+  { name: "Dashboard", href: "/dashboard", icon: House, exact: true },
+  { name: "Contacts", href: "/contacts", icon: Users, exact: false },
+  { name: "Loans", href: "/loans", icon: CurrencyCircleDollar, exact: false },
+  { name: "Payments", href: "/payments", icon: Receipt, exact: false },
+  // Vehicle items — only when enabled
+  ...(vehicleLoansEnabled ? [
+    { name: "V-Contacts", href: "/vehicle/contacts", icon: Car, exact: false },
+    { name: "V-Loans", href: "/vehicle/loans", icon: Car, exact: false },
+  ] : []),
+  { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
+]
 ```
+
+The `vehicleLoansEnabled` flag is already available in route context via `lenderSettings` (loaded in the `_dashboard` layout loader).
+
+**File:** `src/routes/_dashboard/settings/index.tsx`
+
+Add a "Vehicle Loans" section with a toggle switch:
+
+```
+Vehicle Loans
+Enable the vehicle loan portfolio for managing vehicle financing.
+[Toggle: Off]
+```
+
+When toggled on, the nav items appear on next page load.
 
 ---
 
 ## Implementation Order
 
-| Step | What                                                               | Depends on |
-| ---- | ------------------------------------------------------------------ | ---------- |
-| 0a   | Create `src/server/shared/` and `src/server/personal/`, move files | --         |
-| 0b   | Update all server-to-server imports (relative paths)               | 0a         |
-| 0c   | Update all route-to-server imports (`@/server/` paths)             | 0a         |
-| 0d   | Move route files: contacts/, loans/, payments/ -> personal/        | --         |
-| 0e   | Update all navigation links (`/loans` -> `/personal/loans`, etc.)  | 0d         |
-| 0f   | Update `_dashboard.tsx` nav hrefs                                  | 0d         |
-| 0g   | Verify: `npx tsc --noEmit`                                         | 0a-0f      |
-| 1    | Schema: 4 new tables + relations + types in `schema.ts`            | 0g         |
-| 2    | Migration: generate + migrate                                      | 1          |
-| 3    | Extract `shared/loan-utils.ts` from `personal/loans.ts`            | 0g         |
-| 4    | Audit types update                                                 | 0g         |
-| 5    | `vehicle/contacts.ts` server functions                             | 1          |
-| 6    | `vehicle/loans.ts` server functions                                | 1, 3       |
-| 7    | `vehicle/payments.ts` server functions                             | 1, 3       |
-| 8    | Refactor `RecordPaymentDialog` callback prop                       | --         |
-| 9    | Vehicle contact routes (index, new, $contactId)                    | 5          |
-| 10   | Vehicle loan routes (index, new-wizard, $loanId)                   | 6, 7, 8    |
-| 11   | Final navigation update with vehicle items                         | 9, 10      |
-| 12   | `npx tsc --noEmit` + manual verification                           | All        |
+| Step | What                                                                     | Depends on |
+| ---- | ------------------------------------------------------------------------ | ---------- |
+| 1    | Feature flag: update `lender-defaults.ts` + settings UI toggle           | --         |
+| 2    | Schema: 4 new tables + relations + types in `schema.ts`                  | --         |
+| 3    | Migration: `drizzle-kit generate` + `drizzle-kit migrate`                | 2          |
+| 4    | Extract `loan-utils.ts` from `loans.ts`                                  | --         |
+| 5    | Audit types update                                                       | --         |
+| 6    | `vehicle/contacts.ts` — 6 CRUD functions                                 | 2          |
+| 7    | `vehicle/loans.ts` — 4 functions (uses `loan-utils.ts`)                  | 2, 4       |
+| 8    | `vehicle/payments.ts` — 4 functions                                      | 2          |
+| 9    | Refactor `RecordPaymentDialog` — add `onRecordPayment` callback          | --         |
+| 10   | Vehicle contact routes (index, new, $contactId)                          | 6          |
+| 11   | Vehicle loan routes (index, new-wizard, $loanId)                         | 7, 8, 9    |
+| 12   | Navigation update — conditional vehicle nav items based on feature flag   | 1, 10, 11  |
+| 13   | `npx tsc --noEmit` + manual verification                                | All        |
 
 ---
 
@@ -284,65 +369,54 @@ Import `Car` from `@phosphor-icons/react`. Final `lenderNavigation`:
 - Commission generation on vehicle payments
 - Agent portal vehicle routes
 - Promissory note / disclosure documents
-- Dashboard stats integration
+- Dashboard stats integration (vehicle portfolio summary)
 - Overdue processing cron integration
 
 ---
 
 ## Files Summary
 
-### Phase 0 -- Reorganization (move + update imports)
+### Modified files
 
-| Source                              | Destination                                  |
-| ----------------------------------- | -------------------------------------------- |
-| `src/server/session.ts`             | `src/server/shared/session.ts`               |
-| `src/server/audit.ts`               | `src/server/shared/audit.ts`                 |
-| `src/server/dashboard.ts`           | `src/server/shared/dashboard.ts`             |
-| `src/server/onboarding.ts`          | `src/server/shared/onboarding.ts`            |
-| `src/server/admin.ts`               | `src/server/shared/admin.ts`                 |
-| `src/server/loans.ts`               | `src/server/personal/loans.ts`               |
-| `src/server/contacts.ts`            | `src/server/personal/contacts.ts`            |
-| `src/server/payments.ts`            | `src/server/personal/payments.ts`            |
-| `src/server/penalties.ts`           | `src/server/personal/penalties.ts`           |
-| `src/server/penalty-settings.ts`    | `src/server/personal/penalty-settings.ts`    |
-| `src/server/penalty-generation.ts`  | `src/server/personal/penalty-generation.ts`  |
-| `src/server/commissions.ts`         | `src/server/personal/commissions.ts`         |
-| `src/server/commission-settings.ts` | `src/server/personal/commission-settings.ts` |
-| `src/server/agents.ts`              | `src/server/personal/agents.ts`              |
-| `src/server/agent-portal.ts`        | `src/server/personal/agent-portal.ts`        |
-| `src/server/overdue-processing.ts`  | `src/server/personal/overdue-processing.ts`  |
-| `src/routes/_dashboard/contacts/`   | `src/routes/_dashboard/personal/contacts/`   |
-| `src/routes/_dashboard/loans/`      | `src/routes/_dashboard/personal/loans/`      |
-| `src/routes/_dashboard/payments/`   | `src/routes/_dashboard/personal/payments/`   |
+| File                                               | Change                                   |
+| -------------------------------------------------- | ---------------------------------------- |
+| `src/lib/db/schema.ts`                             | Add 4 tables, 4 relations, update userRelations, add types |
+| `src/lib/constants/lender-defaults.ts`             | Add `vehicleLoansEnabled` to config      |
+| `src/server/loans.ts`                              | Import from `loan-utils.ts` (refactor only) |
+| `src/server/audit.ts`                              | Add vehicle audit actions + entity types |
+| `src/components/record-payment-dialog.tsx`         | Add `onRecordPayment` callback prop      |
+| `src/routes/_dashboard.tsx`                        | Conditional vehicle nav items            |
+| `src/routes/_dashboard/settings/index.tsx`         | Vehicle loans toggle in settings         |
 
-Import updates: ~48 files across routes, components, and server files.
+### New files
 
-### New Files -- Vehicle Module
+| File                                                    | Purpose                                 |
+| ------------------------------------------------------- | --------------------------------------- |
+| `src/server/loan-utils.ts`                              | Extracted `calculatePaymentsCount` + `generateScheduleDates` |
+| `src/server/vehicle/contacts.ts`                        | 6 CRUD functions                        |
+| `src/server/vehicle/loans.ts`                           | 4 functions                             |
+| `src/server/vehicle/payments.ts`                        | 4 functions                             |
+| `src/routes/_dashboard/vehicle/contacts/index.tsx`      | Contact list page                       |
+| `src/routes/_dashboard/vehicle/contacts/new.tsx`        | Create contact form                     |
+| `src/routes/_dashboard/vehicle/contacts/$contactId.tsx` | Contact detail page                     |
+| `src/routes/_dashboard/vehicle/loans/index.tsx`         | Loan list page                          |
+| `src/routes/_dashboard/vehicle/loans/new-wizard.tsx`    | 5-step creation wizard                  |
+| `src/routes/_dashboard/vehicle/loans/$loanId/index.tsx` | Loan detail page                        |
 
-| File                                                    | Purpose                                                    |
-| ------------------------------------------------------- | ---------------------------------------------------------- |
-| `src/lib/db/schema.ts`                                  | Add 4 tables, 4 relations, update userRelations, add types |
-| `src/server/shared/loan-utils.ts`                       | Extracted schedule generation helpers                      |
-| `src/server/vehicle/contacts.ts`                        | 6 CRUD functions                                           |
-| `src/server/vehicle/loans.ts`                           | 4 functions                                                |
-| `src/server/vehicle/payments.ts`                        | 4 functions                                                |
-| `src/components/record-payment-dialog.tsx`              | Add `onRecordPayment` callback prop                        |
-| `src/routes/_dashboard/vehicle/contacts/index.tsx`      | List page                                                  |
-| `src/routes/_dashboard/vehicle/contacts/new.tsx`        | Create form                                                |
-| `src/routes/_dashboard/vehicle/contacts/$contactId.tsx` | Detail page                                                |
-| `src/routes/_dashboard/vehicle/loans/index.tsx`         | List page                                                  |
-| `src/routes/_dashboard/vehicle/loans/new-wizard.tsx`    | 5-step wizard                                              |
-| `src/routes/_dashboard/vehicle/loans/$loanId/index.tsx` | Loan detail                                                |
+**Total: 7 modified files, 10 new files.** Zero existing queries modified. Zero URL changes. Core personal loan path untouched.
 
 ---
 
 ## Verification Checklist
 
-1. After Phase 0: `npx tsc --noEmit` passes, all existing pages work at `/personal/*` URLs
-2. After Phase 1-2: 4 new tables in DB, no existing tables altered
-3. After all phases: `npx tsc --noEmit` -- no type errors
-4. Create vehicle contact -> appears in `/vehicle/contacts`
-5. Create vehicle loan via wizard (5 steps) -> detail page shows vehicle info + schedule
-6. Record payment -> schedule/loan balances update
-7. Reverse payment -> balances revert
-8. Nav: 7 items visible on desktop, all in mobile dropdown
+1. Feature flag off (default): no vehicle nav items, vehicle routes return 404 or redirect
+2. Feature flag on: "V-Contacts" and "V-Loans" appear in nav
+3. After migration: 4 new tables in DB, no existing tables altered
+4. After all phases: `npx tsc --noEmit` passes
+5. Create vehicle contact -> appears in `/vehicle/contacts`
+6. Create vehicle loan via wizard (5 steps) -> detail page shows vehicle info + schedule
+7. Record payment on vehicle loan -> schedule and balance update
+8. Reverse payment on vehicle loan -> balances revert
+9. Personal loan pages (`/loans`, `/contacts`, `/payments`) are completely unaffected
+10. Settings page shows vehicle loans toggle
+11. Toggle off -> vehicle nav items disappear, feature hidden

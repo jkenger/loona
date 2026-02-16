@@ -14,6 +14,7 @@ import {
   Article,
   Wallet,
   DotsThree,
+  BookOpenText,
 } from "@phosphor-icons/react"
 import type { Icon } from "@phosphor-icons/react"
 import {
@@ -43,16 +44,19 @@ const portalConfig: Record<
     more: [
       { name: "Contacts", href: "/contacts", icon: Users, exact: false },
       { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
+      { name: "Playbook", href: "/playbook", icon: BookOpenText, exact: true },
       { name: "Settings", href: "/settings", icon: Gear, exact: false },
     ],
   },
   agent: {
     primary: [
       { name: "Home", href: "/agent", icon: House, exact: true },
-      { name: "Loans", href: "/agent/loans", icon: CurrencyCircleDollar, exact: false },
+      { name: "Playbook", href: "/agent/playbook", icon: BookOpenText, exact: true },
       { name: "Earnings", href: "/agent/earnings", icon: Wallet, exact: false },
     ],
-    more: [],
+    more: [
+      { name: "Loans", href: "/agent/loans", icon: CurrencyCircleDollar, exact: false },
+    ],
   },
   admin: {
     primary: [

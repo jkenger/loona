@@ -38,6 +38,7 @@ import {
   Article,
   Newspaper,
   Envelope,
+  BookOpenText,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -117,6 +118,7 @@ const lenderNavigation = [
   { name: "Loans", href: "/loans", icon: CurrencyCircleDollar, exact: false },
   { name: "Payments", href: "/payments", icon: Receipt, exact: false },
   { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
+  { name: "Playbook", href: "/playbook", icon: BookOpenText, exact: true },
 ]
 
 // Navigation items for admin portal (shown in top nav when on /admin routes)
@@ -133,6 +135,7 @@ const adminNavigation = [
 const agentNavigation = [
   { name: "Home", href: "/agent", icon: House, exact: true },
   { name: "Earnings", href: "/agent/earnings", icon: Wallet, exact: false },
+  { name: "Playbook", href: "/agent/playbook", icon: BookOpenText, exact: true },
 ]
 
 function DashboardLayout() {

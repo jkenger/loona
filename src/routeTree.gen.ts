@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as ApiSitemapRouteImport } from './routes/api/sitemap'
+import { Route as DashboardPlaybookRouteImport } from './routes/_dashboard/playbook'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
@@ -40,6 +41,7 @@ import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans
 import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/contacts/new'
 import { Route as DashboardContactsContactIdRouteImport } from './routes/_dashboard/contacts/$contactId'
 import { Route as DashboardAgentsCommissionSettingsRouteImport } from './routes/_dashboard/agents/commission-settings'
+import { Route as DashboardAgentPlaybookRouteImport } from './routes/_dashboard/agent/playbook'
 import { Route as DashboardAgentPaymentsRouteImport } from './routes/_dashboard/agent/payments'
 import { Route as DashboardAgentEarningsRouteImport } from './routes/_dashboard/agent/earnings'
 import { Route as DashboardAgentCommissionsRouteImport } from './routes/_dashboard/agent/commissions'
@@ -108,6 +110,11 @@ const ApiSitemapRoute = ApiSitemapRouteImport.update({
   id: '/api/sitemap',
   path: '/api/sitemap',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardPlaybookRoute = DashboardPlaybookRouteImport.update({
+  id: '/playbook',
+  path: '/playbook',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -217,6 +224,11 @@ const DashboardAgentsCommissionSettingsRoute =
     path: '/agents/commission-settings',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAgentPlaybookRoute = DashboardAgentPlaybookRouteImport.update({
+  id: '/agent/playbook',
+  path: '/agent/playbook',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAgentPaymentsRoute = DashboardAgentPaymentsRouteImport.update({
   id: '/agent/payments',
   path: '/agent/payments',
@@ -339,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
+  '/playbook': typeof DashboardPlaybookRoute
   '/api/sitemap': typeof ApiSitemapRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -350,6 +363,7 @@ export interface FileRoutesByFullPath {
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/agent/earnings': typeof DashboardAgentEarningsRoute
   '/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/agent/playbook': typeof DashboardAgentPlaybookRoute
   '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/contacts/new': typeof DashboardContactsNewRoute
@@ -390,6 +404,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
+  '/playbook': typeof DashboardPlaybookRoute
   '/api/sitemap': typeof ApiSitemapRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog': typeof BlogIndexRoute
@@ -401,6 +416,7 @@ export interface FileRoutesByTo {
   '/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/agent/earnings': typeof DashboardAgentEarningsRoute
   '/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/agent/playbook': typeof DashboardAgentPlaybookRoute
   '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/contacts/new': typeof DashboardContactsNewRoute
@@ -444,6 +460,7 @@ export interface FileRoutesById {
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
+  '/_dashboard/playbook': typeof DashboardPlaybookRoute
   '/api/sitemap': typeof ApiSitemapRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/': typeof BlogIndexRoute
@@ -455,6 +472,7 @@ export interface FileRoutesById {
   '/_dashboard/agent/commissions': typeof DashboardAgentCommissionsRoute
   '/_dashboard/agent/earnings': typeof DashboardAgentEarningsRoute
   '/_dashboard/agent/payments': typeof DashboardAgentPaymentsRoute
+  '/_dashboard/agent/playbook': typeof DashboardAgentPlaybookRoute
   '/_dashboard/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/_dashboard/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/_dashboard/contacts/new': typeof DashboardContactsNewRoute
@@ -497,6 +515,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/playbook'
     | '/api/sitemap'
     | '/blog/$slug'
     | '/blog/'
@@ -508,6 +527,7 @@ export interface FileRouteTypes {
     | '/agent/commissions'
     | '/agent/earnings'
     | '/agent/payments'
+    | '/agent/playbook'
     | '/agents/commission-settings'
     | '/contacts/$contactId'
     | '/contacts/new'
@@ -548,6 +568,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/playbook'
     | '/api/sitemap'
     | '/blog/$slug'
     | '/blog'
@@ -559,6 +580,7 @@ export interface FileRouteTypes {
     | '/agent/commissions'
     | '/agent/earnings'
     | '/agent/payments'
+    | '/agent/playbook'
     | '/agents/commission-settings'
     | '/contacts/$contactId'
     | '/contacts/new'
@@ -601,6 +623,7 @@ export interface FileRouteTypes {
     | '/_auth/forgot-password'
     | '/_auth/login'
     | '/_auth/reset-password'
+    | '/_dashboard/playbook'
     | '/api/sitemap'
     | '/blog/$slug'
     | '/blog/'
@@ -612,6 +635,7 @@ export interface FileRouteTypes {
     | '/_dashboard/agent/commissions'
     | '/_dashboard/agent/earnings'
     | '/_dashboard/agent/payments'
+    | '/_dashboard/agent/playbook'
     | '/_dashboard/agents/commission-settings'
     | '/_dashboard/contacts/$contactId'
     | '/_dashboard/contacts/new'
@@ -732,6 +756,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/sitemap'
       preLoaderRoute: typeof ApiSitemapRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard/playbook': {
+      id: '/_dashboard/playbook'
+      path: '/playbook'
+      fullPath: '/playbook'
+      preLoaderRoute: typeof DashboardPlaybookRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/_auth/reset-password': {
       id: '/_auth/reset-password'
@@ -878,6 +909,13 @@ declare module '@tanstack/react-router' {
       path: '/agents/commission-settings'
       fullPath: '/agents/commission-settings'
       preLoaderRoute: typeof DashboardAgentsCommissionSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/agent/playbook': {
+      id: '/_dashboard/agent/playbook'
+      path: '/agent/playbook'
+      fullPath: '/agent/playbook'
+      preLoaderRoute: typeof DashboardAgentPlaybookRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/agent/payments': {
@@ -1038,6 +1076,7 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface DashboardRouteChildren {
+  DashboardPlaybookRoute: typeof DashboardPlaybookRoute
   DashboardAdminAuditLogsRoute: typeof DashboardAdminAuditLogsRoute
   DashboardAdminComplianceRoute: typeof DashboardAdminComplianceRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
@@ -1046,6 +1085,7 @@ interface DashboardRouteChildren {
   DashboardAgentCommissionsRoute: typeof DashboardAgentCommissionsRoute
   DashboardAgentEarningsRoute: typeof DashboardAgentEarningsRoute
   DashboardAgentPaymentsRoute: typeof DashboardAgentPaymentsRoute
+  DashboardAgentPlaybookRoute: typeof DashboardAgentPlaybookRoute
   DashboardAgentsCommissionSettingsRoute: typeof DashboardAgentsCommissionSettingsRoute
   DashboardContactsContactIdRoute: typeof DashboardContactsContactIdRoute
   DashboardContactsNewRoute: typeof DashboardContactsNewRoute
@@ -1075,6 +1115,7 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardPlaybookRoute: DashboardPlaybookRoute,
   DashboardAdminAuditLogsRoute: DashboardAdminAuditLogsRoute,
   DashboardAdminComplianceRoute: DashboardAdminComplianceRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
@@ -1083,6 +1124,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAgentCommissionsRoute: DashboardAgentCommissionsRoute,
   DashboardAgentEarningsRoute: DashboardAgentEarningsRoute,
   DashboardAgentPaymentsRoute: DashboardAgentPaymentsRoute,
+  DashboardAgentPlaybookRoute: DashboardAgentPlaybookRoute,
   DashboardAgentsCommissionSettingsRoute:
     DashboardAgentsCommissionSettingsRoute,
   DashboardContactsContactIdRoute: DashboardContactsContactIdRoute,
