@@ -31,6 +31,7 @@ import { Route as DashboardContactsIndexRouteImport } from './routes/_dashboard/
 import { Route as DashboardAgentsIndexRouteImport } from './routes/_dashboard/agents/index'
 import { Route as DashboardAgentIndexRouteImport } from './routes/_dashboard/agent/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/_dashboard/admin/index'
+import { Route as ShareRecapLoanIdRouteImport } from './routes/share/recap/$loanId'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
@@ -170,6 +171,11 @@ const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
   getParentRoute: () => DashboardRoute,
+} as any)
+const ShareRecapLoanIdRoute = ShareRecapLoanIdRouteImport.update({
+  id: '/share/recap/$loanId',
+  path: '/share/recap/$loanId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronOverdueRoute = ApiCronOverdueRouteImport.update({
   id: '/api/cron/overdue',
@@ -374,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/admin/': typeof DashboardAdminIndexRoute
   '/agent/': typeof DashboardAgentIndexRoute
   '/agents/': typeof DashboardAgentsIndexRoute
@@ -427,6 +434,7 @@ export interface FileRoutesByTo {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/admin': typeof DashboardAdminIndexRoute
   '/agent': typeof DashboardAgentIndexRoute
   '/agents': typeof DashboardAgentsIndexRoute
@@ -483,6 +491,7 @@ export interface FileRoutesById {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/_dashboard/admin/': typeof DashboardAdminIndexRoute
   '/_dashboard/agent/': typeof DashboardAgentIndexRoute
   '/_dashboard/agents/': typeof DashboardAgentsIndexRoute
@@ -538,6 +547,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/share/recap/$loanId'
     | '/admin/'
     | '/agent/'
     | '/agents/'
@@ -591,6 +601,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/share/recap/$loanId'
     | '/admin'
     | '/agent'
     | '/agents'
@@ -646,6 +657,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/share/recap/$loanId'
     | '/_dashboard/admin/'
     | '/_dashboard/agent/'
     | '/_dashboard/agents/'
@@ -683,6 +695,7 @@ export interface RootRouteChildren {
   ApiAuthErrorRoute: typeof ApiAuthErrorRoute
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
+  ShareRecapLoanIdRoute: typeof ShareRecapLoanIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -840,6 +853,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof DashboardAdminIndexRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/share/recap/$loanId': {
+      id: '/share/recap/$loanId'
+      path: '/share/recap/$loanId'
+      fullPath: '/share/recap/$loanId'
+      preLoaderRoute: typeof ShareRecapLoanIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/cron/overdue': {
       id: '/api/cron/overdue'
@@ -1174,6 +1194,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthErrorRoute: ApiAuthErrorRoute,
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
+  ShareRecapLoanIdRoute: ShareRecapLoanIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

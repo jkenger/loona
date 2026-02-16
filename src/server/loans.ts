@@ -247,6 +247,53 @@ export const getLoan = createServerFn()
   }
 )
 
+// Public — no auth. Only returns data for completed loans.
+export const getPublicLoanRecap = createServerFn()
+  .inputValidator(z.string())
+  .handler(async ({ data: id }) => {
+    const result = await db.query.loans.findFirst({
+      where: eq(loans.id, id),
+      with: {
+        contact: true,
+        schedule: {
+          orderBy: paymentSchedule.dueDate,
+        },
+        penalties: true,
+      },
+    })
+
+    if (!result || result.status !== "completed") {
+      return null
+    }
+
+    const totalApplied = result.penalties
+      .filter((p) => p.status === "applied")
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+
+    return {
+      id: result.id,
+      principal: result.principal,
+      totalToRepay: result.totalToRepay,
+      amountPaid: result.amountPaid,
+      interestRate: result.interestRate,
+      termMonths: result.termMonths,
+      paymentFrequency: result.paymentFrequency,
+      startDate: result.startDate?.toISOString() ?? null,
+      maturityDate: result.maturityDate?.toISOString() ?? null,
+      completedAt: result.completedAt?.toISOString() ?? null,
+      contactName: result.contact.name,
+      schedule: result.schedule.map((s) => ({
+        id: s.id,
+        dueDate: s.dueDate.toISOString(),
+        amount: s.amount,
+        paidAmount: s.paidAmount,
+        paidAt: s.paidAt?.toISOString() ?? null,
+        status: s.status,
+      })),
+      totalPenaltiesApplied: totalApplied,
+    }
+  })
+
 export const createLoan = createServerFn()
   .inputValidator(createLoanSchema)
   .handler(async ({ data }) => {

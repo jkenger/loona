@@ -49,6 +49,7 @@ import {
   Gavel,
   ArrowCounterClockwise,
   ArrowClockwise,
+  ChartLineUp,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
@@ -649,6 +650,8 @@ function LoanDetailPage() {
               const daysOverdue = item.status === "overdue"
                 ? Math.max(0, Math.floor((new Date(new Date().toDateString()).getTime() - new Date(new Date(item.dueDate).toDateString()).getTime()) / 86400000))
                 : 0
+              // Determine if paid late (paid date after due date)
+              const paidLate = item.paidAt && new Date(item.paidAt).toDateString() !== new Date(item.dueDate).toDateString() && new Date(item.paidAt) > new Date(item.dueDate)
 
               return (
                 <PenaltyItems
@@ -691,8 +694,9 @@ function LoanDetailPage() {
                                     Paid: {formatCurrency(item.paidAmount)}
                                   </p>
                                 )}
-                                <p className="text-xs text-muted-foreground">
+                                <p className={`text-xs ${paidLate ? "text-amber-600" : "text-muted-foreground"}`}>
                                   {new Date(item.paidAt).toLocaleDateString()}
+                                  {paidLate ? " (late)" : ""}
                                 </p>
                               </>
                             )}
@@ -842,6 +846,25 @@ function LoanDetailPage() {
                 </div>
                 <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
               </Link>
+
+              {loan.status === "completed" && (
+                <Link
+                  to="/share/recap/$loanId"
+                  params={{ loanId: loan.id }}
+                  className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100">
+                    <ChartLineUp className="h-5 w-5 text-green-600" weight="bold" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">Loan Recap</p>
+                    <p className="text-sm text-muted-foreground">
+                      Payment behavior summary
+                    </p>
+                  </div>
+                  <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </Link>
+              )}
 
             </div>
           </CardContent>
