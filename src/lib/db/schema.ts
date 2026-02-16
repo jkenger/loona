@@ -62,6 +62,8 @@ export const commissionStatusEnum = pgEnum("commission_status", [
 export const penaltyTypeEnum = pgEnum("penalty_type", ["late_fee", "daily_interest"])
 export const penaltyStatusEnum = pgEnum("penalty_status", ["pending", "applied", "waived"])
 
+export const paymentTypeEnum = pgEnum("payment_type", ["credit", "debit"])
+
 export const blogPostStatusEnum = pgEnum("blog_post_status", ["draft", "published"])
 
 // ============================================================================
@@ -227,6 +229,8 @@ export const payments = pgTable("payments", {
 
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   method: paymentMethodEnum("method").notNull().default("cash"),
+  type: paymentTypeEnum("type").notNull().default("credit"),
+  reversesPaymentId: text("reverses_payment_id"),
 
   paidAt: timestamp("paid_at").notNull().defaultNow(),
   recordedByAgentId: text("recorded_by_agent_id").references(() => agents.id),
@@ -549,6 +553,11 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
     references: [agents.id],
   }),
   commission: one(commissions),
+  reversesPayment: one(payments, {
+    fields: [payments.reversesPaymentId],
+    references: [payments.id],
+    relationName: "reversals",
+  }),
 }))
 
 export const agentsRelations = relations(agents, ({ one, many }) => ({

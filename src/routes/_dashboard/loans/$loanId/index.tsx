@@ -738,15 +738,46 @@ function LoanDetailPage() {
           <CardContent className="p-4 pt-0">
             <div className="space-y-3">
               {loan.payments.slice(0, 5).map((payment) => {
-                const isReversed = !!payment.reversedAt
-                // Check if this is the most recent non-reversed payment for its schedule item
-                const canReverse = !isReversed && payment.scheduleItemId && !loan.payments.some(
+                const isDebit = payment.type === "debit"
+                const isReversed = payment.type === "credit" && !!payment.reversedAt
+                // Check if this credit is the most recent non-reversed credit for its schedule item
+                const canReverse = payment.type === "credit" && !payment.reversedAt && payment.scheduleItemId && !loan.payments.some(
                   (other) =>
                     other.id !== payment.id &&
+                    other.type === "credit" &&
                     !other.reversedAt &&
                     other.scheduleItemId === payment.scheduleItemId &&
                     new Date(other.createdAt) > new Date(payment.createdAt)
                 )
+
+                if (isDebit) {
+                  return (
+                    <div
+                      key={payment.id}
+                      className="flex items-center justify-between py-2 border-b last:border-0 opacity-80"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-destructive">
+                            -{formatCurrency(payment.amount)}
+                          </p>
+                          <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">
+                            Reversal
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(payment.paidAt).toLocaleDateString()}
+                        </p>
+                        {payment.notes && (
+                          <p className="text-xs text-destructive/70 mt-0.5">
+                            {payment.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                }
+
                 return (
                   <div
                     key={payment.id}

@@ -28,7 +28,17 @@ const recordPaymentSchema = z.object({
   amount: z.number().positive(),
   method: z.enum(["cash", "gcash", "maya", "bank"]),
   paidAt: z.string().optional()
-    .transform((s) => s ? new Date(s) : undefined)
+    .transform((s) => {
+      if (!s) return undefined
+      // Date-only strings ("2026-02-16") parse as midnight UTC which shows as
+      // 8:00 AM in PHT. Attach current time so the timestamp reflects actual time.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const now = new Date()
+        const [y, m, d] = s.split("-").map(Number)
+        return new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
+      }
+      return new Date(s)
+    })
     .refine((d) => !d || d <= new Date(), "Payment date cannot be in the future"),
   notes: z.string().optional(),
 })
@@ -42,6 +52,8 @@ export const getPayments = createServerFn().handler(async () => {
       id: payments.id,
       amount: payments.amount,
       method: payments.method,
+      type: payments.type,
+      reversesPaymentId: payments.reversesPaymentId,
       paidAt: payments.paidAt,
       notes: payments.notes,
       loanId: loans.id,
@@ -217,6 +229,7 @@ export const recordPayment = createServerFn()
     where: and(
       eq(payments.loanId, data.loanId),
       eq(payments.scheduleItemId, data.scheduleItemId),
+      eq(payments.type, "credit"),
       eq(payments.amount, data.amount.toFixed(2)),
       sql`${payments.createdAt} > NOW() - INTERVAL '60 seconds'`,
       sql`${payments.reversedAt} IS NULL`
@@ -343,6 +356,7 @@ export const recordPayment = createServerFn()
       loanId: data.loanId,
       amount: data.amount.toFixed(2),
       method: data.method,
+      type: "credit",
       scheduleItemId: data.scheduleItemId,
       recordedByAgentId: agentId,
       paidAt: paymentDate,
@@ -480,10 +494,11 @@ export const reversePayment = createServerFn()
       throw new Error("Cannot reverse a payment without a schedule item")
     }
 
-    // Check this is the most recent non-reversed payment for this schedule item
+    // Check this is the most recent non-reversed credit payment for this schedule item
     const laterPayment = await db.query.payments.findFirst({
       where: and(
         eq(payments.scheduleItemId, payment.scheduleItemId),
+        eq(payments.type, "credit"),
         sql`${payments.reversedAt} IS NULL`,
         sql`${payments.createdAt} > ${payment.createdAt}`
       ),
@@ -519,13 +534,29 @@ export const reversePayment = createServerFn()
       assertTransition(payment.loan.status, "active")
     }
 
+    // Pre-generate debit payment ID
+    const debitPaymentId = crypto.randomUUID()
+
     // === Atomic write phase ===
     const writes: any[] = [
+      // Mark the original credit as reversed (for UI filtering)
       db.update(payments).set({
         reversedAt: now,
         reversedBy: session.user.id,
         reversalReason: data.reason,
       }).where(eq(payments.id, data.paymentId)),
+      // Insert debit (reversal) transaction into the ledger
+      db.insert(payments).values({
+        id: debitPaymentId,
+        loanId: payment.loanId,
+        scheduleItemId: payment.scheduleItemId,
+        amount: payment.amount,
+        method: payment.method,
+        type: "debit",
+        reversesPaymentId: data.paymentId,
+        paidAt: now,
+        notes: data.reason,
+      }),
       db.update(loans).set({
         amountPaid: newAmountPaid.toFixed(2),
         interestEarned: newInterestEarned.toFixed(2),

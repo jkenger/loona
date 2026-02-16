@@ -499,15 +499,60 @@ function PaymentsPage() {
               {filteredHistory.length > 0 ? (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
                   {filteredHistory.map((payment) => {
-                    const isReversed = !!payment.reversedAt
-                    // Check if this is the most recent non-reversed payment for its schedule item
-                    const canReverse = !isReversed && payment.scheduleItemId && !history.some(
+                    const isDebit = payment.type === "debit"
+                    const isReversed = payment.type === "credit" && !!payment.reversedAt
+                    // Check if this credit is the most recent non-reversed credit for its schedule item
+                    const canReverse = payment.type === "credit" && !payment.reversedAt && payment.scheduleItemId && !history.some(
                       (other) =>
                         other.id !== payment.id &&
+                        other.type === "credit" &&
                         !other.reversedAt &&
                         other.scheduleItemId === payment.scheduleItemId &&
                         new Date(other.createdAt) > new Date(payment.createdAt)
                     )
+
+                    if (isDebit) {
+                      return (
+                        <div
+                          key={payment.id}
+                          className="flex items-center justify-between p-3 rounded border border-destructive/20 bg-destructive/5 opacity-80"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-destructive/10">
+                              <ArrowCounterClockwise className="h-4 w-4 text-destructive" weight="bold" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  to="/loans/$loanId"
+                                  params={{ loanId: payment.loanId }}
+                                  className="font-medium text-sm hover:text-primary truncate block text-destructive"
+                                >
+                                  {payment.contactName}
+                                </Link>
+                                <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30 shrink-0">
+                                  Reversal
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(payment.paidAt), "MMM d, h:mm a")}
+                              </p>
+                              {payment.notes && (
+                                <p className="text-xs text-destructive/70 mt-0.5 truncate">
+                                  {payment.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="shrink-0 ml-2">
+                            <p className="font-semibold text-sm text-destructive">
+                              -{formatCurrency(payment.amount)}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    }
+
                     return (
                       <div
                         key={payment.id}
