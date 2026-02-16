@@ -48,6 +48,7 @@ import {
   ArrowSquareOut,
   Gavel,
   ArrowCounterClockwise,
+  ArrowClockwise,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
@@ -241,6 +242,17 @@ function LoanDetailPage() {
             </div>
             {loan.isLender && (
               <div className="flex gap-2">
+                {loan.status === "completed" && (
+                  <Link
+                    to="/loans/new-wizard"
+                    search={{ renewFromLoanId: loan.id }}
+                  >
+                    <Button variant="outline" className="gap-2">
+                      <ArrowClockwise className="h-4 w-4" weight="bold" />
+                      Renew
+                    </Button>
+                  </Link>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => setShowDeleteDialog(true)}
@@ -314,6 +326,34 @@ function LoanDetailPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Renewal Chain */}
+      {(loan.renewedFromLoan || loan.renewedToLoan) && (
+        <div className="flex flex-wrap gap-3">
+          {loan.renewedFromLoan && (
+            <Link
+              to="/loans/$loanId"
+              params={{ loanId: loan.renewedFromLoan.id }}
+              className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm hover:border-primary/40 transition-colors"
+            >
+              <ArrowCounterClockwise className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Renewed from</span>
+              <span className="font-medium">{formatCurrency(loan.renewedFromLoan.principal)} loan</span>
+            </Link>
+          )}
+          {loan.renewedToLoan && (
+            <Link
+              to="/loans/$loanId"
+              params={{ loanId: loan.renewedToLoan.id }}
+              className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm hover:border-primary/40 transition-colors"
+            >
+              <ArrowClockwise className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Renewed as</span>
+              <span className="font-medium">{formatCurrency(loan.renewedToLoan.principal)} loan</span>
+            </Link>
+          )}
+        </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">

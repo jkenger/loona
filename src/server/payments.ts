@@ -240,7 +240,8 @@ export const recordPayment = createServerFn()
   // Loan balance computations
   const newAmountPaid = parseFloat(loan.amountPaid) + data.amount
   const newRemainingBalance = parseFloat(loan.totalToRepay) - newAmountPaid
-  const isCompleted = newRemainingBalance <= 0
+  // Tolerance of ₱1 handles rounding gaps from schedule amounts not summing exactly to totalToRepay
+  const isCompleted = newRemainingBalance <= 1
   const nextStatus = isCompleted ? "completed" : "active"
 
   // Validate status transition

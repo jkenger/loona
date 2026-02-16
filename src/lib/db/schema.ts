@@ -189,6 +189,9 @@ export const loans = pgTable("loans", {
   // Customizable promissory note clauses (JSON)
   customClauses: text("custom_clauses"),
 
+  // Renewal tracking
+  renewedFromLoanId: text("renewed_from_loan_id"),
+
   // Agent tracking
   createdByAgentId: text("created_by_agent_id").references(() => agents.id),
   assignedAgentId: text("assigned_agent_id").references(() => agents.id),
@@ -502,6 +505,12 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
     fields: [loans.contactId],
     references: [contacts.id],
   }),
+  renewedFrom: one(loans, {
+    fields: [loans.renewedFromLoanId],
+    references: [loans.id],
+    relationName: "renewals",
+  }),
+  renewals: many(loans, { relationName: "renewals" }),
   createdByAgent: one(agents, {
     fields: [loans.createdByAgentId],
     references: [agents.id],

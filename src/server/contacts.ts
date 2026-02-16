@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, contacts, loans, agents, penalties } from "@/lib/db"
+import { db, contacts, loans, agents } from "@/lib/db"
 import { eq, desc, sql, ilike, or, and } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"

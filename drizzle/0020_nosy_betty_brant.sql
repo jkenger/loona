@@ -1,0 +1,1 @@
+ALTER TABLE "loans" ADD COLUMN "renewed_from_loan_id" text;

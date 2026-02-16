@@ -183,6 +183,27 @@ export const getLoan = createServerFn()
       }
     }
 
+    // Look up renewal chain
+    let renewedFromLoan: { id: string; principal: string; contactName: string } | null = null
+    if (result.renewedFromLoanId) {
+      const parent = await db.query.loans.findFirst({
+        where: eq(loans.id, result.renewedFromLoanId),
+        with: { contact: true },
+      })
+      if (parent) {
+        renewedFromLoan = { id: parent.id, principal: parent.principal, contactName: parent.contact.name }
+      }
+    }
+
+    // Check if this loan was renewed into another loan
+    let renewedToLoan: { id: string; principal: string } | null = null
+    const child = await db.query.loans.findFirst({
+      where: eq(loans.renewedFromLoanId, id),
+    })
+    if (child) {
+      renewedToLoan = { id: child.id, principal: child.principal }
+    }
+
     return {
       ...result,
       startDate: result.startDate?.toISOString() ?? null,
@@ -190,6 +211,8 @@ export const getLoan = createServerFn()
       completedAt: result.completedAt?.toISOString() ?? null,
       createdAt: result.createdAt.toISOString(),
       updatedAt: result.updatedAt.toISOString(),
+      renewedFromLoan,
+      renewedToLoan,
       contact: {
         ...result.contact,
         createdAt: result.contact.createdAt.toISOString(),
@@ -285,7 +308,8 @@ export const createLoan = createServerFn()
     data.startDate,
     paymentsCount,
     paymentAmount,
-    data.paymentFrequency
+    data.paymentFrequency,
+    totalToRepay
   )
 
   await db.insert(paymentSchedule).values(scheduleItems)
@@ -360,10 +384,12 @@ function generatePaymentSchedule(
   startDate: Date,
   paymentsCount: number,
   paymentAmount: number,
-  frequency: "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
+  frequency: "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly",
+  totalToRepay?: number,
 ) {
   const schedule = []
   const currentDate = new Date(startDate)
+  const roundedAmount = paymentAmount.toFixed(2)
 
   for (let i = 0; i < paymentsCount; i++) {
     // Move to next payment date
@@ -391,10 +417,17 @@ function generatePaymentSchedule(
         break
     }
 
+    // Last item absorbs rounding difference so schedule sums to totalToRepay
+    let itemAmount = roundedAmount
+    if (totalToRepay !== undefined && i === paymentsCount - 1) {
+      const sumSoFar = parseFloat(roundedAmount) * (paymentsCount - 1)
+      itemAmount = (totalToRepay - sumSoFar).toFixed(2)
+    }
+
     schedule.push({
       loanId,
       dueDate: new Date(currentDate),
-      amount: paymentAmount.toFixed(2),
+      amount: itemAmount,
     })
   }
 
@@ -424,6 +457,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     coMakerName: z.string().optional(),
     coMakerPhone: z.string().optional(),
     coMakerRelationship: z.string().optional(),
+    renewedFromLoanId: z.string().optional(),
   }),
   z.object({
     isNewContact: z.literal(false),
@@ -439,6 +473,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     coMakerName: z.string().optional(),
     coMakerPhone: z.string().optional(),
     coMakerRelationship: z.string().optional(),
+    renewedFromLoanId: z.string().optional(),
   }),
 ])
 
@@ -519,6 +554,7 @@ export const createContactAndLoan = createServerFn()
         coMakerName: data.coMakerName || null,
         coMakerPhone: data.coMakerPhone || null,
         coMakerRelationship: data.coMakerRelationship || null,
+        renewedFromLoanId: data.renewedFromLoanId || null,
       })
       .returning()
 
@@ -528,7 +564,8 @@ export const createContactAndLoan = createServerFn()
       data.startDate,
       paymentsCount,
       paymentAmount,
-      data.paymentFrequency
+      data.paymentFrequency,
+      totalToRepay
     )
 
     await db.insert(paymentSchedule).values(scheduleItems)
@@ -539,6 +576,7 @@ export const createContactAndLoan = createServerFn()
       principal,
       termMonths,
       isNewContact: data.isNewContact,
+      renewedFromLoanId: data.renewedFromLoanId || null,
     })
 
     return {
@@ -1006,7 +1044,8 @@ export const approveLoan = createServerFn()
       scheduleStartDate,
       paymentsCount,
       parseFloat(loan.paymentAmount),
-      loan.paymentFrequency as any
+      loan.paymentFrequency as any,
+      parseFloat(loan.totalToRepay)
     )
 
     // Atomic: insert schedule + update loan status in one batch
