@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, contacts, loans, agents } from "@/lib/db"
+import { db, contacts, loans, agents, penalties } from "@/lib/db"
 import { eq, desc, sql, ilike, or, and } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
@@ -249,3 +249,95 @@ export const deleteContact = createServerFn()
     return { success: true }
   }
 )
+
+export const getBorrowerScorecard = createServerFn()
+  .inputValidator(z.string())
+  .handler(async ({ data: contactId }) => {
+    await requireAuth()
+
+    const contact = await db.query.contacts.findFirst({
+      where: eq(contacts.id, contactId),
+      with: {
+        loans: {
+          with: {
+            schedule: true,
+            penalties: true,
+          },
+          orderBy: desc(loans.createdAt),
+        },
+      },
+    })
+
+    if (!contact) {
+      throw new Error("Contact not found")
+    }
+
+    const allLoans = contact.loans
+    const totalLoans = allLoans.length
+    const completedLoans = allLoans.filter((l) => l.status === "completed").length
+    const defaultedLoans = allLoans.filter((l) => l.status === "defaulted").length
+    const totalBorrowed = allLoans.reduce((sum, l) => sum + parseFloat(l.principal), 0)
+
+    // Collect all schedule items across all loans
+    let onTimeCount = 0
+    let lateCount = 0
+    let totalDaysLate = 0
+
+    for (const loan of allLoans) {
+      for (const item of loan.schedule) {
+        if (item.status !== "paid") continue
+        if (!item.paidAt) continue
+
+        const dueDate = new Date(item.dueDate)
+        const paidAt = new Date(item.paidAt)
+
+        // Compare dates only (ignore time)
+        const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+        const paidDateOnly = new Date(paidAt.getFullYear(), paidAt.getMonth(), paidAt.getDate())
+
+        if (paidDateOnly <= dueDateOnly) {
+          onTimeCount++
+        } else {
+          lateCount++
+          const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
+          totalDaysLate += Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+        }
+      }
+    }
+
+    const totalPaidItems = onTimeCount + lateCount
+    const onTimeRate = totalPaidItems > 0 ? Math.round((onTimeCount / totalPaidItems) * 100) : 100
+
+    // Sum applied penalties
+    const totalPenalties = allLoans.reduce((sum, loan) => {
+      return sum + loan.penalties
+        .filter((p) => p.status === "applied")
+        .reduce((pSum, p) => pSum + parseFloat(p.amount), 0)
+    }, 0)
+
+    const avgDaysLate = lateCount > 0 ? Math.round(totalDaysLate / lateCount) : 0
+
+    // Last 3 completed loans for trend
+    const previousLoans = allLoans
+      .filter((l) => l.status === "completed")
+      .slice(0, 3)
+      .map((l) => ({
+        id: l.id,
+        principal: l.principal,
+        interestRate: l.interestRate,
+        termMonths: l.termMonths,
+        completedAt: l.completedAt?.toISOString() ?? null,
+      }))
+
+    return {
+      totalLoans,
+      completedLoans,
+      defaultedLoans,
+      totalBorrowed,
+      onTimeRate,
+      latePayments: lateCount,
+      totalPenalties,
+      avgDaysLate,
+      previousLoans,
+    }
+  })

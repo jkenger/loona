@@ -3,8 +3,8 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { z } from "zod"
-import { createContactAndLoan } from "@/server/loans"
-import { getContacts } from "@/server/contacts"
+import { createContactAndLoan, getLoan } from "@/server/loans"
+import { getContacts, getBorrowerScorecard } from "@/server/contacts"
 import { getCashPosition } from "@/server/lender-settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,6 +51,8 @@ import {
   Plus,
   Info,
   Warning,
+  ChartBar,
+  TrendUp,
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
@@ -71,32 +73,49 @@ const STEP_LABELS = ["Borrower", "Loan Terms", "Review", "Done"]
 
 const searchSchema = z.object({
   contactId: z.string().optional(),
+  renewFromLoanId: z.string().optional(),
 })
 
 export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
   validateSearch: searchSchema,
-  loader: async ({ context }) => {
+  loaderDeps: ({ search }) => ({ renewFromLoanId: search.renewFromLoanId }),
+  loader: async ({ context, deps }) => {
     const { session } = context as {
       session: { user: { role: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { contacts: [], cashPosition: null, unauthorized: true }
+      return { contacts: [], cashPosition: null, unauthorized: true, renewFromLoan: null, scorecard: null }
     }
     const [contacts, cashPosition] = await Promise.all([
       getContacts(),
       getCashPosition().catch(() => null),
     ])
-    return { contacts, cashPosition, unauthorized: false }
+    let renewFromLoan: Awaited<ReturnType<typeof getLoan>> | null = null
+    let scorecard: Awaited<ReturnType<typeof getBorrowerScorecard>> | null = null
+    if (deps.renewFromLoanId) {
+      try {
+        renewFromLoan = await getLoan({ data: deps.renewFromLoanId })
+        if (renewFromLoan) {
+          scorecard = await getBorrowerScorecard({ data: renewFromLoan.contactId })
+        }
+      } catch {
+        // Source loan not found or not accessible
+      }
+    }
+    return { contacts, cashPosition, unauthorized: false, renewFromLoan, scorecard }
   },
   pendingComponent: SkeletonFormPage,
   component: NewLoanWizard,
 })
 
 function NewLoanWizard() {
-  const { contacts, cashPosition, unauthorized } = Route.useLoaderData()
+  const { contacts, cashPosition, unauthorized, renewFromLoan, scorecard } = Route.useLoaderData()
   const { contactId: preselectedContactId } = Route.useSearch()
 
-  const hasPreselected = !!preselectedContactId && contacts.some((c) => c.id === preselectedContactId)
+  const isRenewal = !!renewFromLoan
+  const renewalContactId = renewFromLoan?.contactId
+  const effectivePreselectedContactId = renewalContactId || preselectedContactId
+  const hasPreselected = !!effectivePreselectedContactId && contacts.some((c) => c.id === effectivePreselectedContactId)
 
   const [step, setStep] = useState(hasPreselected ? 2 : 1)
   const [loading, setLoading] = useState(false)
@@ -114,23 +133,23 @@ function NewLoanWizard() {
   const [facebookProfile, setFacebookProfile] = useState("")
   const [contactNotes, setContactNotes] = useState("")
   // Existing borrower
-  const [contactId, setContactId] = useState(preselectedContactId || "")
+  const [contactId, setContactId] = useState(effectivePreselectedContactId || "")
 
-  // Step 2 — Loan Terms
-  const [principal, setPrincipal] = useState("")
-  const [interestRate, setInterestRate] = useState("5")
-  const [termMonths, setTermMonths] = useState("6")
+  // Step 2 — Loan Terms (pre-fill from renewal source if available)
+  const [principal, setPrincipal] = useState(renewFromLoan ? renewFromLoan.principal : "")
+  const [interestRate, setInterestRate] = useState(renewFromLoan ? renewFromLoan.interestRate : "5")
+  const [termMonths, setTermMonths] = useState(renewFromLoan ? String(renewFromLoan.termMonths) : "6")
   const [paymentFrequency, setPaymentFrequency] = useState<
     "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
-  >("monthly")
+  >(renewFromLoan?.paymentFrequency as any || "monthly")
   const [startDate, setStartDate] = useState<Date>(new Date())
-  const [purpose, setPurpose] = useState("")
-  const [hasCollateral, setHasCollateral] = useState(false)
-  const [collateralDescription, setCollateralDescription] = useState("")
-  const [hasCoMaker, setHasCoMaker] = useState(false)
-  const [coMakerName, setCoMakerName] = useState("")
-  const [coMakerPhone, setCoMakerPhone] = useState("")
-  const [coMakerRelationship, setCoMakerRelationship] = useState("")
+  const [purpose, setPurpose] = useState(renewFromLoan?.purpose || "")
+  const [hasCollateral, setHasCollateral] = useState(!!renewFromLoan?.collateralDescription)
+  const [collateralDescription, setCollateralDescription] = useState(renewFromLoan?.collateralDescription || "")
+  const [hasCoMaker, setHasCoMaker] = useState(!!renewFromLoan?.coMakerName)
+  const [coMakerName, setCoMakerName] = useState(renewFromLoan?.coMakerName || "")
+  const [coMakerPhone, setCoMakerPhone] = useState(renewFromLoan?.coMakerPhone || "")
+  const [coMakerRelationship, setCoMakerRelationship] = useState(renewFromLoan?.coMakerRelationship || "")
 
   if (unauthorized) {
     return (
@@ -270,6 +289,7 @@ function NewLoanWizard() {
         coMakerName: hasCoMaker ? coMakerName : undefined,
         coMakerPhone: hasCoMaker ? coMakerPhone : undefined,
         coMakerRelationship: hasCoMaker ? coMakerRelationship : undefined,
+        renewedFromLoanId: renewFromLoan?.id || undefined,
       }
 
       const payload = isNewContact
@@ -331,12 +351,30 @@ function NewLoanWizard() {
               Loans
             </Link>
             <span className="text-blue-300/40">/</span>
-            <h1 className="text-lg font-semibold">New Loan</h1>
+            <h1 className="text-lg font-semibold">{isRenewal ? "Renew Loan" : "New Loan"}</h1>
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-6 pb-8">
+        {/* Renewal Banner */}
+        {isRenewal && renewFromLoan && (
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-blue-300/50 bg-blue-50 dark:bg-blue-950/30 p-3 text-sm">
+            <ArrowRight className="h-4 w-4 text-blue-600 shrink-0" />
+            <span className="text-blue-800 dark:text-blue-200">
+              Renewing from{" "}
+              <Link
+                to="/loans/$loanId"
+                params={{ loanId: renewFromLoan.id }}
+                className="font-medium underline hover:no-underline"
+              >
+                {formatCurrency(parseFloat(renewFromLoan.principal))} loan
+              </Link>
+              {" "}for {renewFromLoan.contact.name}. All terms are pre-filled — edit as needed.
+            </span>
+          </div>
+        )}
+
         {/* Step Indicator */}
         <div className="flex items-center justify-center gap-0 mb-6 bg-card rounded-lg border shadow-lg p-4">
           {STEP_LABELS.map((label, i) => {
@@ -846,91 +884,197 @@ function NewLoanWizard() {
               </CardContent>
             </Card>
 
-            {/* Summary Card */}
-            <Card className="lg:col-span-2 h-fit shadow-lg">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5 text-primary" />
-                  Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-4">
-                <div className="flex items-center gap-3 p-3 rounded bg-secondary">
-                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary">
-                      {borrowerDisplayName.charAt(0).toUpperCase()}
-                    </span>
+            {/* Summary Card + Scorecard Column */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="h-fit shadow-lg">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5 text-primary" />
+                    Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-4">
+                  <div className="flex items-center gap-3 p-3 rounded bg-secondary">
+                    <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-sm font-medium text-primary">
+                        {borrowerDisplayName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">
+                        {borrowerDisplayName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {isNewContact ? "New borrower" : "Existing contact"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">
-                      {borrowerDisplayName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {isNewContact ? "New borrower" : "Existing contact"}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Principal</span>
-                    <span className="font-medium">
-                      {formatCurrency(parseFloat(principal) || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Total Interest
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(calculations.totalInterest)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Interest Rate</span>
-                    <span className="font-medium">{interestRate || 0}% / mo</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground relative group/eir cursor-help">
-                      Effective Rate
-                      <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/eir:opacity-100" />
-                      <span className="absolute bottom-full left-0 mb-2 w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/eir:opacity-100 group-hover/eir:pointer-events-auto transition-opacity z-50">
-                        <span className="block text-xs text-muted-foreground leading-relaxed">
-                          The Effective Interest Rate (EIR) shows the true annual cost. It's higher than the monthly rate because interest is charged on the full principal for the entire term, even as you pay it down each period.
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Principal</span>
+                      <span className="font-medium">
+                        {formatCurrency(parseFloat(principal) || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Total Interest
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(calculations.totalInterest)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Interest Rate</span>
+                      <span className="font-medium">{interestRate || 0}% / mo</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground relative group/eir cursor-help">
+                        Effective Rate
+                        <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/eir:opacity-100" />
+                        <span className="absolute bottom-full left-0 mb-2 w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/eir:opacity-100 group-hover/eir:pointer-events-auto transition-opacity z-50">
+                          <span className="block text-xs text-muted-foreground leading-relaxed">
+                            The Effective Interest Rate (EIR) shows the true annual cost. It's higher than the monthly rate because interest is charged on the full principal for the entire term, even as you pay it down each period.
+                          </span>
                         </span>
                       </span>
-                    </span>
-                    <span className="font-medium text-primary">
-                      {formatEIR(calculations.eir)}
-                    </span>
+                      <span className="font-medium text-primary">
+                        {formatEIR(calculations.eir)}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="border-t pt-4">
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Total to Repay</span>
-                    <span className="font-bold text-lg text-primary">
-                      {formatCurrency(calculations.totalToRepay)}
-                    </span>
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between">
+                      <span className="font-semibold">Total to Repay</span>
+                      <span className="font-bold text-lg text-primary">
+                        {formatCurrency(calculations.totalToRepay)}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Payments</span>
-                    <span className="font-medium">
-                      {calculations.paymentsCount}x
-                    </span>
+                  <div className="border-t pt-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Payments</span>
+                      <span className="font-medium">
+                        {calculations.paymentsCount}x
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Each Payment</span>
+                      <span className="font-medium">
+                        {formatCurrency(calculations.paymentAmount)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Each Payment</span>
-                    <span className="font-medium">
-                      {formatCurrency(calculations.paymentAmount)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Borrower History Scorecard — renewals only */}
+              {isRenewal && scorecard && (
+                <Card className="h-fit shadow-lg">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="flex items-center gap-2">
+                      <ChartBar className="h-5 w-5 text-primary" />
+                      Borrower History
+                    </CardTitle>
+                    <CardDescription>
+                      Payment track record across {scorecard.totalLoans} loan{scorecard.totalLoans !== 1 ? "s" : ""}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 space-y-4">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Loans Completed</p>
+                        <p className="text-lg font-bold">
+                          {scorecard.completedLoans}
+                          <span className="text-sm font-normal text-muted-foreground"> / {scorecard.totalLoans}</span>
+                        </p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">On-Time Rate</p>
+                        <p className={cn(
+                          "text-lg font-bold",
+                          scorecard.onTimeRate >= 90 ? "text-green-600 dark:text-green-400" :
+                          scorecard.onTimeRate >= 70 ? "text-amber-600 dark:text-amber-400" :
+                          "text-red-600 dark:text-red-400"
+                        )}>
+                          {scorecard.onTimeRate}%
+                        </p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Total Borrowed</p>
+                        <p className="text-lg font-bold">{formatCurrency(scorecard.totalBorrowed)}</p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Penalties</p>
+                        <p className={cn(
+                          "text-lg font-bold",
+                          scorecard.totalPenalties > 0 ? "text-red-600 dark:text-red-400" : ""
+                        )}>
+                          {scorecard.totalPenalties > 0 ? formatCurrency(scorecard.totalPenalties) : "None"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Extra stats */}
+                    {(scorecard.latePayments > 0 || scorecard.defaultedLoans > 0) && (
+                      <div className="space-y-2 text-sm">
+                        {scorecard.latePayments > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Late Payments</span>
+                            <span className="font-medium text-amber-600 dark:text-amber-400">
+                              {scorecard.latePayments} (avg {scorecard.avgDaysLate}d late)
+                            </span>
+                          </div>
+                        )}
+                        {scorecard.defaultedLoans > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Defaulted Loans</span>
+                            <span className="font-medium text-red-600 dark:text-red-400">
+                              {scorecard.defaultedLoans}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Previous Loans Trend */}
+                    {scorecard.previousLoans.length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                            <TrendUp className="h-3.5 w-3.5" />
+                            Previous Loans
+                          </p>
+                          <div className="space-y-2">
+                            {scorecard.previousLoans.map((loan) => (
+                              <div
+                                key={loan.id}
+                                className="flex items-center justify-between text-sm p-2 rounded bg-secondary"
+                              >
+                                <span className="font-medium">
+                                  {formatCurrency(parseFloat(loan.principal))}
+                                </span>
+                                <span className="text-muted-foreground text-xs">
+                                  {loan.interestRate}% &middot; {loan.termMonths}mo
+                                  {loan.completedAt && (
+                                    <> &middot; {format(new Date(loan.completedAt), "MMM yyyy")}</>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         )}
 
