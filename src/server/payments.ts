@@ -11,7 +11,7 @@ import {
   penaltySettings,
   penalties,
 } from "@/lib/db"
-import { eq, desc, and, sql, lte, ne } from "drizzle-orm"
+import { eq, desc, and, asc, sql, lte, gte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { assertTransition } from "./loans"
 import { createAuditLogger } from "./audit"
@@ -255,10 +255,51 @@ export const recordPayment = createServerFn()
   const interestPortion = data.amount * interestRatio
   const newInterestEarned = parseFloat(loan.interestEarned) + interestPortion
 
-  // Schedule item computations
-  const newPaidAmount = parseFloat(scheduleItem.paidAmount) + data.amount
-  const scheduleAmount = parseFloat(scheduleItem.amount)
-  const isPaid = newPaidAmount >= scheduleAmount
+  // === Cascade: fetch unpaid schedule items starting from the selected one ===
+  const unpaidItems = await db
+    .select()
+    .from(paymentSchedule)
+    .where(
+      and(
+        eq(paymentSchedule.loanId, data.loanId),
+        ne(paymentSchedule.status, "paid"),
+        gte(paymentSchedule.dueDate, scheduleItem.dueDate)
+      )
+    )
+    .orderBy(asc(paymentSchedule.dueDate), asc(paymentSchedule.createdAt))
+
+  // Ensure the selected item is first (it may share a dueDate with others)
+  const selectedIdx = unpaidItems.findIndex((i) => i.id === data.scheduleItemId)
+  if (selectedIdx > 0) {
+    const [selected] = unpaidItems.splice(selectedIdx, 1)
+    unpaidItems.unshift(selected)
+  }
+
+  // Build cascade updates
+  type ScheduleUpdate = {
+    id: string
+    paidAmount: string
+    status: "paid" | "partial"
+    paidAt: Date | null
+  }
+  const scheduleUpdates: ScheduleUpdate[] = []
+  let leftover = data.amount
+
+  for (const item of unpaidItems) {
+    if (leftover <= 0) break
+    const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
+    if (remaining <= 0) continue
+    const applied = Math.min(leftover, remaining)
+    const newPaid = parseFloat(item.paidAmount) + applied
+    const itemFullyPaid = newPaid >= parseFloat(item.amount)
+    scheduleUpdates.push({
+      id: item.id,
+      paidAmount: newPaid.toFixed(2),
+      status: itemFullyPaid ? "paid" : "partial",
+      paidAt: itemFullyPaid ? paymentDate : null,
+    })
+    leftover = Math.round((leftover - applied) * 100) / 100
+  }
 
   // Commission computation (read settings before batch)
   let commissionAmount: number | null = null
@@ -284,6 +325,16 @@ export const recordPayment = createServerFn()
     }
   }
 
+  // Build cascade allocation records for reversal tracking
+  const cascadeAllocations = scheduleUpdates.map((u) => {
+    const original = unpaidItems.find((i) => i.id === u.id)!
+    return {
+      scheduleItemId: u.id,
+      applied: parseFloat(u.paidAmount) - parseFloat(original.paidAmount),
+      prevPaidAmount: parseFloat(original.paidAmount),
+    }
+  })
+
   // === Atomic write phase ===
   const writes: any[] = [
     db.insert(payments).values({
@@ -295,6 +346,7 @@ export const recordPayment = createServerFn()
       recordedByAgentId: agentId,
       paidAt: paymentDate,
       notes: data.notes || null,
+      cascadeAllocations: cascadeAllocations.length > 1 ? cascadeAllocations : null,
     }).returning(),
     db.update(loans).set({
       amountPaid: newAmountPaid.toFixed(2),
@@ -304,11 +356,14 @@ export const recordPayment = createServerFn()
       completedAt: isCompleted ? new Date() : null,
       updatedAt: new Date(),
     }).where(eq(loans.id, data.loanId)),
-    db.update(paymentSchedule).set({
-      paidAmount: newPaidAmount.toFixed(2),
-      status: isPaid ? "paid" : "partial",
-      paidAt: isPaid ? paymentDate : null,
-    }).where(eq(paymentSchedule.id, data.scheduleItemId)),
+    // Cascade schedule item updates
+    ...scheduleUpdates.map((u) =>
+      db.update(paymentSchedule).set({
+        paidAmount: u.paidAmount,
+        status: u.status,
+        paidAt: u.paidAt,
+      }).where(eq(paymentSchedule.id, u.id))
+    ),
   ]
 
   if (agentId && agentRecord && commissionAmount !== null && effectiveRate !== null) {
@@ -480,7 +535,38 @@ export const reversePayment = createServerFn()
       }).where(eq(loans.id, payment.loanId)),
     ]
 
-    if (scheduleItem) {
+    // Revert cascade allocations (or just the single schedule item)
+    const allocations = payment.cascadeAllocations as
+      | { scheduleItemId: string; applied: number; prevPaidAmount: number }[]
+      | null
+
+    if (allocations && allocations.length > 0) {
+      // Cascade-aware reversal: restore each item to its pre-cascade paidAmount
+      // Fetch the items so we can check due dates for overdue status
+      const allocItemIds = allocations.map((a) => a.scheduleItemId)
+      const allocItems = await db.query.paymentSchedule.findMany({
+        where: sql`${paymentSchedule.id} IN ${allocItemIds}`,
+      })
+      const allocItemMap = new Map(allocItems.map((i) => [i.id, i]))
+
+      for (const alloc of allocations) {
+        const item = allocItemMap.get(alloc.scheduleItemId)
+        let revertedStatus: "pending" | "partial" | "overdue"
+        if (alloc.prevPaidAmount <= 0) {
+          revertedStatus = item && new Date(item.dueDate) < now ? "overdue" : "pending"
+        } else {
+          revertedStatus = "partial"
+        }
+        writes.push(
+          db.update(paymentSchedule).set({
+            paidAmount: alloc.prevPaidAmount.toFixed(2),
+            status: revertedStatus,
+            paidAt: null,
+          }).where(eq(paymentSchedule.id, alloc.scheduleItemId)),
+        )
+      }
+    } else if (scheduleItem) {
+      // Single-item reversal (no cascade or legacy payment)
       const newPaidAmount = Math.max(0, parseFloat(scheduleItem.paidAmount) - paymentAmount)
 
       let newStatus: "pending" | "partial" | "overdue"

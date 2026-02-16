@@ -1,0 +1,1 @@
+ALTER TABLE "payments" ADD COLUMN "cascade_allocations" jsonb;

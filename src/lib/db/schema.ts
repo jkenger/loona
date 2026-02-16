@@ -7,6 +7,7 @@ import {
   decimal,
   pgEnum,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 
@@ -228,6 +229,11 @@ export const payments = pgTable("payments", {
   recordedByAgentId: text("recorded_by_agent_id").references(() => agents.id),
   notes: text("notes"),
 
+  // Cascade payment allocations: [{ scheduleItemId, applied, prevPaidAmount }]
+  cascadeAllocations: jsonb("cascade_allocations").$type<
+    { scheduleItemId: string; applied: number; prevPaidAmount: number }[]
+  >(),
+
   // Reversal fields (soft delete)
   reversedAt: timestamp("reversed_at"),
   reversedBy: text("reversed_by").references(() => user.id),
@@ -367,6 +373,24 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
+// Playbook Sections (lender lending handbook)
+export const playbookSections = pgTable(
+  "playbook_sections",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    lenderId: text("lender_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    sectionKey: text("section_key").notNull(),
+    content: text("content"), // TipTap JSON stored as text
+    contentTl: text("content_tl"), // TipTap JSON — Tagalog version
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    unique("unique_lender_section").on(table.lenderId, table.sectionKey),
+  ]
+)
+
 // Blog Categories
 export const blogCategories = pgTable("blog_categories", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -440,6 +464,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   penaltySettings: one(penaltySettings),
   lenderSettings: one(lenderSettings),
   blogPosts: many(blogPosts),
+  playbookSections: many(playbookSections),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -571,6 +596,10 @@ export const penaltiesRelations = relations(penalties, ({ one }) => ({
   decidedByUser: one(user, { fields: [penalties.decidedBy], references: [user.id] }),
 }))
 
+export const playbookSectionsRelations = relations(playbookSections, ({ one }) => ({
+  lender: one(user, { fields: [playbookSections.lenderId], references: [user.id] }),
+}))
+
 export const blogCategoriesRelations = relations(blogCategories, ({ many }) => ({
   posts: many(blogPosts),
 }))
@@ -635,6 +664,8 @@ export type PenaltyRow = typeof penalties.$inferSelect
 
 export type LenderSettingsRow = typeof lenderSettings.$inferSelect
 export type NewLenderSettingsRow = typeof lenderSettings.$inferInsert
+
+export type PlaybookSection = typeof playbookSections.$inferSelect
 
 export type BlogCategory = typeof blogCategories.$inferSelect
 export type BlogTag = typeof blogTags.$inferSelect

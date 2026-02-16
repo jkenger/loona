@@ -92,7 +92,7 @@ export const getLoan = createServerFn()
           orderBy: paymentSchedule.dueDate,
         },
         payments: {
-          orderBy: (payments, { desc }) => [desc(payments.paidAt)],
+          orderBy: (payments, { desc }) => [desc(payments.paidAt), desc(payments.createdAt)],
         },
         penalties: true,
         assignedAgent: {
