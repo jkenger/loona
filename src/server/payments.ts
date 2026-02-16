@@ -551,15 +551,25 @@ export const reversePayment = createServerFn()
 
       for (const alloc of allocations) {
         const item = allocItemMap.get(alloc.scheduleItemId)
+        if (!item) continue
+        // Subtract what this cascade applied, not restore to snapshot
+        // This preserves any payments made after the cascade
+        const currentPaid = parseFloat(item.paidAmount)
+        const newPaidAmount = Math.max(0, currentPaid - alloc.applied)
+        const itemAmount = parseFloat(item.amount)
+
+        // If still fully paid by other payments, leave it alone
+        if (newPaidAmount >= itemAmount) continue
+
         let revertedStatus: "pending" | "partial" | "overdue"
-        if (alloc.prevPaidAmount <= 0) {
-          revertedStatus = item && new Date(item.dueDate) < now ? "overdue" : "pending"
+        if (newPaidAmount <= 0) {
+          revertedStatus = new Date(item.dueDate) < now ? "overdue" : "pending"
         } else {
           revertedStatus = "partial"
         }
         writes.push(
           db.update(paymentSchedule).set({
-            paidAmount: alloc.prevPaidAmount.toFixed(2),
+            paidAmount: newPaidAmount.toFixed(2),
             status: revertedStatus,
             paidAt: null,
           }).where(eq(paymentSchedule.id, alloc.scheduleItemId)),
