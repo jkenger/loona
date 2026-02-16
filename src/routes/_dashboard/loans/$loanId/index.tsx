@@ -645,9 +645,16 @@ function LoanDetailPage() {
                               </p>
                             )}
                             {item.status === "paid" && item.paidAt && (
-                              <p className="text-xs text-muted-foreground">
-                                Paid: {new Date(item.paidAt).toLocaleDateString()}
-                              </p>
+                              <>
+                                {parseFloat(item.paidAmount) !== parseFloat(item.amount) && (
+                                  <p className="text-xs text-primary">
+                                    Paid: {formatCurrency(item.paidAmount)}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(item.paidAt).toLocaleDateString()}
+                                </p>
+                              </>
                             )}
                             {item.status === "partial" && (
                               <p className="text-xs text-primary">
