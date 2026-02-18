@@ -1,1 +1,1 @@
-ALTER TABLE "loans" ADD COLUMN "penalty_config" text;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "penalty_config" text;
