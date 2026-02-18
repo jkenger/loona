@@ -1,0 +1,1 @@
+ALTER TABLE "loans" ADD COLUMN "penalty_config" text;

@@ -17,7 +17,7 @@ import { assertTransition } from "./loans"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
 import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
-import { parsePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
+import { parsePenaltyConfig, getEffectivePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
 import { revertPenaltyCore } from "./penalties"
 
@@ -96,6 +96,7 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
       status: paymentSchedule.status,
       paidAmount: paymentSchedule.paidAmount,
       loanId: loans.id,
+      loanPenaltyConfig: loans.penaltyConfig,
       contactName: contacts.name,
       contactId: contacts.id,
     })
@@ -111,11 +112,11 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
     )
     .orderBy(paymentSchedule.dueDate)
 
-  // Load penalty config and penalties for overdue items
+  // Load global penalty config as fallback
   const settingsRow = await db.query.penaltySettings.findFirst({
     where: eq(penaltySettings.lenderId, session.user.id),
   })
-  const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
+  const globalConfigJson = settingsRow?.config ?? null
 
   const overdueIds = result.filter((r) => r.status === "overdue").map((r) => r.id)
   let penaltyMap: Record<string, { id: string; penaltyType: string; amount: string; status: string }[]> = {}
@@ -138,6 +139,7 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
   return result.map((p) => {
     const daysOverdue = p.status === "overdue" ? calendarDaysOverdue(p.dueDate, now) : 0
     // How many days until late fee applies (0 = already applies, -1 = penalties disabled)
+    const penaltyConfig = getEffectivePenaltyConfig(p.loanPenaltyConfig, globalConfigJson)
     let penaltyIn = -1
     if (penaltyConfig.enabled && penaltyConfig.lateFee.enabled && p.status === "overdue") {
       const remaining = penaltyConfig.gracePeriodDays - daysOverdue
@@ -146,6 +148,7 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
 
     return {
       ...p,
+      loanPenaltyConfig: undefined,
       dueDate: p.dueDate.toISOString(),
       penalties: penaltyMap[p.id] ?? [],
       daysOverdue,
@@ -468,9 +471,10 @@ export const updateOverduePayments = createServerFn().handler(async () => {
   const settingsRow = await db.query.penaltySettings.findFirst({
     where: eq(penaltySettings.lenderId, session.user.id),
   })
-  const config = parsePenaltyConfig(settingsRow?.config ?? null)
+  const globalConfigJson = settingsRow?.config ?? null
+  const globalConfig = parsePenaltyConfig(globalConfigJson)
 
-  if (config.enabled) {
+  if (globalConfig.enabled) {
     const activeLoans = await db.query.loans.findMany({
       where: and(
         eq(loans.lenderId, session.user.id),
@@ -483,6 +487,8 @@ export const updateOverduePayments = createServerFn().handler(async () => {
     })
 
     for (const loan of activeLoans) {
+      const config = getEffectivePenaltyConfig(loan.penaltyConfig, globalConfigJson)
+      if (!config.enabled) continue
       await ensurePendingPenalties(loan, config, loan.penalties)
     }
   }

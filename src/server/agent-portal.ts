@@ -13,7 +13,7 @@ import {
 import { eq, desc, and, sql, ne, lte } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { z } from "zod"
-import { parsePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
+import { getEffectivePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 
 // ============================================================================
 // Agent Portal Service
@@ -299,6 +299,7 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
       paidAmount: paymentSchedule.paidAmount,
       loanId: loans.id,
       lenderId: loans.lenderId,
+      loanPenaltyConfig: loans.penaltyConfig,
       contactName: contacts.name,
       contactId: contacts.id,
       contactPhone: contacts.phone,
@@ -316,15 +317,15 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
     )
     .orderBy(paymentSchedule.dueDate)
 
-  // Load penalty configs per lender
+  // Load global penalty config JSON per lender (used as fallback)
   const uniqueLenderIds = [...new Set(result.map((r) => r.lenderId))]
-  const penaltyConfigMap = new Map<string, ReturnType<typeof parsePenaltyConfig>>()
+  const globalConfigMap = new Map<string, string | null>()
 
   for (const lenderId of uniqueLenderIds) {
     const settingsRow = await db.query.penaltySettings.findFirst({
       where: eq(penaltySettings.lenderId, lenderId),
     })
-    penaltyConfigMap.set(lenderId, parsePenaltyConfig(settingsRow?.config ?? null))
+    globalConfigMap.set(lenderId, settingsRow?.config ?? null)
   }
 
   // Load penalties for overdue schedule items
@@ -348,15 +349,19 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
 
   return result.map((p) => {
     const daysOverdue = p.status === "overdue" ? calendarDaysOverdue(p.dueDate, now) : 0
-    const penaltyConfig = penaltyConfigMap.get(p.lenderId)
+    const penaltyConfig = getEffectivePenaltyConfig(
+      p.loanPenaltyConfig,
+      globalConfigMap.get(p.lenderId) ?? null,
+    )
     let penaltyIn = -1
-    if (penaltyConfig?.enabled && penaltyConfig.lateFee.enabled && p.status === "overdue") {
+    if (penaltyConfig.enabled && penaltyConfig.lateFee.enabled && p.status === "overdue") {
       const remaining = penaltyConfig.gracePeriodDays - daysOverdue
       penaltyIn = Math.max(0, remaining)
     }
 
     return {
       ...p,
+      loanPenaltyConfig: undefined,
       dueDate: p.dueDate.toISOString(),
       penalties: penaltyMap[p.id] ?? [],
       daysOverdue,

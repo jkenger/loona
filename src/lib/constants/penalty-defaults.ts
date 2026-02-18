@@ -98,6 +98,17 @@ export function calendarDaysOverdue(dueDate: Date, now: Date = new Date()): numb
   return Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
 }
 
+/**
+ * Resolve effective penalty config: prefer loan-level snapshot, fall back to global settings.
+ */
+export function getEffectivePenaltyConfig(
+  loanSnapshot: string | null,
+  globalSettingsJson: string | null,
+): PenaltyConfig {
+  if (loanSnapshot) return parsePenaltyConfig(loanSnapshot)
+  return parsePenaltyConfig(globalSettingsJson)
+}
+
 export function parsePenaltyConfig(json: string | null): PenaltyConfig {
   if (!json) return DEFAULT_PENALTY_CONFIG
   try {

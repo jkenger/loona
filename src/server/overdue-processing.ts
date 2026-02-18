@@ -2,10 +2,10 @@
  * Shared overdue + penalty processing logic. Server-only — no session required.
  * Used by the cron endpoint and dashboard fallback (via updateOverduePayments).
  */
-import { db, paymentSchedule, loans, penaltySettings, contacts, user } from "@/lib/db"
+import { db, paymentSchedule, loans, contacts, user } from "@/lib/db"
 import { eq, and, lte } from "drizzle-orm"
 import { sendEmail, paymentReminderEmail } from "@/lib/email"
-import { parsePenaltyConfig } from "@/lib/constants/penalty-defaults"
+import { parsePenaltyConfig, getEffectivePenaltyConfig } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
 
 /**
@@ -66,8 +66,8 @@ export async function processOverdueAndPenalties() {
   const allSettings = await db.query.penaltySettings.findMany()
 
   for (const settingsRow of allSettings) {
-    const config = parsePenaltyConfig(settingsRow.config)
-    if (!config.enabled) continue
+    const globalConfig = parsePenaltyConfig(settingsRow.config)
+    if (!globalConfig.enabled) continue
 
     // Get active loans for this lender with overdue items
     const activeLoans = await db.query.loans.findMany({
@@ -82,6 +82,8 @@ export async function processOverdueAndPenalties() {
     })
 
     for (const loan of activeLoans) {
+      const config = getEffectivePenaltyConfig(loan.penaltyConfig, settingsRow.config)
+      if (!config.enabled) continue
       await ensurePendingPenalties(loan, config, loan.penalties)
     }
   }

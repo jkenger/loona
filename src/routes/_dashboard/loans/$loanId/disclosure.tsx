@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useRef, useState, useEffect } from "react"
 import { getLoan } from "@/server/loans"
-import { getPenaltySettings } from "@/server/penalty-settings"
 import { Button } from "@/components/ui/button"
 import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
-import { formatPenaltyForDisclosure, formatDailyInterestForDisclosure, type PenaltyConfig } from "@/lib/constants/penalty-defaults"
+import { formatPenaltyForDisclosure, formatDailyInterestForDisclosure } from "@/lib/constants/penalty-defaults"
 import { ArrowLeft, FilePdf, Spinner } from "@phosphor-icons/react"
 import { format } from "date-fns"
 
@@ -26,14 +25,7 @@ export const Route = createFileRoute("/_dashboard/loans/$loanId/disclosure")({
         return { loan: null, unauthorized: true, lenderName: null, penaltyConfig: null }
       }
 
-      let penaltyConfig: PenaltyConfig | null = null
-      try {
-        penaltyConfig = await getPenaltySettings()
-      } catch {
-        // Penalty settings not available
-      }
-
-      return { loan, unauthorized: false, lenderName: session.user.name, penaltyConfig }
+      return { loan, unauthorized: false, lenderName: session.user.name, penaltyConfig: loan.effectivePenaltyConfig ?? null }
     } catch {
       return { loan: null, unauthorized: false, lenderName: null, penaltyConfig: null }
     }

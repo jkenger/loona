@@ -7,7 +7,7 @@ import { z } from "zod"
 
 import { type CustomClauses, DEFAULT_CLAUSES, type ClauseKey } from "@/lib/constants/promissory-clauses"
 import {
-  parsePenaltyConfig,
+  getEffectivePenaltyConfig,
   getRemainingPenaltyBudget,
   type PenaltyConfig,
 } from "@/lib/constants/penalty-defaults"
@@ -146,11 +146,11 @@ export const getLoan = createServerFn()
       budgetRemaining: number
     } | null = null
 
-    // Always fetch penalty config for grace period (used for "late" labels)
+    // Resolve effective penalty config: prefer loan snapshot, fall back to global
     const settingsRow = await db.query.penaltySettings.findFirst({
       where: eq(penaltySettings.lenderId, result.lenderId),
     })
-    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
+    const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig, settingsRow?.config ?? null)
 
     if (result.status === "active" && penaltyConfig.enabled) {
       const totalApplied = result.penalties
@@ -231,6 +231,7 @@ export const getLoan = createServerFn()
       })),
       penalties: undefined, // don't expose raw relation, use penaltyData instead
       penaltyData,
+      effectivePenaltyConfig: penaltyConfig,
       gracePeriodDays: penaltyConfig.gracePeriodDays,
       assignedAgent: result.assignedAgent
         ? {
@@ -269,7 +270,7 @@ export const getPublicLoanRecap = createServerFn()
     const settingsRow = await db.query.penaltySettings.findFirst({
       where: eq(penaltySettings.lenderId, result.lenderId),
     })
-    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
+    const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig, settingsRow?.config ?? null)
 
     const totalApplied = result.penalties
       .filter((p) => p.status === "applied")
@@ -330,6 +331,11 @@ export const createLoan = createServerFn()
   const maturityDate = new Date(data.startDate)
   maturityDate.setMonth(maturityDate.getMonth() + termMonths)
 
+  // Snapshot penalty config at creation time
+  const penaltySettingsRow = await db.query.penaltySettings.findFirst({
+    where: eq(penaltySettings.lenderId, session.user.id),
+  })
+
   // Create loan
   const [loan] = await db
     .insert(loans)
@@ -352,6 +358,8 @@ export const createLoan = createServerFn()
       coMakerName: data.coMakerName || null,
       coMakerPhone: data.coMakerPhone || null,
       coMakerRelationship: data.coMakerRelationship || null,
+      // Snapshot penalty config
+      penaltyConfig: penaltySettingsRow?.config ?? null,
     })
     .returning()
 
@@ -586,6 +594,11 @@ export const createContactAndLoan = createServerFn()
     const maturityDate = new Date(data.startDate)
     maturityDate.setMonth(maturityDate.getMonth() + termMonths)
 
+    // Snapshot penalty config at creation time
+    const penaltySettingsRow = await db.query.penaltySettings.findFirst({
+      where: eq(penaltySettings.lenderId, session.user.id),
+    })
+
     // Create loan
     const [loan] = await db
       .insert(loans)
@@ -608,6 +621,7 @@ export const createContactAndLoan = createServerFn()
         coMakerPhone: data.coMakerPhone || null,
         coMakerRelationship: data.coMakerRelationship || null,
         renewedFromLoanId: data.renewedFromLoanId || null,
+        penaltyConfig: penaltySettingsRow?.config ?? null,
       })
       .returning()
 
@@ -976,6 +990,11 @@ export const createLoanAsAgent = createServerFn()
     const maturityDate = new Date(data.startDate)
     maturityDate.setMonth(maturityDate.getMonth() + termMonths)
 
+    // Snapshot penalty config at creation time
+    const penaltySettingsRow = await db.query.penaltySettings.findFirst({
+      where: eq(penaltySettings.lenderId, agent.lenderId),
+    })
+
     // Create loan with pending_approval status
     const [loan] = await db
       .insert(loans)
@@ -999,6 +1018,7 @@ export const createLoanAsAgent = createServerFn()
         coMakerRelationship: data.coMakerRelationship || null,
         createdByAgentId: agent.id,
         assignedAgentId: agent.id,
+        penaltyConfig: penaltySettingsRow?.config ?? null,
       })
       .returning()
 

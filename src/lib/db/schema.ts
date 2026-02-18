@@ -191,6 +191,9 @@ export const loans = pgTable("loans", {
   // Customizable promissory note clauses (JSON)
   customClauses: text("custom_clauses"),
 
+  // Snapshot of lender's penalty config at loan creation (JSON)
+  penaltyConfig: text("penalty_config"),
+
   // Renewal tracking
   renewedFromLoanId: text("renewed_from_loan_id"),
 
