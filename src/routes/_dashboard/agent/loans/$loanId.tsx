@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SkeletonDetailPage } from '@/components/ui/skeleton'
 import { getLoan } from '@/server/loans'
-import { PenaltyItems } from '@/components/penalty-items'
+import { PenaltyBadge } from '@/components/penalty-badge'
 import { RecordPaymentDialog } from '@/components/record-payment-dialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -414,72 +414,59 @@ function AgentLoanDetailPage() {
                 const appliedPenaltyTotal = itemPenalties
                   .filter((p) => p.status === 'applied')
                   .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-                const daysOverdue = item.status === 'overdue'
-                  ? Math.max(0, Math.floor((new Date(new Date().toDateString()).getTime() - new Date(new Date(item.dueDate).toDateString()).getTime()) / 86400000))
-                  : 0
-
                 return (
-                  <PenaltyItems
-                    key={item.id}
-                    penalties={itemPenalties}
-                    daysOverdue={daysOverdue}
-                    formatCurrency={formatCurrency}
-                  >
-                    {({ toggleButton, detailPanel }) => (
-                      <div className="space-y-1">
-                        <div
-                          className={`flex items-center justify-between p-3 rounded border ${
-                            item.status === 'overdue' ? 'border-destructive/50' : ''
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
-                              <StatusIcon className="h-4 w-4" weight="bold" />
-                            </div>
-                            <div>
-                              <p className="font-medium">Payment #{index + 1}</p>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
-                                {toggleButton}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                              {appliedPenaltyTotal > 0 && (
-                                <p className="text-xs text-amber-600">
-                                  + {formatCurrency(appliedPenaltyTotal)} penalty
-                                </p>
-                              )}
-                              {item.status === 'paid' && item.paidAt && (
-                                <p className="text-xs text-muted-foreground">
-                                  Paid: {new Date(item.paidAt).toLocaleDateString()}
-                                </p>
-                              )}
-                              {item.status === 'partial' && (
-                                <p className="text-xs text-primary">
-                                  Paid: {formatCurrency(item.paidAmount)}
-                                </p>
-                              )}
-                            </div>
-                            {item.status !== 'paid' && loan.status === 'active' && loan.canRecordPayments && (
-                              <Button
-                                size="sm"
-                                variant={item.status === 'overdue' ? 'default' : 'outline'}
-                                onClick={() => setSelectedScheduleItem(item)}
-                              >
-                                Collect
-                              </Button>
-                            )}
+                  <div key={item.id} className="space-y-1">
+                    <div
+                      className={`flex items-center justify-between p-3 rounded border ${
+                        item.status === 'overdue' ? 'border-destructive/50' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
+                          <StatusIcon className="h-4 w-4" weight="bold" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Payment #{index + 1}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
+                            <PenaltyBadge
+                              penalties={itemPenalties}
+                              formatCurrency={formatCurrency}
+                            />
                           </div>
                         </div>
-                        {detailPanel && (
-                          <div className="ml-11">{detailPanel}</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="font-semibold">{formatCurrency(item.amount)}</p>
+                          {appliedPenaltyTotal > 0 && (
+                            <p className="text-xs text-amber-600">
+                              + {formatCurrency(appliedPenaltyTotal)} penalty
+                            </p>
+                          )}
+                          {item.status === 'paid' && item.paidAt && (
+                            <p className="text-xs text-muted-foreground">
+                              Paid: {new Date(item.paidAt).toLocaleDateString()}
+                            </p>
+                          )}
+                          {item.status === 'partial' && (
+                            <p className="text-xs text-primary">
+                              Paid: {formatCurrency(item.paidAmount)}
+                            </p>
+                          )}
+                        </div>
+                        {item.status !== 'paid' && loan.status === 'active' && loan.canRecordPayments && (
+                          <Button
+                            size="sm"
+                            variant={item.status === 'overdue' ? 'default' : 'outline'}
+                            onClick={() => setSelectedScheduleItem(item)}
+                          >
+                            Collect
+                          </Button>
                         )}
                       </div>
-                    )}
-                  </PenaltyItems>
+                    </div>
+                  </div>
                 )
               })}
             </div>

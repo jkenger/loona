@@ -24,6 +24,7 @@ import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-pass
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as DashboardSettingsIndexRouteImport } from './routes/_dashboard/settings/index'
+import { Route as DashboardPenaltiesIndexRouteImport } from './routes/_dashboard/penalties/index'
 import { Route as DashboardPaymentsIndexRouteImport } from './routes/_dashboard/payments/index'
 import { Route as DashboardLoansIndexRouteImport } from './routes/_dashboard/loans/index'
 import { Route as DashboardDashboardIndexRouteImport } from './routes/_dashboard/dashboard/index'
@@ -135,6 +136,11 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
 const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardPenaltiesIndexRoute = DashboardPenaltiesIndexRouteImport.update({
+  id: '/penalties/',
+  path: '/penalties/',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardPaymentsIndexRoute = DashboardPaymentsIndexRouteImport.update({
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardDashboardIndexRoute
   '/loans/': typeof DashboardLoansIndexRoute
   '/payments/': typeof DashboardPaymentsIndexRoute
+  '/penalties/': typeof DashboardPenaltiesIndexRoute
   '/settings/': typeof DashboardSettingsIndexRoute
   '/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
   '/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
@@ -442,6 +449,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardDashboardIndexRoute
   '/loans': typeof DashboardLoansIndexRoute
   '/payments': typeof DashboardPaymentsIndexRoute
+  '/penalties': typeof DashboardPenaltiesIndexRoute
   '/settings': typeof DashboardSettingsIndexRoute
   '/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
   '/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
@@ -499,6 +507,7 @@ export interface FileRoutesById {
   '/_dashboard/dashboard/': typeof DashboardDashboardIndexRoute
   '/_dashboard/loans/': typeof DashboardLoansIndexRoute
   '/_dashboard/payments/': typeof DashboardPaymentsIndexRoute
+  '/_dashboard/penalties/': typeof DashboardPenaltiesIndexRoute
   '/_dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/_dashboard/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
   '/_dashboard/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/loans/'
     | '/payments/'
+    | '/penalties/'
     | '/settings/'
     | '/admin/blog/$postId'
     | '/admin/blog/categories'
@@ -609,6 +619,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/loans'
     | '/payments'
+    | '/penalties'
     | '/settings'
     | '/admin/blog/$postId'
     | '/admin/blog/categories'
@@ -665,6 +676,7 @@ export interface FileRouteTypes {
     | '/_dashboard/dashboard/'
     | '/_dashboard/loans/'
     | '/_dashboard/payments/'
+    | '/_dashboard/penalties/'
     | '/_dashboard/settings/'
     | '/_dashboard/admin/blog/$postId'
     | '/_dashboard/admin/blog/categories'
@@ -803,6 +815,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings/'
       preLoaderRoute: typeof DashboardSettingsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/penalties/': {
+      id: '/_dashboard/penalties/'
+      path: '/penalties'
+      fullPath: '/penalties/'
+      preLoaderRoute: typeof DashboardPenaltiesIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/payments/': {
@@ -1119,6 +1138,7 @@ interface DashboardRouteChildren {
   DashboardDashboardIndexRoute: typeof DashboardDashboardIndexRoute
   DashboardLoansIndexRoute: typeof DashboardLoansIndexRoute
   DashboardPaymentsIndexRoute: typeof DashboardPaymentsIndexRoute
+  DashboardPenaltiesIndexRoute: typeof DashboardPenaltiesIndexRoute
   DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
   DashboardAdminBlogPostIdRoute: typeof DashboardAdminBlogPostIdRoute
   DashboardAdminBlogCategoriesRoute: typeof DashboardAdminBlogCategoriesRoute
@@ -1159,6 +1179,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardDashboardIndexRoute: DashboardDashboardIndexRoute,
   DashboardLoansIndexRoute: DashboardLoansIndexRoute,
   DashboardPaymentsIndexRoute: DashboardPaymentsIndexRoute,
+  DashboardPenaltiesIndexRoute: DashboardPenaltiesIndexRoute,
   DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
   DashboardAdminBlogPostIdRoute: DashboardAdminBlogPostIdRoute,
   DashboardAdminBlogCategoriesRoute: DashboardAdminBlogCategoriesRoute,

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, penalties, loans, penaltySettings } from "@/lib/db"
-import { eq, and, sql } from "drizzle-orm"
+import { db, penalties, loans, penaltySettings, contacts, paymentSchedule } from "@/lib/db"
+import { eq, and, sql, desc } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { hasRole, ROLES } from "@/lib/constants/roles"
@@ -380,8 +380,6 @@ export const revertPenalty = createServerFn()
 
     await revertPenaltyCore(data.penaltyId, penalty.loanId)
 
-    await db.batch(writes as any)
-
     const log = createAuditLogger(session.user)
     log("penalty.revert", "penalty", data.penaltyId, {
       loanId: penalty.loanId,
@@ -391,4 +389,153 @@ export const revertPenalty = createServerFn()
     })
 
     return { success: true }
+  })
+
+// ============================================================================
+// Penalties Page Server Functions
+// ============================================================================
+
+export interface AllPenaltyRecord {
+  id: string
+  loanId: string
+  scheduleItemId: string
+  penaltyType: "late_fee" | "daily_interest"
+  amount: string
+  status: "pending" | "applied" | "waived"
+  contactName: string
+  dueDate: string
+  daysOverdue: number
+  createdAt: string
+}
+
+export interface PenaltySummary {
+  totalPending: number
+  totalApplied: number
+  totalWaived: number
+  pendingAmount: number
+  appliedAmount: number
+}
+
+export interface AllPenaltiesResult {
+  penalties: AllPenaltyRecord[]
+  summary: PenaltySummary
+}
+
+/**
+ * Get all penalties across all loans for the authenticated lender.
+ */
+export const getAllPenalties = createServerFn()
+  .handler(async (): Promise<AllPenaltiesResult> => {
+    const session = await requireAuth()
+
+    if (!hasRole(session.user.role, ROLES.LENDER)) {
+      throw new Error("Forbidden: Lender access required")
+    }
+
+    const rows = await db
+      .select({
+        id: penalties.id,
+        loanId: penalties.loanId,
+        scheduleItemId: penalties.scheduleItemId,
+        penaltyType: penalties.penaltyType,
+        amount: penalties.amount,
+        status: penalties.status,
+        createdAt: penalties.createdAt,
+        contactName: contacts.name,
+        dueDate: paymentSchedule.dueDate,
+      })
+      .from(penalties)
+      .innerJoin(loans, eq(penalties.loanId, loans.id))
+      .innerJoin(contacts, eq(loans.contactId, contacts.id))
+      .innerJoin(paymentSchedule, eq(penalties.scheduleItemId, paymentSchedule.id))
+      .where(eq(loans.lenderId, session.user.id))
+      .orderBy(desc(penalties.createdAt))
+
+    const now = new Date()
+    const todayMs = new Date(now.toDateString()).getTime()
+
+    const mapped: AllPenaltyRecord[] = rows.map((r) => {
+      const dueDateMs = new Date(new Date(r.dueDate).toDateString()).getTime()
+      const daysOverdue = Math.max(0, Math.floor((todayMs - dueDateMs) / 86400000))
+      return {
+        id: r.id,
+        loanId: r.loanId,
+        scheduleItemId: r.scheduleItemId,
+        penaltyType: r.penaltyType,
+        amount: r.amount,
+        status: r.status,
+        contactName: r.contactName,
+        dueDate: r.dueDate.toISOString(),
+        daysOverdue,
+        createdAt: r.createdAt.toISOString(),
+      }
+    })
+
+    const pendingItems = mapped.filter((p) => p.status === "pending")
+    const appliedItems = mapped.filter((p) => p.status === "applied")
+    const waivedItems = mapped.filter((p) => p.status === "waived")
+
+    const summary: PenaltySummary = {
+      totalPending: pendingItems.length,
+      totalApplied: appliedItems.length,
+      totalWaived: waivedItems.length,
+      pendingAmount: pendingItems.reduce((s, p) => s + parseFloat(p.amount), 0),
+      appliedAmount: appliedItems.reduce((s, p) => s + parseFloat(p.amount), 0),
+    }
+
+    return { penalties: mapped, summary }
+  })
+
+/**
+ * Batch apply multiple pending penalties.
+ */
+export const batchApplyPenalties = createServerFn()
+  .inputValidator(z.object({ penaltyIds: z.array(z.string().min(1)).min(1) }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+
+    if (!hasRole(session.user.role, ROLES.LENDER)) {
+      throw new Error("Forbidden: Lender access required")
+    }
+
+    let success = 0
+    let failed = 0
+
+    for (const penaltyId of data.penaltyIds) {
+      try {
+        await applyPenalty({ data: { penaltyId } })
+        success++
+      } catch {
+        failed++
+      }
+    }
+
+    return { success, failed }
+  })
+
+/**
+ * Batch waive multiple pending penalties.
+ */
+export const batchWaivePenalties = createServerFn()
+  .inputValidator(z.object({ penaltyIds: z.array(z.string().min(1)).min(1) }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+
+    if (!hasRole(session.user.role, ROLES.LENDER)) {
+      throw new Error("Forbidden: Lender access required")
+    }
+
+    let success = 0
+    let failed = 0
+
+    for (const penaltyId of data.penaltyIds) {
+      try {
+        await waivePenalty({ data: { penaltyId } })
+        success++
+      } catch {
+        failed++
+      }
+    }
+
+    return { success, failed }
   })

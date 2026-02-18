@@ -112,13 +112,13 @@ export const Route = createFileRoute("/_dashboard")({
 })
 
 // Navigation items for lenders (shown in top nav)
+// Playbook + Settings live in the user dropdown; Penalties is a tab within Payments
 const lenderNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: House, exact: true },
   { name: "Contacts", href: "/contacts", icon: Users, exact: false },
   { name: "Loans", href: "/loans", icon: CurrencyCircleDollar, exact: false },
   { name: "Payments", href: "/payments", icon: Receipt, exact: false },
   { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
-  { name: "Playbook", href: "/playbook", icon: BookOpenText, exact: true },
 ]
 
 // Navigation items for admin portal (shown in top nav when on /admin routes)
@@ -131,9 +131,10 @@ const adminNavigation = [
   { name: "Blog", href: "/admin/blog", icon: Article, exact: false },
 ]
 
-// Navigation items for agent portal
+// Navigation items for agent portal (minimal — mobile-first design)
 const agentNavigation = [
   { name: "Home", href: "/agent", icon: House, exact: true },
+  { name: "Loans", href: "/agent/loans", icon: CurrencyCircleDollar, exact: false },
   { name: "Earnings", href: "/agent/earnings", icon: Wallet, exact: false },
   { name: "Playbook", href: "/agent/playbook", icon: BookOpenText, exact: true },
 ]
@@ -265,12 +266,15 @@ function DashboardLayout() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">
-              {navigation.map((item) => (
+              {navigation.map((item) => {
+                // Payments link should also appear active when on /penalties
+                const forceActive = item.href === "/payments" && location.pathname.startsWith("/penalties")
+                return (
                 <Link
                   key={item.name}
                   to={item.href}
                   activeOptions={{ exact: item.exact }}
-                  className="relative px-3 py-1.5 text-sm font-medium text-blue-200/70 hover:text-white transition-colors [&.active]:text-white after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 after:ease-out hover:after:w-full [&.active]:after:w-full"
+                  className={`relative px-3 py-1.5 text-sm font-medium text-blue-200/70 hover:text-white transition-colors [&.active]:text-white after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 after:ease-out hover:after:w-full [&.active]:after:w-full ${forceActive ? "text-white after:w-full" : ""}`}
                 >
                   {item.name}
                   {"badge" in item && (item as { badge?: string }).badge && (
@@ -279,7 +283,8 @@ function DashboardLayout() {
                     </span>
                   )}
                 </Link>
-              ))}
+                )
+              })}
             </nav>
 
             {/* User Menu */}
@@ -531,6 +536,15 @@ function DashboardLayout() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
+                  )}
+                  {isLender && !isOnAgentPortal && !isOnAdminPortal && (
+                    <DropdownMenuItem
+                      onClick={() => navigate({ to: "/playbook" })}
+                      className="cursor-pointer"
+                    >
+                      <BookOpenText className="h-4 w-4 mr-2" />
+                      Playbook
+                    </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
                     onClick={() => navigate({ to: "/settings" })}

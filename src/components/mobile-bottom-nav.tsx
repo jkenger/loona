@@ -51,11 +51,11 @@ const portalConfig: Record<
   agent: {
     primary: [
       { name: "Home", href: "/agent", icon: House, exact: true },
-      { name: "Playbook", href: "/agent/playbook", icon: BookOpenText, exact: true },
+      { name: "Loans", href: "/agent/loans", icon: CurrencyCircleDollar, exact: false },
       { name: "Earnings", href: "/agent/earnings", icon: Wallet, exact: false },
     ],
     more: [
-      { name: "Loans", href: "/agent/loans", icon: CurrencyCircleDollar, exact: false },
+      { name: "Playbook", href: "/agent/playbook", icon: BookOpenText, exact: true },
     ],
   },
   admin: {
@@ -73,7 +73,10 @@ const portalConfig: Record<
 }
 
 function isActive(pathname: string, href: string, exact: boolean) {
-  return exact ? pathname === href : pathname === href || pathname.startsWith(href + "/")
+  if (exact) return pathname === href
+  // Payments tab also covers /penalties (penalties is a sub-section of payments)
+  if (href === "/payments" && pathname.startsWith("/penalties")) return true
+  return pathname === href || pathname.startsWith(href + "/")
 }
 
 export function MobileBottomNav({ portal }: { portal: "lender" | "agent" | "admin" }) {

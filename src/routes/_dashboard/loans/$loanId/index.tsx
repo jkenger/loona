@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { getLoan, deleteLoan, approveLoan, rejectLoan } from "@/server/loans"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
-import { PenaltyItems } from "@/components/penalty-items"
+import { PenaltyBadge } from "@/components/penalty-badge"
 import { RecordPaymentDialog } from "@/components/record-payment-dialog"
 import { ReversePaymentDialog } from "@/components/reverse-payment-dialog"
+import { EditPaymentDateDialog } from "@/components/edit-payment-date-dialog"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,10 +47,10 @@ import {
   X,
   Scroll,
   ArrowSquareOut,
-  Gavel,
   ArrowCounterClockwise,
   ArrowClockwise,
   ChartLineUp,
+  PencilSimple,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
@@ -108,7 +109,12 @@ function LoanDetailPage() {
 
   // Reverse payment dialog state
   const [selectedPaymentForReversal, setSelectedPaymentForReversal] = useState<{
-    id: string; amount: string; method: string; paidAt: string
+    id: string; amount: string; method: string; paidAt: string; scheduleItemId: string | null
+  } | null>(null)
+
+  // Edit payment date dialog state
+  const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState<{
+    id: string; amount: string; method: string; paidAt: string; scheduleItemId: string | null
   } | null>(null)
 
   if (unauthorized) {
@@ -197,7 +203,13 @@ function LoanDetailPage() {
     }
   }
 
-  const hasOverdueItems = loan?.schedule.some((s) => s.status === "overdue")
+  const getScheduleInfo = (scheduleItemId: string | null) => {
+    if (!scheduleItemId) return null
+    const idx = loan.schedule.findIndex((s) => s.id === scheduleItemId)
+    if (idx === -1) return null
+    const item = loan.schedule[idx]
+    return { label: `Payment #${idx + 1}`, dueDate: item.dueDate, amount: item.amount }
+  }
 
   const statusConfig: Record<string, { variant: any; label: string; className?: string }> = {
     pending_disbursement: { variant: "outline", label: "Pending Disbursement" },
@@ -596,36 +608,6 @@ function LoanDetailPage() {
         </div>
       )}
 
-      {/* Penalty Summary */}
-      {penaltyData && penaltyData.config.enabled && hasOverdueItems && (
-        <Card className="shadow-sm border-amber-300/50">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <Gavel className="h-5 w-5 text-amber-600" />
-              Penalties
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1 p-3 rounded bg-muted/50">
-                <p className="text-sm text-muted-foreground">Applied</p>
-                <p className="text-lg font-bold">{formatCurrency(penaltyData.totalApplied)}</p>
-              </div>
-              <div className="space-y-1 p-3 rounded bg-amber-50 dark:bg-amber-900/20">
-                <p className="text-sm text-muted-foreground">Pending Decisions</p>
-                <p className="text-lg font-bold text-amber-600">
-                  {penaltyData.penalties.filter((p) => p.status === "pending").length}
-                </p>
-              </div>
-              <div className="space-y-1 p-3 rounded bg-muted/50">
-                <p className="text-sm text-muted-foreground">Cap Remaining</p>
-                <p className="text-lg font-bold">{formatCurrency(penaltyData.budgetRemaining)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Payment Schedule */}
       <Card className="shadow-sm">
         <CardHeader className="p-4 pb-2">
@@ -646,83 +628,71 @@ function LoanDetailPage() {
               const appliedPenaltyTotal = itemPenalties
                 .filter((p) => p.status === "applied")
                 .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-              // Compute days overdue from due date (calendar days)
-              const daysOverdue = item.status === "overdue"
-                ? Math.max(0, Math.floor((new Date(new Date().toDateString()).getTime() - new Date(new Date(item.dueDate).toDateString()).getTime()) / 86400000))
-                : 0
               // Determine if paid late (paid date after due date)
               const paidLate = item.paidAt && new Date(item.paidAt).toDateString() !== new Date(item.dueDate).toDateString() && new Date(item.paidAt) > new Date(item.dueDate)
 
               return (
-                <PenaltyItems
-                  key={item.id}
-                  penalties={itemPenalties}
-                  daysOverdue={daysOverdue}
-                  formatCurrency={formatCurrency}
-                >
-                  {({ toggleButton, detailPanel }) => (
-                    <div className="space-y-1">
-                      <div
-                        className={`flex items-center justify-between p-3 rounded border ${
-                          item.status === "overdue" ? "border-destructive/50" : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
-                            <StatusIcon className="h-4 w-4" weight="bold" />
-                          </div>
-                          <div>
-                            <p className="font-medium">Payment #{index + 1}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
-                              {toggleButton}
-                            </div>
-                          </div>
+                <div key={item.id} className="space-y-1">
+                  <div
+                    className={`flex items-center justify-between p-3 rounded border ${
+                      item.status === "overdue" ? "border-destructive/50" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
+                        <StatusIcon className="h-4 w-4" weight="bold" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Payment #{index + 1}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
+                          <PenaltyBadge
+                            penalties={itemPenalties}
+                            formatCurrency={formatCurrency}
+                            loanId={loan.id}
+                          />
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                            {appliedPenaltyTotal > 0 && (
-                              <p className="text-xs text-amber-600">
-                                + {formatCurrency(appliedPenaltyTotal)} penalty
-                              </p>
-                            )}
-                            {item.status === "paid" && item.paidAt && (
-                              <>
-                                {parseFloat(item.paidAmount) !== parseFloat(item.amount) && (
-                                  <p className="text-xs text-primary">
-                                    Paid: {formatCurrency(item.paidAmount)}
-                                  </p>
-                                )}
-                                <p className={`text-xs ${paidLate ? "text-amber-600" : "text-muted-foreground"}`}>
-                                  {new Date(item.paidAt).toLocaleDateString()}
-                                  {paidLate ? " (late)" : ""}
-                                </p>
-                              </>
-                            )}
-                            {item.status === "partial" && (
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-semibold">{formatCurrency(item.amount)}</p>
+                        {appliedPenaltyTotal > 0 && (
+                          <p className="text-xs text-amber-600">
+                            + {formatCurrency(appliedPenaltyTotal)} penalty
+                          </p>
+                        )}
+                        {item.status === "paid" && item.paidAt && (
+                          <>
+                            {parseFloat(item.paidAmount) !== parseFloat(item.amount) && (
                               <p className="text-xs text-primary">
                                 Paid: {formatCurrency(item.paidAmount)}
                               </p>
                             )}
-                          </div>
-                          {item.status !== "paid" && loan.status === "active" && (
-                            <Button
-                              size="sm"
-                              variant={item.status === "overdue" ? "default" : "outline"}
-                              onClick={() => setSelectedScheduleItem(item)}
-                            >
-                              Pay
-                            </Button>
-                          )}
-                        </div>
+                            <p className={`text-xs ${paidLate ? "text-amber-600" : "text-muted-foreground"}`}>
+                              {new Date(item.paidAt).toLocaleDateString()}
+                              {paidLate ? " (late)" : ""}
+                            </p>
+                          </>
+                        )}
+                        {item.status === "partial" && (
+                          <p className="text-xs text-primary">
+                            Paid: {formatCurrency(item.paidAmount)}
+                          </p>
+                        )}
                       </div>
-                      {detailPanel && (
-                        <div className="ml-11">{detailPanel}</div>
+                      {item.status !== "paid" && loan.status === "active" && (
+                        <Button
+                          size="sm"
+                          variant={item.status === "overdue" ? "default" : "outline"}
+                          onClick={() => setSelectedScheduleItem(item)}
+                        >
+                          Pay
+                        </Button>
                       )}
                     </div>
-                  )}
-                </PenaltyItems>
+                  </div>
+                </div>
               )
             })}
           </div>
@@ -781,7 +751,7 @@ function LoanDetailPage() {
                 return (
                   <div
                     key={payment.id}
-                    className={`flex items-center justify-between py-2 border-b last:border-0 ${isReversed ? "opacity-60" : ""}`}
+                    className={`flex items-center justify-between py-2 border-b last:border-0 group ${isReversed ? "opacity-60" : ""}`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
@@ -804,25 +774,43 @@ function LoanDetailPage() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {payment.notes && (
-                        <p className="text-sm text-muted-foreground">{payment.notes}</p>
+                        <p className="text-sm text-muted-foreground mr-1">{payment.notes}</p>
                       )}
-                      {canReverse && loan.isLender && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
-                          onClick={() => setSelectedPaymentForReversal({
-                            id: payment.id,
-                            amount: payment.amount,
-                            method: payment.method,
-                            paidAt: payment.paidAt,
-                          })}
-                        >
-                          <ArrowCounterClockwise className="h-3.5 w-3.5 mr-1" />
-                          Reverse
-                        </Button>
+                      {payment.type === "credit" && !payment.reversedAt && loan.isLender && (
+                        <div className="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[4rem] group-hover:opacity-100 transition-all duration-200">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            onClick={() => setSelectedPaymentForEdit({
+                              id: payment.id,
+                              amount: payment.amount,
+                              method: payment.method,
+                              paidAt: payment.paidAt,
+                              scheduleItemId: payment.scheduleItemId,
+                            })}
+                          >
+                            <PencilSimple className="h-3.5 w-3.5" />
+                          </Button>
+                          {canReverse && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => setSelectedPaymentForReversal({
+                                id: payment.id,
+                                amount: payment.amount,
+                                method: payment.method,
+                                paidAt: payment.paidAt,
+                                scheduleItemId: payment.scheduleItemId,
+                              })}
+                            >
+                              <ArrowCounterClockwise className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -967,6 +955,15 @@ function LoanDetailPage() {
         open={!!selectedPaymentForReversal}
         onOpenChange={(open) => { if (!open) setSelectedPaymentForReversal(null) }}
         payment={selectedPaymentForReversal}
+        scheduleInfo={selectedPaymentForReversal ? getScheduleInfo(selectedPaymentForReversal.scheduleItemId) : null}
+      />
+
+      {/* Edit Payment Date Dialog */}
+      <EditPaymentDateDialog
+        open={!!selectedPaymentForEdit}
+        onOpenChange={(open) => { if (!open) setSelectedPaymentForEdit(null) }}
+        payment={selectedPaymentForEdit}
+        scheduleInfo={selectedPaymentForEdit ? getScheduleInfo(selectedPaymentForEdit.scheduleItemId) : null}
       />
 
       {/* Approve Loan Dialog */}

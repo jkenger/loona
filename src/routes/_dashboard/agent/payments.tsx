@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { format, subDays, startOfMonth, isAfter } from 'date-fns'
 import { getAgentPayments, getAgentUpcomingPayments, getAgentDashboard } from '@/server/agents'
-import { PenaltyItems } from '@/components/penalty-items'
+import { PenaltyBadge } from '@/components/penalty-badge'
 import { RecordPaymentDialog } from '@/components/record-payment-dialog'
 import {
   Card,
@@ -260,54 +260,44 @@ function AgentPaymentsPage() {
                         .filter((p) => p.status === 'applied')
                         .reduce((sum, p) => sum + parseFloat(p.amount), 0)
                       return (
-                        <PenaltyItems
-                          key={item.id}
-                          penalties={itemPenalties}
-                          daysOverdue={item.daysOverdue}
-                          penaltyIn={item.penaltyIn}
-                          formatCurrency={formatCurrency}
-                        >
-                          {({ toggleButton, detailPanel }) => (
-                            <div className="space-y-1">
-                              <div
-                                className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-medium text-sm truncate">
-                                    {item.contactName}
-                                  </p>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span>Due {formatRelativeDate(item.dueDate)}</span>
-                                    {toggleButton}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 ml-2">
-                                  <div className="text-right">
-                                    <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
-                                    {appliedPenaltyTotal > 0 && (
-                                      <p className="text-xs text-amber-600">
-                                        + {formatCurrency(appliedPenaltyTotal)} penalty
-                                      </p>
-                                    )}
-                                  </div>
-                                  {canRecordPayments && (
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => setSelectedScheduleItem(item)}
-                                      className="h-8"
-                                    >
-                                      Collect
-                                    </Button>
-                                  )}
-                                </div>
+                        <div key={item.id} className="space-y-1">
+                          <div
+                            className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">
+                                {item.contactName}
+                              </p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>Due {formatRelativeDate(item.dueDate)}</span>
+                                <PenaltyBadge
+                                  penalties={itemPenalties}
+                                  formatCurrency={formatCurrency}
+                                />
                               </div>
-                              {detailPanel && (
-                                <div className="ml-3">{detailPanel}</div>
+                            </div>
+                            <div className="flex items-center gap-2 ml-2">
+                              <div className="text-right">
+                                <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
+                                {appliedPenaltyTotal > 0 && (
+                                  <p className="text-xs text-amber-600">
+                                    + {formatCurrency(appliedPenaltyTotal)} penalty
+                                  </p>
+                                )}
+                              </div>
+                              {canRecordPayments && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => setSelectedScheduleItem(item)}
+                                  className="h-8"
+                                >
+                                  Collect
+                                </Button>
                               )}
                             </div>
-                          )}
-                        </PenaltyItems>
+                          </div>
+                        </div>
                       )
                     })}
                   </div>

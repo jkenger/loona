@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { getUpcomingPayments, getPayments } from "@/server/payments"
-import { PenaltyItems } from "@/components/penalty-items"
+import { PenaltyBadge } from "@/components/penalty-badge"
 import { RecordPaymentDialog } from "@/components/record-payment-dialog"
 import { ReversePaymentDialog } from "@/components/reverse-payment-dialog"
+import { EditPaymentDateDialog } from "@/components/edit-payment-date-dialog"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ import {
   TrendUp,
   CalendarCheck,
   ArrowCounterClockwise,
+  PencilSimple,
 } from "@phosphor-icons/react"
 import { subDays, startOfMonth, isAfter, format } from "date-fns"
 import { formatRelativeDate } from "@/lib/utils/date"
@@ -121,6 +123,13 @@ function PaymentsPage() {
   // Reverse payment dialog state
   const [selectedPaymentForReversal, setSelectedPaymentForReversal] = useState<{
     id: string; amount: string; method: string; paidAt: string
+    scheduleDueDate: string | null; scheduleAmount: string | null
+  } | null>(null)
+
+  // Edit payment date dialog state
+  const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState<{
+    id: string; amount: string; method: string; paidAt: string
+    scheduleDueDate: string | null; scheduleAmount: string | null
   } | null>(null)
 
   // Date range filter
@@ -213,6 +222,20 @@ function PaymentsPage() {
               <p className="text-blue-200/70">Track and record loan payments</p>
             </div>
           </div>
+
+          {/* Section Tabs */}
+          <div className="flex items-center gap-1 border-t border-white/10 pt-3">
+            <span className="px-3 py-1.5 text-sm font-medium text-white border-b-2 border-primary">
+              Collections
+            </span>
+            <Link
+              to="/penalties"
+              search={{ loan: undefined }}
+              className="px-3 py-1.5 text-sm font-medium text-blue-200/50 hover:text-white transition-colors border-b-2 border-transparent"
+            >
+              Penalties
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -293,54 +316,45 @@ function PaymentsPage() {
                         .filter((p) => p.status === "applied")
                         .reduce((sum, p) => sum + parseFloat(p.amount), 0)
                       return (
-                        <PenaltyItems
-                          key={item.id}
-                          penalties={item.penalties}
-                          daysOverdue={item.daysOverdue}
-                          penaltyIn={item.penaltyIn}
-                          formatCurrency={formatCurrency}
-                        >
-                          {({ toggleButton, detailPanel }) => (
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5">
-                                <div className="min-w-0 flex-1">
-                                  <Link
-                                    to="/contacts/$contactId"
-                                    params={{ contactId: item.contactId }}
-                                    className="font-medium text-sm hover:text-primary truncate block"
-                                  >
-                                    {item.contactName}
-                                  </Link>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span>Due {formatRelativeDate(item.dueDate)}</span>
-                                    {toggleButton}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 ml-2">
-                                  <div className="text-right">
-                                    <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
-                                    {appliedPenaltyTotal > 0 && (
-                                      <p className="text-xs text-amber-600">
-                                        + {formatCurrency(appliedPenaltyTotal)} penalty
-                                      </p>
-                                    )}
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => setSelectedScheduleItem(item)}
-                                    className="h-8"
-                                  >
-                                    Record
-                                  </Button>
-                                </div>
+                        <div key={item.id} className="space-y-1">
+                          <div className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5">
+                            <div className="min-w-0 flex-1">
+                              <Link
+                                to="/contacts/$contactId"
+                                params={{ contactId: item.contactId }}
+                                className="font-medium text-sm hover:text-primary truncate block"
+                              >
+                                {item.contactName}
+                              </Link>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>Due {formatRelativeDate(item.dueDate)}</span>
+                                <PenaltyBadge
+                                  penalties={item.penalties}
+                                  formatCurrency={formatCurrency}
+                                  loanId={item.loanId}
+                                />
                               </div>
-                              {detailPanel && (
-                                <div className="ml-3">{detailPanel}</div>
-                              )}
                             </div>
-                          )}
-                        </PenaltyItems>
+                            <div className="flex items-center gap-2 ml-2">
+                              <div className="text-right">
+                                <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
+                                {appliedPenaltyTotal > 0 && (
+                                  <p className="text-xs text-amber-600">
+                                    + {formatCurrency(appliedPenaltyTotal)} penalty
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setSelectedScheduleItem(item)}
+                                className="h-8"
+                              >
+                                Record
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       )
                     })}
                   </div>
@@ -556,7 +570,7 @@ function PaymentsPage() {
                     return (
                       <div
                         key={payment.id}
-                        className={`flex items-center justify-between p-3 rounded border ${isReversed ? "opacity-60" : ""}`}
+                        className={`flex items-center justify-between p-3 rounded border group ${isReversed ? "opacity-60" : ""}`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isReversed ? "bg-destructive/10" : "bg-primary/10"}`}>
@@ -591,24 +605,45 @@ function PaymentsPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
                           <p className={`font-semibold text-sm ${isReversed ? "text-muted-foreground line-through" : "text-primary"}`}>
                             +{formatCurrency(payment.amount)}
                           </p>
-                          {canReverse && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
-                              onClick={() => setSelectedPaymentForReversal({
-                                id: payment.id,
-                                amount: payment.amount,
-                                method: payment.method,
-                                paidAt: payment.paidAt,
-                              })}
-                            >
-                              <ArrowCounterClockwise className="h-3.5 w-3.5" />
-                            </Button>
+                          {payment.type === "credit" && !payment.reversedAt && (
+                            <div className="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[4rem] group-hover:opacity-100 transition-all duration-200">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                onClick={() => setSelectedPaymentForEdit({
+                                  id: payment.id,
+                                  amount: payment.amount,
+                                  method: payment.method,
+                                  paidAt: payment.paidAt,
+                                  scheduleDueDate: payment.scheduleDueDate,
+                                  scheduleAmount: payment.scheduleAmount,
+                                })}
+                              >
+                                <PencilSimple className="h-3.5 w-3.5" />
+                              </Button>
+                              {canReverse && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => setSelectedPaymentForReversal({
+                                    id: payment.id,
+                                    amount: payment.amount,
+                                    method: payment.method,
+                                    paidAt: payment.paidAt,
+                                    scheduleDueDate: payment.scheduleDueDate,
+                                    scheduleAmount: payment.scheduleAmount,
+                                  })}
+                                >
+                                  <ArrowCounterClockwise className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -662,6 +697,19 @@ function PaymentsPage() {
         open={!!selectedPaymentForReversal}
         onOpenChange={(open) => { if (!open) setSelectedPaymentForReversal(null) }}
         payment={selectedPaymentForReversal}
+        scheduleInfo={selectedPaymentForReversal?.scheduleDueDate && selectedPaymentForReversal?.scheduleAmount
+          ? { label: "Installment", dueDate: selectedPaymentForReversal.scheduleDueDate, amount: selectedPaymentForReversal.scheduleAmount }
+          : null}
+      />
+
+      {/* Edit Payment Date Dialog */}
+      <EditPaymentDateDialog
+        open={!!selectedPaymentForEdit}
+        onOpenChange={(open) => { if (!open) setSelectedPaymentForEdit(null) }}
+        payment={selectedPaymentForEdit}
+        scheduleInfo={selectedPaymentForEdit?.scheduleDueDate && selectedPaymentForEdit?.scheduleAmount
+          ? { label: "Installment", dueDate: selectedPaymentForEdit.scheduleDueDate, amount: selectedPaymentForEdit.scheduleAmount }
+          : null}
       />
     </div>
   )
