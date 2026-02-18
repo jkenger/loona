@@ -51,6 +51,7 @@ import {
   ArrowClockwise,
   ChartLineUp,
   PencilSimple,
+  UserCircle,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
@@ -873,22 +874,40 @@ function LoanDetailPage() {
               </Link>
 
               {loan.status === "completed" && (
-                <Link
-                  to="/share/recap/$loanId"
-                  params={{ loanId: loan.id }}
-                  className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100">
-                    <ChartLineUp className="h-5 w-5 text-green-600" weight="bold" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">Loan Recap</p>
-                    <p className="text-sm text-muted-foreground">
-                      Payment behavior summary
-                    </p>
-                  </div>
-                  <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </Link>
+                <>
+                  <Link
+                    to="/share/recap/$loanId"
+                    params={{ loanId: loan.id }}
+                    className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100">
+                      <ChartLineUp className="h-5 w-5 text-green-600" weight="bold" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">Loan Recap</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment behavior summary
+                      </p>
+                    </div>
+                    <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </Link>
+                  <Link
+                    to="/share/borrower/$contactId"
+                    params={{ contactId: loan.contact.id }}
+                    className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100">
+                      <UserCircle className="h-5 w-5 text-purple-600" weight="bold" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">Borrower Profile</p>
+                      <p className="text-sm text-muted-foreground">
+                        Credit standing and renewal benefits
+                      </p>
+                    </div>
+                    <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </Link>
+                </>
               )}
 
             </div>

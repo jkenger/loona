@@ -56,120 +56,35 @@ import {
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
+import { computeRenewalTier } from "@/lib/utils/renewal-tiers"
 import { InterestRateWarning } from "@/components/interest-rate-warning"
 
 type Scorecard = NonNullable<Awaited<ReturnType<typeof getBorrowerScorecard>>>
-
-type RenewalRecommendation = {
-  tier: "new" | "returning" | "established" | "loyal"
-  tierLabel: string
-  interestAdjustment: number // negative = discount (e.g., -0.5)
-  termSuggestion: "shorter" | "same" | "longer" | null
-  suggestedRate: number
-  suggestedTerm: number
-  reasoning: string[]
-  hasDefaults: boolean
-}
 
 function getRenewalRecommendation(
   scorecard: Scorecard,
   currentRate: number,
   currentTerm: number,
-): RenewalRecommendation {
-  const { completedLoans, defaultedLoans, onTimeRate, latePayments, avgDaysLate, totalPenalties } = scorecard
-  const hasDefaults = defaultedLoans > 0
-
-  // Determine tier
-  let tier: RenewalRecommendation["tier"]
-  let tierLabel: string
-  if (completedLoans === 0) {
-    tier = "new"
-    tierLabel = "New Borrower"
-  } else if (completedLoans <= 2) {
-    tier = "returning"
-    tierLabel = "Returning Borrower"
-  } else if (completedLoans <= 5) {
-    tier = "established"
-    tierLabel = "Established Borrower"
-  } else {
-    tier = "loyal"
-    tierLabel = "Loyal Borrower"
-  }
-
-  // Calculate adjustments
-  let interestAdjustment = 0
-  let termSuggestion: RenewalRecommendation["termSuggestion"] = "same"
-  const reasoning: string[] = []
-
-  if (hasDefaults) {
-    reasoning.push("Has defaulted loan(s) — no discount recommended")
-    interestAdjustment = 0
-    termSuggestion = "shorter"
-  } else if (tier === "new") {
-    reasoning.push("First loan — standard terms, no history to base adjustments on")
-  } else if (tier === "returning") {
-    if (onTimeRate >= 90) {
-      interestAdjustment = -0.5
-      reasoning.push(`${onTimeRate}% on-time rate across ${completedLoans} loan(s) — eligible for -0.5% discount`)
-    } else if (onTimeRate >= 75) {
-      reasoning.push(`${onTimeRate}% on-time rate — maintain current terms`)
-    } else {
-      termSuggestion = "shorter"
-      reasoning.push(`${onTimeRate}% on-time rate is below target — consider shorter term`)
-    }
-  } else if (tier === "established") {
-    if (onTimeRate >= 90) {
-      interestAdjustment = -1
-      termSuggestion = "longer"
-      reasoning.push(`Excellent ${onTimeRate}% on-time rate across ${completedLoans} loans — eligible for -1% discount`)
-      reasoning.push("Longer term option available based on track record")
-    } else if (onTimeRate >= 75) {
-      interestAdjustment = -0.5
-      reasoning.push(`${onTimeRate}% on-time rate — eligible for -0.5% discount`)
-    } else {
-      reasoning.push(`${onTimeRate}% on-time rate — maintain current terms`)
-    }
-  } else {
-    // loyal
-    if (onTimeRate >= 90) {
-      interestAdjustment = -1.5
-      termSuggestion = "longer"
-      reasoning.push(`Outstanding ${onTimeRate}% on-time rate across ${completedLoans} loans — eligible for -1.5% discount`)
-      reasoning.push("Eligible for longer terms and higher principal")
-    } else if (onTimeRate >= 75) {
-      interestAdjustment = -1
-      reasoning.push(`${onTimeRate}% on-time rate — eligible for -1% discount`)
-    } else {
-      interestAdjustment = -0.5
-      reasoning.push(`${onTimeRate}% on-time rate — eligible for -0.5% discount`)
-    }
-  }
-
-  // Additional context
-  if (latePayments > 0 && !hasDefaults) {
-    reasoning.push(`${latePayments} late payment(s), avg ${avgDaysLate} day(s) late`)
-  }
-  if (totalPenalties > 0) {
-    reasoning.push(`${formatCurrency(totalPenalties)} in penalties incurred`)
-  }
+) {
+  const tierResult = computeRenewalTier(scorecard)
 
   // Clamp suggested rate (minimum 1%)
-  const suggestedRate = Math.max(1, currentRate + interestAdjustment)
-  const suggestedTerm = termSuggestion === "longer"
+  const suggestedRate = Math.max(1, currentRate + tierResult.interestDiscount)
+  const suggestedTerm = tierResult.termBenefit === "longer"
     ? currentTerm + 3
-    : termSuggestion === "shorter"
+    : tierResult.termBenefit === "shorter"
       ? Math.max(1, currentTerm - 3)
       : currentTerm
 
   return {
-    tier,
-    tierLabel,
-    interestAdjustment,
-    termSuggestion,
+    tier: tierResult.tier,
+    tierLabel: tierResult.tierLabel,
+    interestAdjustment: tierResult.interestDiscount,
+    termSuggestion: tierResult.termBenefit,
     suggestedRate,
     suggestedTerm,
-    reasoning,
-    hasDefaults,
+    reasoning: tierResult.reasoning,
+    hasDefaults: tierResult.hasDefaults,
   }
 }
 

@@ -33,6 +33,10 @@ import {
   Trash,
   Spinner,
   User,
+  ShareNetwork,
+  Copy,
+  Check,
+  ChatText,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
@@ -63,8 +67,11 @@ function ContactDetailPage() {
 
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showShareDialog, setShowShareDialog] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
+  const [copiedMessage, setCopiedMessage] = useState(false)
 
   // Edit form state - use empty strings for null contact case
   const [editName, setEditName] = useState(contact?.name || "")
@@ -137,6 +144,27 @@ function ContactDetailPage() {
   }
 
   const activeLoansCount = contact.loans.filter(l => l.status === "active").length
+  const completedLoansCount = contact.loans.filter(l => l.status === "completed").length
+
+  const shareUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/share/borrower/${contact.id}`
+    : `/share/borrower/${contact.id}`
+
+  const shareMessage = `Hi ${contact.name}! Here's your payment history summary with me — check out what you qualify for on your next loan: ${shareUrl}`
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(shareUrl)
+    setCopiedLink(true)
+    toast.success("Link copied to clipboard")
+    setTimeout(() => setCopiedLink(false), 2000)
+  }
+
+  const handleCopyMessage = async () => {
+    await navigator.clipboard.writeText(shareMessage)
+    setCopiedMessage(true)
+    toast.success("Message copied to clipboard")
+    setTimeout(() => setCopiedMessage(false), 2000)
+  }
 
   return (
     <div>
@@ -169,6 +197,12 @@ function ContactDetailPage() {
             </div>
             {contact.isLender && (
               <div className="flex gap-2">
+                {completedLoansCount > 0 && (
+                  <Button variant="outline" onClick={() => setShowShareDialog(true)} className="gap-2">
+                    <ShareNetwork className="h-4 w-4" weight="bold" />
+                    Share Profile
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => setShowEditDialog(true)} className="gap-2">
                   <PencilSimple className="h-4 w-4" weight="bold" />
                   Edit
@@ -430,6 +464,53 @@ function ContactDetailPage() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Profile Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Borrower Profile</DialogTitle>
+            <DialogDescription>
+              Share {contact.name}'s credit standing and renewal benefits
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Shareable Link</p>
+              <div className="flex gap-2">
+                <input
+                  readOnly
+                  value={shareUrl}
+                  className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm select-all"
+                  onFocus={(e) => e.target.select()}
+                />
+                <Button size="sm" variant="outline" onClick={handleCopyLink} className="gap-2 shrink-0">
+                  {copiedLink ? (
+                    <Check className="h-4 w-4" weight="bold" />
+                  ) : (
+                    <Copy className="h-4 w-4" weight="bold" />
+                  )}
+                  {copiedLink ? "Copied" : "Copy"}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Copy with Message</p>
+              <p className="text-xs text-muted-foreground rounded-md border bg-muted p-3">
+                {shareMessage}
+              </p>
+              <Button size="sm" variant="outline" onClick={handleCopyMessage} className="gap-2 w-full">
+                {copiedMessage ? (
+                  <Check className="h-4 w-4" weight="bold" />
+                ) : (
+                  <ChatText className="h-4 w-4" weight="bold" />
+                )}
+                {copiedMessage ? "Copied" : "Copy Link + Message"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

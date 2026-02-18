@@ -33,6 +33,7 @@ import { Route as DashboardAgentsIndexRouteImport } from './routes/_dashboard/ag
 import { Route as DashboardAgentIndexRouteImport } from './routes/_dashboard/agent/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/_dashboard/admin/index'
 import { Route as ShareRecapLoanIdRouteImport } from './routes/share/recap/$loanId'
+import { Route as ShareBorrowerContactIdRouteImport } from './routes/share/borrower/$contactId'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
@@ -181,6 +182,11 @@ const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
 const ShareRecapLoanIdRoute = ShareRecapLoanIdRouteImport.update({
   id: '/share/recap/$loanId',
   path: '/share/recap/$loanId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareBorrowerContactIdRoute = ShareBorrowerContactIdRouteImport.update({
+  id: '/share/borrower/$contactId',
+  path: '/share/borrower/$contactId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronOverdueRoute = ApiCronOverdueRouteImport.update({
@@ -386,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/admin/': typeof DashboardAdminIndexRoute
   '/agent/': typeof DashboardAgentIndexRoute
@@ -441,6 +448,7 @@ export interface FileRoutesByTo {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/admin': typeof DashboardAdminIndexRoute
   '/agent': typeof DashboardAgentIndexRoute
@@ -499,6 +507,7 @@ export interface FileRoutesById {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/_dashboard/admin/': typeof DashboardAdminIndexRoute
   '/_dashboard/agent/': typeof DashboardAgentIndexRoute
@@ -556,6 +565,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/share/borrower/$contactId'
     | '/share/recap/$loanId'
     | '/admin/'
     | '/agent/'
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/share/borrower/$contactId'
     | '/share/recap/$loanId'
     | '/admin'
     | '/agent'
@@ -668,6 +679,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/share/borrower/$contactId'
     | '/share/recap/$loanId'
     | '/_dashboard/admin/'
     | '/_dashboard/agent/'
@@ -707,6 +719,7 @@ export interface RootRouteChildren {
   ApiAuthErrorRoute: typeof ApiAuthErrorRoute
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
+  ShareBorrowerContactIdRoute: typeof ShareBorrowerContactIdRoute
   ShareRecapLoanIdRoute: typeof ShareRecapLoanIdRoute
 }
 
@@ -878,6 +891,13 @@ declare module '@tanstack/react-router' {
       path: '/share/recap/$loanId'
       fullPath: '/share/recap/$loanId'
       preLoaderRoute: typeof ShareRecapLoanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share/borrower/$contactId': {
+      id: '/share/borrower/$contactId'
+      path: '/share/borrower/$contactId'
+      fullPath: '/share/borrower/$contactId'
+      preLoaderRoute: typeof ShareBorrowerContactIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/overdue': {
@@ -1215,6 +1235,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthErrorRoute: ApiAuthErrorRoute,
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
+  ShareBorrowerContactIdRoute: ShareBorrowerContactIdRoute,
   ShareRecapLoanIdRoute: ShareRecapLoanIdRoute,
 }
 export const routeTree = rootRouteImport
