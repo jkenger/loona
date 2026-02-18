@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, contacts, loans, agents } from "@/lib/db"
+import { db, contacts, loans, agents, penaltySettings } from "@/lib/db"
 import { eq, desc, sql, ilike, or, and } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
+import { parsePenaltyConfig } from "@/lib/constants/penalty-defaults"
 import { z } from "zod"
 
 // Validation schemas
@@ -278,6 +279,13 @@ export const getBorrowerScorecard = createServerFn()
     const defaultedLoans = allLoans.filter((l) => l.status === "defaulted").length
     const totalBorrowed = allLoans.reduce((sum, l) => sum + parseFloat(l.principal), 0)
 
+    // Fetch grace period from lender's penalty settings
+    const settingsRow = await db.query.penaltySettings.findFirst({
+      where: eq(penaltySettings.lenderId, contact.lenderId),
+    })
+    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
+    const gracePeriodDays = penaltyConfig.lateFee.gracePeriodDays
+
     // Collect all schedule items across all loans
     let onTimeCount = 0
     let lateCount = 0
@@ -291,16 +299,17 @@ export const getBorrowerScorecard = createServerFn()
         const dueDate = new Date(item.dueDate)
         const paidAt = new Date(item.paidAt)
 
-        // Compare dates only (ignore time)
+        // Compare dates only (ignore time), accounting for grace period
         const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
         const paidDateOnly = new Date(paidAt.getFullYear(), paidAt.getMonth(), paidAt.getDate())
+        const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
+        const daysDiff = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
 
-        if (paidDateOnly <= dueDateOnly) {
+        if (daysDiff <= gracePeriodDays) {
           onTimeCount++
         } else {
           lateCount++
-          const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
-          totalDaysLate += Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+          totalDaysLate += daysDiff
         }
       }
     }

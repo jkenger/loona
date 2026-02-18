@@ -58,6 +58,121 @@ import { cn } from "@/lib/utils"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 import { InterestRateWarning } from "@/components/interest-rate-warning"
 
+type Scorecard = NonNullable<Awaited<ReturnType<typeof getBorrowerScorecard>>>
+
+type RenewalRecommendation = {
+  tier: "new" | "returning" | "established" | "loyal"
+  tierLabel: string
+  interestAdjustment: number // negative = discount (e.g., -0.5)
+  termSuggestion: "shorter" | "same" | "longer" | null
+  suggestedRate: number
+  suggestedTerm: number
+  reasoning: string[]
+  hasDefaults: boolean
+}
+
+function getRenewalRecommendation(
+  scorecard: Scorecard,
+  currentRate: number,
+  currentTerm: number,
+): RenewalRecommendation {
+  const { completedLoans, defaultedLoans, onTimeRate, latePayments, avgDaysLate, totalPenalties } = scorecard
+  const hasDefaults = defaultedLoans > 0
+
+  // Determine tier
+  let tier: RenewalRecommendation["tier"]
+  let tierLabel: string
+  if (completedLoans === 0) {
+    tier = "new"
+    tierLabel = "New Borrower"
+  } else if (completedLoans <= 2) {
+    tier = "returning"
+    tierLabel = "Returning Borrower"
+  } else if (completedLoans <= 5) {
+    tier = "established"
+    tierLabel = "Established Borrower"
+  } else {
+    tier = "loyal"
+    tierLabel = "Loyal Borrower"
+  }
+
+  // Calculate adjustments
+  let interestAdjustment = 0
+  let termSuggestion: RenewalRecommendation["termSuggestion"] = "same"
+  const reasoning: string[] = []
+
+  if (hasDefaults) {
+    reasoning.push("Has defaulted loan(s) — no discount recommended")
+    interestAdjustment = 0
+    termSuggestion = "shorter"
+  } else if (tier === "new") {
+    reasoning.push("First loan — standard terms, no history to base adjustments on")
+  } else if (tier === "returning") {
+    if (onTimeRate >= 90) {
+      interestAdjustment = -0.5
+      reasoning.push(`${onTimeRate}% on-time rate across ${completedLoans} loan(s) — eligible for -0.5% discount`)
+    } else if (onTimeRate >= 75) {
+      reasoning.push(`${onTimeRate}% on-time rate — maintain current terms`)
+    } else {
+      termSuggestion = "shorter"
+      reasoning.push(`${onTimeRate}% on-time rate is below target — consider shorter term`)
+    }
+  } else if (tier === "established") {
+    if (onTimeRate >= 90) {
+      interestAdjustment = -1
+      termSuggestion = "longer"
+      reasoning.push(`Excellent ${onTimeRate}% on-time rate across ${completedLoans} loans — eligible for -1% discount`)
+      reasoning.push("Longer term option available based on track record")
+    } else if (onTimeRate >= 75) {
+      interestAdjustment = -0.5
+      reasoning.push(`${onTimeRate}% on-time rate — eligible for -0.5% discount`)
+    } else {
+      reasoning.push(`${onTimeRate}% on-time rate — maintain current terms`)
+    }
+  } else {
+    // loyal
+    if (onTimeRate >= 90) {
+      interestAdjustment = -1.5
+      termSuggestion = "longer"
+      reasoning.push(`Outstanding ${onTimeRate}% on-time rate across ${completedLoans} loans — eligible for -1.5% discount`)
+      reasoning.push("Eligible for longer terms and higher principal")
+    } else if (onTimeRate >= 75) {
+      interestAdjustment = -1
+      reasoning.push(`${onTimeRate}% on-time rate — eligible for -1% discount`)
+    } else {
+      interestAdjustment = -0.5
+      reasoning.push(`${onTimeRate}% on-time rate — eligible for -0.5% discount`)
+    }
+  }
+
+  // Additional context
+  if (latePayments > 0 && !hasDefaults) {
+    reasoning.push(`${latePayments} late payment(s), avg ${avgDaysLate} day(s) late`)
+  }
+  if (totalPenalties > 0) {
+    reasoning.push(`${formatCurrency(totalPenalties)} in penalties incurred`)
+  }
+
+  // Clamp suggested rate (minimum 1%)
+  const suggestedRate = Math.max(1, currentRate + interestAdjustment)
+  const suggestedTerm = termSuggestion === "longer"
+    ? currentTerm + 3
+    : termSuggestion === "shorter"
+      ? Math.max(1, currentTerm - 3)
+      : currentTerm
+
+  return {
+    tier,
+    tierLabel,
+    interestAdjustment,
+    termSuggestion,
+    suggestedRate,
+    suggestedTerm,
+    reasoning,
+    hasDefaults,
+  }
+}
+
 const PURPOSE_TEMPLATES = [
   { label: "Bill Payment", icon: "\u{1F4B3}" },
   { label: "Utilities", icon: "\u{1F4A1}" },
@@ -1074,6 +1189,119 @@ function NewLoanWizard() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Renewal Recommendation Card */}
+              {isRenewal && scorecard && scorecard.completedLoans > 0 && (() => {
+                const rec = getRenewalRecommendation(
+                  scorecard,
+                  parseFloat(interestRate) || 0,
+                  parseInt(termMonths) || 0,
+                )
+                const hasAdjustment = rec.interestAdjustment !== 0 || rec.termSuggestion !== "same"
+                const alreadyApplied =
+                  rec.suggestedRate === (parseFloat(interestRate) || 0) &&
+                  rec.suggestedTerm === (parseInt(termMonths) || 0)
+
+                return (
+                  <Card className={cn(
+                    "h-fit shadow-lg border-2",
+                    rec.hasDefaults
+                      ? "border-red-500/30"
+                      : hasAdjustment
+                        ? "border-green-500/30"
+                        : "border-border"
+                  )}>
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <TrendUp className="h-5 w-5 text-primary" />
+                        Renewal Recommendation
+                      </CardTitle>
+                      <CardDescription>
+                        <span className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+                          rec.tier === "loyal" && "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+                          rec.tier === "established" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+                          rec.tier === "returning" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+                          rec.tier === "new" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+                        )}>
+                          {rec.tierLabel}
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-4">
+                      {/* Reasoning */}
+                      <div className="space-y-1.5">
+                        {rec.reasoning.map((r, i) => (
+                          <p key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="shrink-0 mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+                            {r}
+                          </p>
+                        ))}
+                      </div>
+
+                      {/* Suggested adjustments */}
+                      {hasAdjustment && (
+                        <>
+                          <Separator />
+                          <div className="space-y-2">
+                            {rec.interestAdjustment !== 0 && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Suggested Rate</span>
+                                <span className="font-medium">
+                                  {rec.suggestedRate}% / mo
+                                  <span className={cn(
+                                    "ml-1.5 text-xs",
+                                    rec.interestAdjustment < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                                  )}>
+                                    ({rec.interestAdjustment > 0 ? "+" : ""}{rec.interestAdjustment}%)
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                            {rec.termSuggestion !== "same" && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Suggested Term</span>
+                                <span className="font-medium">
+                                  {rec.suggestedTerm} months
+                                  <span className="ml-1.5 text-xs text-muted-foreground">
+                                    ({rec.termSuggestion === "longer" ? "+3" : "-3"} mo)
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {!alreadyApplied ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full gap-2"
+                              onClick={() => {
+                                if (rec.interestAdjustment !== 0) {
+                                  setInterestRate(String(rec.suggestedRate))
+                                }
+                                if (rec.termSuggestion !== "same") {
+                                  setTermMonths(String(rec.suggestedTerm))
+                                }
+                                toast.success("Suggestion applied to loan terms")
+                              }}
+                            >
+                              <Check className="h-4 w-4" />
+                              Apply Suggestion
+                            </Button>
+                          ) : (
+                            <p className="text-xs text-center text-green-600 dark:text-green-400 font-medium flex items-center justify-center gap-1.5">
+                              <CheckCircle className="h-3.5 w-3.5" weight="fill" />
+                              Suggestion applied
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })()}
             </div>
           </div>
         )}

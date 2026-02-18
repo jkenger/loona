@@ -146,40 +146,39 @@ export const getLoan = createServerFn()
       budgetRemaining: number
     } | null = null
 
-    if (result.status === "active") {
-      const settingsRow = await db.query.penaltySettings.findFirst({
-        where: eq(penaltySettings.lenderId, result.lenderId),
-      })
-      const config = parsePenaltyConfig(settingsRow?.config ?? null)
+    // Always fetch penalty config for grace period (used for "late" labels)
+    const settingsRow = await db.query.penaltySettings.findFirst({
+      where: eq(penaltySettings.lenderId, result.lenderId),
+    })
+    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
 
-      if (config.enabled) {
-        const totalApplied = result.penalties
-          .filter((p) => p.status === "applied")
-          .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+    if (result.status === "active" && penaltyConfig.enabled) {
+      const totalApplied = result.penalties
+        .filter((p) => p.status === "applied")
+        .reduce((sum, p) => sum + parseFloat(p.amount), 0)
 
-        const totalPending = result.penalties
-          .filter((p) => p.status === "pending")
-          .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+      const totalPending = result.penalties
+        .filter((p) => p.status === "pending")
+        .reduce((sum, p) => sum + parseFloat(p.amount), 0)
 
-        penaltyData = {
-          config,
-          penalties: result.penalties.map((p) => ({
-            id: p.id,
-            loanId: p.loanId,
-            scheduleItemId: p.scheduleItemId,
-            penaltyType: p.penaltyType,
-            amount: p.amount,
-            status: p.status,
-            appliedAt: p.appliedAt?.toISOString() ?? null,
-            waivedAt: p.waivedAt?.toISOString() ?? null,
-            decidedBy: p.decidedBy,
-            notes: p.notes,
-            createdAt: p.createdAt.toISOString(),
-          })),
-          totalApplied,
-          totalPending,
-          budgetRemaining: getRemainingPenaltyBudget(config, parseFloat(result.principal), totalApplied),
-        }
+      penaltyData = {
+        config: penaltyConfig,
+        penalties: result.penalties.map((p) => ({
+          id: p.id,
+          loanId: p.loanId,
+          scheduleItemId: p.scheduleItemId,
+          penaltyType: p.penaltyType,
+          amount: p.amount,
+          status: p.status,
+          appliedAt: p.appliedAt?.toISOString() ?? null,
+          waivedAt: p.waivedAt?.toISOString() ?? null,
+          decidedBy: p.decidedBy,
+          notes: p.notes,
+          createdAt: p.createdAt.toISOString(),
+        })),
+        totalApplied,
+        totalPending,
+        budgetRemaining: getRemainingPenaltyBudget(penaltyConfig, parseFloat(result.principal), totalApplied),
       }
     }
 
@@ -232,6 +231,8 @@ export const getLoan = createServerFn()
       })),
       penalties: undefined, // don't expose raw relation, use penaltyData instead
       penaltyData,
+      gracePeriodDays: penaltyConfig.lateFee.gracePeriodDays,
+      gracePeriodDays: penaltyConfig.lateFee.gracePeriodDays,
       assignedAgent: result.assignedAgent
         ? {
             id: result.assignedAgent.id,
@@ -266,6 +267,11 @@ export const getPublicLoanRecap = createServerFn()
       return null
     }
 
+    const settingsRow = await db.query.penaltySettings.findFirst({
+      where: eq(penaltySettings.lenderId, result.lenderId),
+    })
+    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
+
     const totalApplied = result.penalties
       .filter((p) => p.status === "applied")
       .reduce((sum, p) => sum + parseFloat(p.amount), 0)
@@ -291,6 +297,7 @@ export const getPublicLoanRecap = createServerFn()
         status: s.status,
       })),
       totalPenaltiesApplied: totalApplied,
+      gracePeriodDays: penaltyConfig.lateFee.gracePeriodDays,
     }
   })
 

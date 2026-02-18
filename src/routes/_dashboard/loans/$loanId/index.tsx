@@ -628,11 +628,13 @@ function LoanDetailPage() {
               const appliedPenaltyTotal = itemPenalties
                 .filter((p) => p.status === "applied")
                 .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-              // Determine if paid late — compare calendar dates only (strip time)
+              // Determine if paid late — compare calendar dates, accounting for grace period
+              const gracePeriodDays = loan.gracePeriodDays ?? 0
               const paidLate = item.paidAt && (() => {
                 const paid = new Date(new Date(item.paidAt).toDateString()).getTime()
                 const due = new Date(new Date(item.dueDate).toDateString()).getTime()
-                return paid > due
+                const graceMs = gracePeriodDays * 24 * 60 * 60 * 1000
+                return paid > due + graceMs
               })()
 
               return (

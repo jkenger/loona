@@ -73,7 +73,7 @@ function computeMetrics(recap: RecapData) {
 
     totalDaysDiff += daysDiff
 
-    if (daysDiff <= 0) {
+    if (daysDiff <= (recap.gracePeriodDays ?? 0)) {
       onTimeCount++
       currentStreak++
       longestStreak = Math.max(longestStreak, currentStreak)
@@ -355,7 +355,7 @@ function RecapPage() {
                       {/* Dots */}
                       {recap.schedule.map((item, index) => {
                         const isOnTime = item.paidAt
-                          ? differenceInCalendarDays(new Date(item.paidAt), new Date(item.dueDate)) <= 0
+                          ? differenceInCalendarDays(new Date(item.paidAt), new Date(item.dueDate)) <= (recap.gracePeriodDays ?? 0)
                           : false
                         const dotColor = item.paidAt
                           ? isOnTime ? c.green : c.amber
@@ -460,8 +460,9 @@ function RecapPage() {
                         const daysDiff = item.paidAt
                           ? differenceInCalendarDays(new Date(item.paidAt), new Date(item.dueDate))
                           : null
-                        const isOnTime = daysDiff !== null && daysDiff <= 0
-                        const isLate = daysDiff !== null && daysDiff > 0
+                        const grace = recap.gracePeriodDays ?? 0
+                        const isOnTime = daysDiff !== null && daysDiff <= grace
+                        const isLate = daysDiff !== null && daysDiff > grace
                         const statusColor = isOnTime ? c.green : isLate ? c.amber : c.muted
 
                         return (
@@ -537,7 +538,7 @@ function RecapPage() {
                                 padding: "6px 10px",
                                 border: `1px solid ${c.border}`,
                                 textAlign: "center",
-                                color: daysDiff !== null ? (daysDiff <= 0 ? c.green : c.amber) : c.muted,
+                                color: daysDiff !== null ? (daysDiff <= grace ? c.green : c.amber) : c.muted,
                                 fontWeight: 500,
                               }}
                             >
