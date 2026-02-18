@@ -11,7 +11,7 @@ import {
   penaltySettings,
   penalties,
 } from "@/lib/db"
-import { eq, desc, and, asc, sql, lte, gte, ne } from "drizzle-orm"
+import { eq, desc, and, sql, lte, gte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { assertTransition } from "./loans"
 import { createAuditLogger } from "./audit"
@@ -63,10 +63,13 @@ export const getPayments = createServerFn().handler(async () => {
       reversedAt: payments.reversedAt,
       reversalReason: payments.reversalReason,
       createdAt: payments.createdAt,
+      scheduleDueDate: paymentSchedule.dueDate,
+      scheduleAmount: paymentSchedule.amount,
     })
     .from(payments)
     .innerJoin(loans, eq(payments.loanId, loans.id))
     .innerJoin(contacts, eq(loans.contactId, contacts.id))
+    .leftJoin(paymentSchedule, eq(payments.scheduleItemId, paymentSchedule.id))
     .where(eq(loans.lenderId, session.user.id))
     .orderBy(desc(payments.paidAt), desc(payments.createdAt))
     .limit(100)
@@ -76,6 +79,7 @@ export const getPayments = createServerFn().handler(async () => {
     paidAt: p.paidAt.toISOString(),
     reversedAt: p.reversedAt?.toISOString() ?? null,
     createdAt: p.createdAt.toISOString(),
+    scheduleDueDate: p.scheduleDueDate?.toISOString() ?? null,
   }))
 })
 
@@ -239,11 +243,19 @@ export const recordPayment = createServerFn()
     throw new Error("This payment was already recorded. Please wait before retrying.")
   }
 
-  // Reject overpayment
+  // Reject overpayment (loan-level)
   const remainingBalance = parseFloat(loan.remainingBalance)
   if (data.amount > remainingBalance) {
     throw new Error(
       `Payment of ₱${data.amount.toFixed(2)} exceeds remaining balance of ₱${remainingBalance.toFixed(2)}`
+    )
+  }
+
+  // Reject overpayment (installment-level — no cascade)
+  const itemRemaining = parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount)
+  if (data.amount > itemRemaining) {
+    throw new Error(
+      `Payment of ₱${data.amount.toFixed(2)} exceeds remaining balance of ₱${itemRemaining.toFixed(2)} for this installment`
     )
   }
 
@@ -269,51 +281,9 @@ export const recordPayment = createServerFn()
   const interestPortion = data.amount * interestRatio
   const newInterestEarned = parseFloat(loan.interestEarned) + interestPortion
 
-  // === Cascade: fetch unpaid schedule items starting from the selected one ===
-  const unpaidItems = await db
-    .select()
-    .from(paymentSchedule)
-    .where(
-      and(
-        eq(paymentSchedule.loanId, data.loanId),
-        ne(paymentSchedule.status, "paid"),
-        gte(paymentSchedule.dueDate, scheduleItem.dueDate)
-      )
-    )
-    .orderBy(asc(paymentSchedule.dueDate), asc(paymentSchedule.createdAt))
-
-  // Ensure the selected item is first (it may share a dueDate with others)
-  const selectedIdx = unpaidItems.findIndex((i) => i.id === data.scheduleItemId)
-  if (selectedIdx > 0) {
-    const [selected] = unpaidItems.splice(selectedIdx, 1)
-    unpaidItems.unshift(selected)
-  }
-
-  // Build cascade updates
-  type ScheduleUpdate = {
-    id: string
-    paidAmount: string
-    status: "paid" | "partial"
-    paidAt: Date | null
-  }
-  const scheduleUpdates: ScheduleUpdate[] = []
-  let leftover = data.amount
-
-  for (const item of unpaidItems) {
-    if (leftover <= 0) break
-    const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-    if (remaining <= 0) continue
-    const applied = Math.min(leftover, remaining)
-    const newPaid = parseFloat(item.paidAmount) + applied
-    const itemFullyPaid = newPaid >= parseFloat(item.amount)
-    scheduleUpdates.push({
-      id: item.id,
-      paidAmount: newPaid.toFixed(2),
-      status: itemFullyPaid ? "paid" : "partial",
-      paidAt: itemFullyPaid ? paymentDate : null,
-    })
-    leftover = Math.round((leftover - applied) * 100) / 100
-  }
+  // Single schedule item update
+  const newPaidAmount = parseFloat(scheduleItem.paidAmount) + data.amount
+  const itemFullyPaid = newPaidAmount >= parseFloat(scheduleItem.amount)
 
   // Commission computation (read settings before batch)
   let commissionAmount: number | null = null
@@ -339,16 +309,6 @@ export const recordPayment = createServerFn()
     }
   }
 
-  // Build cascade allocation records for reversal tracking
-  const cascadeAllocations = scheduleUpdates.map((u) => {
-    const original = unpaidItems.find((i) => i.id === u.id)!
-    return {
-      scheduleItemId: u.id,
-      applied: parseFloat(u.paidAmount) - parseFloat(original.paidAmount),
-      prevPaidAmount: parseFloat(original.paidAmount),
-    }
-  })
-
   // === Atomic write phase ===
   const writes: any[] = [
     db.insert(payments).values({
@@ -361,7 +321,6 @@ export const recordPayment = createServerFn()
       recordedByAgentId: agentId,
       paidAt: paymentDate,
       notes: data.notes || null,
-      cascadeAllocations: cascadeAllocations.length > 1 ? cascadeAllocations : null,
     }).returning(),
     db.update(loans).set({
       amountPaid: newAmountPaid.toFixed(2),
@@ -371,14 +330,11 @@ export const recordPayment = createServerFn()
       completedAt: isCompleted ? new Date() : null,
       updatedAt: new Date(),
     }).where(eq(loans.id, data.loanId)),
-    // Cascade schedule item updates
-    ...scheduleUpdates.map((u) =>
-      db.update(paymentSchedule).set({
-        paidAmount: u.paidAmount,
-        status: u.status,
-        paidAt: u.paidAt,
-      }).where(eq(paymentSchedule.id, u.id))
-    ),
+    db.update(paymentSchedule).set({
+      paidAmount: newPaidAmount.toFixed(2),
+      status: itemFullyPaid ? "paid" : "partial",
+      paidAt: itemFullyPaid ? paymentDate : null,
+    }).where(eq(paymentSchedule.id, data.scheduleItemId)),
   ]
 
   if (agentId && agentRecord && commissionAmount !== null && effectiveRate !== null) {
@@ -415,6 +371,85 @@ export const recordPayment = createServerFn()
     createdAt: payment.createdAt.toISOString(),
   }
 })
+
+// Edit payment date
+const editPaymentDateSchema = z.object({
+  paymentId: z.string().min(1),
+  paidAt: z.string()
+    .transform((s) => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const now = new Date()
+        const [y, m, d] = s.split("-").map(Number)
+        return new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
+      }
+      return new Date(s)
+    })
+    .refine((d) => d <= new Date(), "Payment date cannot be in the future"),
+})
+
+export const editPaymentDate = createServerFn()
+  .inputValidator(editPaymentDateSchema)
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+
+    const payment = await db.query.payments.findFirst({
+      where: eq(payments.id, data.paymentId),
+      with: { loan: true },
+    })
+
+    if (!payment) throw new Error("Payment not found")
+    if (payment.loan.lenderId !== session.user.id) throw new Error("Payment not found")
+    if (payment.reversedAt) throw new Error("Cannot edit a reversed payment")
+    if (payment.type !== "credit") throw new Error("Cannot edit a reversal entry")
+
+    const oldPaidAt = payment.paidAt
+
+    // Update payment paidAt
+    const writes: any[] = [
+      db.update(payments).set({ paidAt: data.paidAt }).where(eq(payments.id, data.paymentId)),
+    ]
+
+    // Update schedule items that were fully paid by this payment
+    const allocations = payment.cascadeAllocations as
+      | { scheduleItemId: string; applied: number; prevPaidAmount: number }[]
+      | null
+
+    if (allocations && allocations.length > 0) {
+      // Cascade payment: update all fully-paid schedule items
+      for (const alloc of allocations) {
+        const item = await db.query.paymentSchedule.findFirst({
+          where: eq(paymentSchedule.id, alloc.scheduleItemId),
+        })
+        if (item && item.status === "paid") {
+          writes.push(
+            db.update(paymentSchedule).set({ paidAt: data.paidAt }).where(eq(paymentSchedule.id, alloc.scheduleItemId))
+          )
+        }
+      }
+    } else if (payment.scheduleItemId) {
+      // Single schedule item
+      const item = await db.query.paymentSchedule.findFirst({
+        where: eq(paymentSchedule.id, payment.scheduleItemId),
+      })
+      if (item && item.status === "paid") {
+        writes.push(
+          db.update(paymentSchedule).set({ paidAt: data.paidAt }).where(eq(paymentSchedule.id, payment.scheduleItemId))
+        )
+      }
+    }
+
+    await Promise.all(writes)
+
+    // Audit log
+    const log = createAuditLogger(session.user)
+    log("payment.edit_date", "payment", data.paymentId, {
+      loanId: payment.loanId,
+      oldPaidAt: oldPaidAt.toISOString(),
+      newPaidAt: data.paidAt.toISOString(),
+    })
+
+    return { success: true }
+  })
 
 // Update overdue payments + generate penalties (called on dashboard load as fallback)
 export const updateOverduePayments = createServerFn().handler(async () => {

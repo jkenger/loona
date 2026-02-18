@@ -6,12 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CurrencyInput } from "@/components/ui/currency-input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -21,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Spinner } from "@phosphor-icons/react"
+import { Spinner, Warning, Money, Bank } from "@phosphor-icons/react"
 import { format } from "date-fns"
 
 interface RecordPaymentDialogProps {
@@ -49,11 +44,30 @@ function formatCurrency(amount: string | number): string {
   }).format(num)
 }
 
-const METHOD_LABELS: Record<string, string> = {
-  cash: "Cash",
-  gcash: "GCash",
-  maya: "Maya",
-  bank: "Bank Transfer",
+const PAYMENT_METHODS = [
+  { value: "cash", label: "Cash" },
+  { value: "gcash", label: "GCash" },
+  { value: "maya", label: "Maya" },
+  { value: "bank", label: "Bank" },
+] as const
+
+const METHOD_LABELS: Record<string, string> = Object.fromEntries(
+  PAYMENT_METHODS.map((m) => [m.value, m.label])
+)
+
+function MethodIcon({ method, className, selected }: { method: string; className?: string; selected?: boolean }) {
+  switch (method) {
+    case "cash":
+      return <Money className={className} weight={selected ? "fill" : "regular"} />
+    case "gcash":
+      return <img src="/icons/gcash.svg" alt="GCash" className={className} />
+    case "maya":
+      return <img src="/icons/maya.svg" alt="Maya" className={className} />
+    case "bank":
+      return <Bank className={className} weight={selected ? "fill" : "regular"} />
+    default:
+      return null
+  }
 }
 
 export function RecordPaymentDialog({
@@ -78,7 +92,7 @@ export function RecordPaymentDialog({
   useEffect(() => {
     if (open && scheduleItem) {
       const remaining = parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount)
-      setPaymentAmount((remaining + appliedPenalties).toString())
+      setPaymentAmount(remaining.toString())
       setPaymentMethod("cash")
       setPaymentDate(new Date())
       setPaymentNotes("")
@@ -170,7 +184,7 @@ export function RecordPaymentDialog({
                 })()}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="paymentAmount">Payment Amount</Label>
                   <CurrencyInput
@@ -179,24 +193,54 @@ export function RecordPaymentDialog({
                     onValueChange={setPaymentAmount}
                     placeholder="1,000"
                   />
+                  {(() => {
+                    const entered = parseFloat(paymentAmount) || 0
+                    const remaining = parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount)
+                    if (entered > remaining && remaining > 0) {
+                      return (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <Warning className="h-3 w-3 shrink-0" weight="bold" />
+                          Exceeds remaining balance.{" "}
+                          <button
+                            type="button"
+                            className="underline hover:text-destructive/80 transition-colors"
+                            onClick={() => setPaymentAmount(remaining.toString())}
+                          >
+                            Set to {formatCurrency(remaining)}
+                          </button>
+                        </p>
+                      )
+                    }
+                    return null
+                  })()}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
-                    <SelectTrigger>
-                      {METHOD_LABELS[paymentMethod]}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="gcash">GCash</SelectItem>
-                      <SelectItem value="maya">Maya</SelectItem>
-                      <SelectItem value="bank">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Payment Method</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {PAYMENT_METHODS.map((method) => {
+                      const isSelected = paymentMethod === method.value
+                      return (
+                        <button
+                          key={method.value}
+                          type="button"
+                          onClick={() => setPaymentMethod(method.value as any)}
+                          className={cn(
+                            "flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-all",
+                            isSelected
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
+                          )}
+                        >
+                          <MethodIcon method={method.value} className="h-5 w-5" selected={isSelected} />
+                          {method.label}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                <div className="space-y-2 sm:col-span-2">
+                <div className="space-y-2">
                   <Label>Payment Date</Label>
                   <DatePicker
                     value={paymentDate}
@@ -206,7 +250,7 @@ export function RecordPaymentDialog({
                   />
                 </div>
 
-                <div className="space-y-2 sm:col-span-2">
+                <div className="space-y-2">
                   <Label htmlFor="paymentNotes">Notes (optional)</Label>
                   <Input
                     id="paymentNotes"
@@ -260,7 +304,10 @@ export function RecordPaymentDialog({
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button onClick={() => setPaymentStep("confirm")} disabled={!paymentAmount}>
+              <Button
+                onClick={() => setPaymentStep("confirm")}
+                disabled={!paymentAmount || (scheduleItem != null && (parseFloat(paymentAmount) || 0) > parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount))}
+              >
                 Review Payment
               </Button>
             </>
