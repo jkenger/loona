@@ -628,8 +628,12 @@ function LoanDetailPage() {
               const appliedPenaltyTotal = itemPenalties
                 .filter((p) => p.status === "applied")
                 .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-              // Determine if paid late (paid date after due date)
-              const paidLate = item.paidAt && new Date(item.paidAt).toDateString() !== new Date(item.dueDate).toDateString() && new Date(item.paidAt) > new Date(item.dueDate)
+              // Determine if paid late — compare calendar dates only (strip time)
+              const paidLate = item.paidAt && (() => {
+                const paid = new Date(new Date(item.paidAt).toDateString()).getTime()
+                const due = new Date(new Date(item.dueDate).toDateString()).getTime()
+                return paid > due
+              })()
 
               return (
                 <div key={item.id} className="space-y-1">
