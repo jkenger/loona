@@ -351,7 +351,7 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
     const penaltyConfig = penaltyConfigMap.get(p.lenderId)
     let penaltyIn = -1
     if (penaltyConfig?.enabled && penaltyConfig.lateFee.enabled && p.status === "overdue") {
-      const remaining = penaltyConfig.lateFee.gracePeriodDays - daysOverdue
+      const remaining = penaltyConfig.gracePeriodDays - daysOverdue
       penaltyIn = Math.max(0, remaining)
     }
 

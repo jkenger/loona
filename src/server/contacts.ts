@@ -285,7 +285,7 @@ export const getBorrowerScorecard = createServerFn()
       where: eq(penaltySettings.lenderId, contact.lenderId),
     })
     const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
-    const gracePeriodDays = penaltyConfig.lateFee.gracePeriodDays
+    const gracePeriodDays = penaltyConfig.gracePeriodDays
 
     // Collect all schedule items across all loans
     let onTimeCount = 0
@@ -385,7 +385,7 @@ export const getPublicBorrowerProfile = createServerFn()
       where: eq(penaltySettings.lenderId, contact.lenderId),
     })
     const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
-    const gracePeriodDays = penaltyConfig.lateFee.gracePeriodDays
+    const gracePeriodDays = penaltyConfig.gracePeriodDays
 
     // Collect all schedule items across all loans
     let onTimeCount = 0

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useRef, useState, useEffect } from "react"
 import { getPublicBorrowerProfile } from "@/server/contacts"
 import { Button } from "@/components/ui/button"
-import { FilePdf, Spinner } from "@phosphor-icons/react"
+import { ArrowSquareOut, FilePdf, Spinner } from "@phosphor-icons/react"
 import { format } from "date-fns"
 
 export const Route = createFileRoute("/share/borrower/$contactId")({
@@ -346,7 +346,7 @@ function BorrowerProfilePage() {
                   >
                     <thead>
                       <tr style={{ backgroundColor: c.headerBg }}>
-                        {["#", "Principal", "Rate", "Term", "Completed", "On-Time"].map((h) => (
+                        {["Loan", "Principal", "Rate", "Term", "Completed", "On-Time"].map((h) => (
                           <th
                             key={h}
                             style={{
@@ -370,7 +370,23 @@ function BorrowerProfilePage() {
                           }}
                         >
                           <td style={{ padding: "6px 10px", border: `1px solid ${c.border}` }}>
-                            {index + 1}
+                            <a
+                              href={`/share/recap/${loan.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                color: c.blue,
+                                textDecoration: "none",
+                                fontWeight: 500,
+                                fontSize: "11px",
+                              }}
+                            >
+                              {loan.id.slice(0, 8)}
+                              <ArrowSquareOut style={{ width: "12px", height: "12px" }} />
+                            </a>
                           </td>
                           <td style={{ padding: "6px 10px", border: `1px solid ${c.border}`, textAlign: "right" }}>
                             {formatCurrency(parseFloat(loan.principal))}

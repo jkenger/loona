@@ -143,6 +143,24 @@ function PenaltySettingsPage() {
                   onCheckedChange={(enabled) => update({ enabled })}
                 />
               </div>
+
+              {config.enabled && (
+                <div className="space-y-2">
+                  <Label>Grace Period (days)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="90"
+                    value={config.gracePeriodDays}
+                    onChange={(e) =>
+                      update({ gracePeriodDays: parseInt(e.target.value) || 0 })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Number of days after the due date before any penalties apply
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -211,27 +229,6 @@ function PenaltySettingsPage() {
                           />
                         </div>
                       </div>
-
-                      <div className="space-y-2">
-                        <Label>Grace Period (days)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="90"
-                          value={config.lateFee.gracePeriodDays}
-                          onChange={(e) =>
-                            update({
-                              lateFee: {
-                                ...config.lateFee,
-                                gracePeriodDays: parseInt(e.target.value) || 0,
-                              },
-                            })
-                          }
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Number of days after the due date before the late fee applies
-                        </p>
-                      </div>
                     </>
                   )}
                 </CardContent>
@@ -263,43 +260,23 @@ function PenaltySettingsPage() {
 
                   {config.dailyPenaltyInterest.enabled && (
                     <>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Rate Per Day (%)</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="10"
-                            step="0.01"
-                            value={config.dailyPenaltyInterest.ratePerDay}
-                            onChange={(e) =>
-                              update({
-                                dailyPenaltyInterest: {
-                                  ...config.dailyPenaltyInterest,
-                                  ratePerDay: parseFloat(e.target.value) || 0,
-                                },
-                              })
-                            }
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Starts After (days)</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="90"
-                            value={config.dailyPenaltyInterest.startsAfterDays}
-                            onChange={(e) =>
-                              update({
-                                dailyPenaltyInterest: {
-                                  ...config.dailyPenaltyInterest,
-                                  startsAfterDays: parseInt(e.target.value) || 0,
-                                },
-                              })
-                            }
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label>Rate Per Day (%)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="10"
+                          step="0.01"
+                          value={config.dailyPenaltyInterest.ratePerDay}
+                          onChange={(e) =>
+                            update({
+                              dailyPenaltyInterest: {
+                                ...config.dailyPenaltyInterest,
+                                ratePerDay: parseFloat(e.target.value) || 0,
+                              },
+                            })
+                          }
+                        />
                       </div>
 
                       <div className="space-y-2">

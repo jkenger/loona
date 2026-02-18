@@ -8,13 +8,11 @@ export interface LateFeeConfig {
   enabled: boolean
   type: "fixed" | "percentage"
   amount: number         // flat amount (e.g., 200) or percentage (e.g., 5 for 5%)
-  gracePeriodDays: number // days after due date before late fee applies
 }
 
 export interface DailyPenaltyInterestConfig {
   enabled: boolean
   ratePerDay: number     // e.g., 0.1 for 0.1% per day
-  startsAfterDays: number // days after due date before daily interest starts
   maxDays: number        // cap on how many days of daily interest can accrue
 }
 
@@ -25,6 +23,7 @@ export interface PenaltyCapConfig {
 
 export interface PenaltyConfig {
   enabled: boolean
+  gracePeriodDays: number // days after due date before any penalties apply
   lateFee: LateFeeConfig
   dailyPenaltyInterest: DailyPenaltyInterestConfig
   penaltyCap: PenaltyCapConfig
@@ -39,13 +38,11 @@ const lateFeeSchema = z.object({
   enabled: z.boolean(),
   type: z.enum(["fixed", "percentage"]),
   amount: z.number().min(0),
-  gracePeriodDays: z.number().int().min(0).max(90),
 })
 
 const dailyPenaltyInterestSchema = z.object({
   enabled: z.boolean(),
   ratePerDay: z.number().min(0).max(10),
-  startsAfterDays: z.number().int().min(0).max(90),
   maxDays: z.number().int().min(1).max(365),
 })
 
@@ -56,6 +53,7 @@ const penaltyCapSchema = z.object({
 
 export const penaltyConfigSchema = z.object({
   enabled: z.boolean(),
+  gracePeriodDays: z.number().int().min(0).max(90),
   lateFee: lateFeeSchema,
   dailyPenaltyInterest: dailyPenaltyInterestSchema,
   penaltyCap: penaltyCapSchema,
@@ -68,16 +66,15 @@ export const penaltyConfigSchema = z.object({
 
 export const DEFAULT_PENALTY_CONFIG: PenaltyConfig = {
   enabled: false,
+  gracePeriodDays: 3,
   lateFee: {
     enabled: true,
     type: "fixed",
     amount: 200,
-    gracePeriodDays: 3,
   },
   dailyPenaltyInterest: {
     enabled: false,
     ratePerDay: 0.1,
-    startsAfterDays: 3,
     maxDays: 90,
   },
   penaltyCap: {
@@ -105,6 +102,15 @@ export function parsePenaltyConfig(json: string | null): PenaltyConfig {
   if (!json) return DEFAULT_PENALTY_CONFIG
   try {
     const parsed = JSON.parse(json)
+
+    // Migrate old shape: hoist nested gracePeriodDays to top level
+    if (parsed.gracePeriodDays === undefined) {
+      parsed.gracePeriodDays = parsed.lateFee?.gracePeriodDays ?? DEFAULT_PENALTY_CONFIG.gracePeriodDays
+    }
+    // Strip removed nested fields so Zod strict parsing won't choke on extras
+    if (parsed.lateFee) delete parsed.lateFee.gracePeriodDays
+    if (parsed.dailyPenaltyInterest) delete parsed.dailyPenaltyInterest.startsAfterDays
+
     const result = penaltyConfigSchema.safeParse(parsed)
     if (result.success) return result.data
     return DEFAULT_PENALTY_CONFIG
@@ -122,7 +128,7 @@ export function calculateLateFee(
   daysOverdue: number,
 ): number {
   if (!config.enabled || !config.lateFee.enabled) return 0
-  if (daysOverdue <= config.lateFee.gracePeriodDays) return 0
+  if (daysOverdue <= config.gracePeriodDays) return 0
 
   if (config.lateFee.type === "fixed") {
     return config.lateFee.amount
@@ -140,10 +146,10 @@ export function calculateDailyPenaltyInterest(
   daysOverdue: number,
 ): number {
   if (!config.enabled || !config.dailyPenaltyInterest.enabled) return 0
-  if (daysOverdue <= config.dailyPenaltyInterest.startsAfterDays) return 0
+  if (daysOverdue <= config.gracePeriodDays) return 0
 
   const applicableDays = Math.min(
-    daysOverdue - config.dailyPenaltyInterest.startsAfterDays,
+    daysOverdue - config.gracePeriodDays,
     config.dailyPenaltyInterest.maxDays,
   )
 
@@ -219,13 +225,13 @@ export function formatPenaltyForDisclosure(config: PenaltyConfig): string {
         ? `₱${config.lateFee.amount.toLocaleString()}`
         : `${config.lateFee.amount}% of overdue amount`
     parts.push(
-      `Late fee of ${feeStr} after ${config.lateFee.gracePeriodDays} day${config.lateFee.gracePeriodDays !== 1 ? "s" : ""} grace period`,
+      `Late fee of ${feeStr} after ${config.gracePeriodDays} day${config.gracePeriodDays !== 1 ? "s" : ""} grace period`,
     )
   }
 
   if (config.dailyPenaltyInterest.enabled) {
     parts.push(
-      `${config.dailyPenaltyInterest.ratePerDay}% per day penalty interest starting ${config.dailyPenaltyInterest.startsAfterDays} day${config.dailyPenaltyInterest.startsAfterDays !== 1 ? "s" : ""} after due date (max ${config.dailyPenaltyInterest.maxDays} days)`,
+      `${config.dailyPenaltyInterest.ratePerDay}% per day penalty interest starting ${config.gracePeriodDays} day${config.gracePeriodDays !== 1 ? "s" : ""} after due date (max ${config.dailyPenaltyInterest.maxDays} days)`,
     )
   }
 
@@ -246,5 +252,5 @@ export function formatPenaltyForDisclosure(config: PenaltyConfig): string {
 export function formatDailyInterestForDisclosure(config: PenaltyConfig): string {
   if (!config.enabled || !config.dailyPenaltyInterest.enabled) return "None"
 
-  return `${config.dailyPenaltyInterest.ratePerDay}% per day penalty interest starting ${config.dailyPenaltyInterest.startsAfterDays} day${config.dailyPenaltyInterest.startsAfterDays !== 1 ? "s" : ""} after due date, up to ${config.dailyPenaltyInterest.maxDays} days maximum`
+  return `${config.dailyPenaltyInterest.ratePerDay}% per day penalty interest starting ${config.gracePeriodDays} day${config.gracePeriodDays !== 1 ? "s" : ""} after due date, up to ${config.dailyPenaltyInterest.maxDays} days maximum`
 }

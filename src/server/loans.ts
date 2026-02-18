@@ -231,8 +231,7 @@ export const getLoan = createServerFn()
       })),
       penalties: undefined, // don't expose raw relation, use penaltyData instead
       penaltyData,
-      gracePeriodDays: penaltyConfig.lateFee.gracePeriodDays,
-      gracePeriodDays: penaltyConfig.lateFee.gracePeriodDays,
+      gracePeriodDays: penaltyConfig.gracePeriodDays,
       assignedAgent: result.assignedAgent
         ? {
             id: result.assignedAgent.id,
@@ -297,7 +296,7 @@ export const getPublicLoanRecap = createServerFn()
         status: s.status,
       })),
       totalPenaltiesApplied: totalApplied,
-      gracePeriodDays: penaltyConfig.lateFee.gracePeriodDays,
+      gracePeriodDays: penaltyConfig.gracePeriodDays,
     }
   })
 

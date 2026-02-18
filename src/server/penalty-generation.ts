@@ -58,7 +58,7 @@ export async function ensurePendingPenalties(
     // Late fee: create once per item if past grace period
     if (
       config.lateFee.enabled &&
-      daysOverdue > config.lateFee.gracePeriodDays
+      daysOverdue > config.gracePeriodDays
     ) {
       const hasLateFee = itemPenalties.some((p) => p.penaltyType === 'late_fee')
       if (!hasLateFee) {
@@ -81,7 +81,7 @@ export async function ensurePendingPenalties(
     // Daily interest: create or update one pending record per item
     if (
       config.dailyPenaltyInterest.enabled &&
-      daysOverdue > config.dailyPenaltyInterest.startsAfterDays
+      daysOverdue > config.gracePeriodDays
     ) {
       const pendingDailyInterest = itemPenalties.find(
         (p) => p.penaltyType === 'daily_interest' && p.status === 'pending',
