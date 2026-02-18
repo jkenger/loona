@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Spinner } from "@phosphor-icons/react"
+import { format } from "date-fns"
 
 interface ReversePaymentDialogProps {
   open: boolean
@@ -23,6 +24,11 @@ interface ReversePaymentDialogProps {
     amount: string
     method: string
     paidAt: string
+  } | null
+  scheduleInfo?: {
+    label: string
+    dueDate: string
+    amount: string
   } | null
 }
 
@@ -47,6 +53,7 @@ export function ReversePaymentDialog({
   open,
   onOpenChange,
   payment,
+  scheduleInfo,
 }: ReversePaymentDialogProps) {
   const router = useRouter()
   const [reason, setReason] = useState("")
@@ -100,6 +107,14 @@ export function ReversePaymentDialog({
                 <p className="text-sm text-muted-foreground">Payment Amount</p>
               </div>
               <div className="space-y-2 text-sm">
+                {scheduleInfo && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{scheduleInfo.label}</span>
+                    <span className="font-medium">
+                      {formatCurrency(scheduleInfo.amount)} · due {format(new Date(scheduleInfo.dueDate), "MMM d, yyyy")}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date</span>
                   <span className="font-medium">

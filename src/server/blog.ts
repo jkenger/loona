@@ -186,7 +186,7 @@ export const getAdminPost = createServerFn()
     return post ?? null
   })
 
-export const createPost = createServerFn()
+export const createPost = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       title: z.string().min(1),
@@ -233,7 +233,7 @@ export const createPost = createServerFn()
     return post
   })
 
-export const updatePost = createServerFn()
+export const updatePost = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       id: z.string(),

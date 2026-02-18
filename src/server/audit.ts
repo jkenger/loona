@@ -17,6 +17,7 @@ type AuditAction =
   // Payments
   | "payment.record"
   | "payment.reverse"
+  | "payment.edit_date"
   | "payment.view"
   // Agents
   | "agent.create"
