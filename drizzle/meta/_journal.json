@@ -162,6 +162,20 @@
       "when": 1771416089469,
       "tag": "0022_gorgeous_madelyne_pryor",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1771452498292,
+      "tag": "0023_tan_saracen",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1771456930361,
+      "tag": "0024_bright_slyde",
+      "breakpoints": true
     }
   ]
 }

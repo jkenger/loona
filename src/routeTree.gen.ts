@@ -32,7 +32,10 @@ import { Route as DashboardContactsIndexRouteImport } from './routes/_dashboard/
 import { Route as DashboardAgentsIndexRouteImport } from './routes/_dashboard/agents/index'
 import { Route as DashboardAgentIndexRouteImport } from './routes/_dashboard/agent/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/_dashboard/admin/index'
+import { Route as ShareSignTokenRouteImport } from './routes/share/sign/$token'
+import { Route as ShareReceiptPaymentIdRouteImport } from './routes/share/receipt/$paymentId'
 import { Route as ShareRecapLoanIdRouteImport } from './routes/share/recap/$loanId'
+import { Route as ShareLenderUserIdRouteImport } from './routes/share/lender/$userId'
 import { Route as ShareBorrowerContactIdRouteImport } from './routes/share/borrower/$contactId'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
@@ -179,9 +182,24 @@ const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const ShareSignTokenRoute = ShareSignTokenRouteImport.update({
+  id: '/share/sign/$token',
+  path: '/share/sign/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareReceiptPaymentIdRoute = ShareReceiptPaymentIdRouteImport.update({
+  id: '/share/receipt/$paymentId',
+  path: '/share/receipt/$paymentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareRecapLoanIdRoute = ShareRecapLoanIdRouteImport.update({
   id: '/share/recap/$loanId',
   path: '/share/recap/$loanId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareLenderUserIdRoute = ShareLenderUserIdRouteImport.update({
+  id: '/share/lender/$userId',
+  path: '/share/lender/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShareBorrowerContactIdRoute = ShareBorrowerContactIdRouteImport.update({
@@ -393,7 +411,10 @@ export interface FileRoutesByFullPath {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
+  '/share/lender/$userId': typeof ShareLenderUserIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
+  '/share/receipt/$paymentId': typeof ShareReceiptPaymentIdRoute
+  '/share/sign/$token': typeof ShareSignTokenRoute
   '/admin/': typeof DashboardAdminIndexRoute
   '/agent/': typeof DashboardAgentIndexRoute
   '/agents/': typeof DashboardAgentsIndexRoute
@@ -449,7 +470,10 @@ export interface FileRoutesByTo {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
+  '/share/lender/$userId': typeof ShareLenderUserIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
+  '/share/receipt/$paymentId': typeof ShareReceiptPaymentIdRoute
+  '/share/sign/$token': typeof ShareSignTokenRoute
   '/admin': typeof DashboardAdminIndexRoute
   '/agent': typeof DashboardAgentIndexRoute
   '/agents': typeof DashboardAgentsIndexRoute
@@ -508,7 +532,10 @@ export interface FileRoutesById {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
+  '/share/lender/$userId': typeof ShareLenderUserIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
+  '/share/receipt/$paymentId': typeof ShareReceiptPaymentIdRoute
+  '/share/sign/$token': typeof ShareSignTokenRoute
   '/_dashboard/admin/': typeof DashboardAdminIndexRoute
   '/_dashboard/agent/': typeof DashboardAgentIndexRoute
   '/_dashboard/agents/': typeof DashboardAgentsIndexRoute
@@ -566,7 +593,10 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/share/borrower/$contactId'
+    | '/share/lender/$userId'
     | '/share/recap/$loanId'
+    | '/share/receipt/$paymentId'
+    | '/share/sign/$token'
     | '/admin/'
     | '/agent/'
     | '/agents/'
@@ -622,7 +652,10 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/share/borrower/$contactId'
+    | '/share/lender/$userId'
     | '/share/recap/$loanId'
+    | '/share/receipt/$paymentId'
+    | '/share/sign/$token'
     | '/admin'
     | '/agent'
     | '/agents'
@@ -680,7 +713,10 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/share/borrower/$contactId'
+    | '/share/lender/$userId'
     | '/share/recap/$loanId'
+    | '/share/receipt/$paymentId'
+    | '/share/sign/$token'
     | '/_dashboard/admin/'
     | '/_dashboard/agent/'
     | '/_dashboard/agents/'
@@ -720,7 +756,10 @@ export interface RootRouteChildren {
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
   ShareBorrowerContactIdRoute: typeof ShareBorrowerContactIdRoute
+  ShareLenderUserIdRoute: typeof ShareLenderUserIdRoute
   ShareRecapLoanIdRoute: typeof ShareRecapLoanIdRoute
+  ShareReceiptPaymentIdRoute: typeof ShareReceiptPaymentIdRoute
+  ShareSignTokenRoute: typeof ShareSignTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -886,11 +925,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/share/sign/$token': {
+      id: '/share/sign/$token'
+      path: '/share/sign/$token'
+      fullPath: '/share/sign/$token'
+      preLoaderRoute: typeof ShareSignTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share/receipt/$paymentId': {
+      id: '/share/receipt/$paymentId'
+      path: '/share/receipt/$paymentId'
+      fullPath: '/share/receipt/$paymentId'
+      preLoaderRoute: typeof ShareReceiptPaymentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share/recap/$loanId': {
       id: '/share/recap/$loanId'
       path: '/share/recap/$loanId'
       fullPath: '/share/recap/$loanId'
       preLoaderRoute: typeof ShareRecapLoanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share/lender/$userId': {
+      id: '/share/lender/$userId'
+      path: '/share/lender/$userId'
+      fullPath: '/share/lender/$userId'
+      preLoaderRoute: typeof ShareLenderUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/share/borrower/$contactId': {
@@ -1236,7 +1296,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
   ShareBorrowerContactIdRoute: ShareBorrowerContactIdRoute,
+  ShareLenderUserIdRoute: ShareLenderUserIdRoute,
   ShareRecapLoanIdRoute: ShareRecapLoanIdRoute,
+  ShareReceiptPaymentIdRoute: ShareReceiptPaymentIdRoute,
+  ShareSignTokenRoute: ShareSignTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

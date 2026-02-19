@@ -87,6 +87,18 @@ export const auth = betterAuth({
         defaultValue: false,
         input: false,
       },
+      websiteUrl: {
+        type: "string",
+        required: false,
+        defaultValue: null,
+        input: true,
+      },
+      facebookUrl: {
+        type: "string",
+        required: false,
+        defaultValue: null,
+        input: true,
+      },
     },
   },
   session: {

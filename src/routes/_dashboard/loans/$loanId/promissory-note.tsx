@@ -1,11 +1,19 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useRef, useState, useEffect, useMemo } from "react"
 import { getLoan, updateLoanClauses } from "@/server/loans"
+import {
+  getDocumentSignatures,
+  saveLenderSignature,
+  generateSigningLink,
+  deleteSignature,
+} from "@/server/signatures"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
+import { SignaturePad } from "@/components/ui/signature-pad"
+import { SignatureBlock } from "@/components/documents/signature-block"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import {
   ArrowLeft,
@@ -16,7 +24,11 @@ import {
   X,
   CaretDown,
   Check,
+  PenNib,
+  LinkSimple,
+  Trash,
 } from "@phosphor-icons/react"
+import { toast } from "sonner"
 import { format } from "date-fns"
 import {
   type ClauseKey,
@@ -39,17 +51,27 @@ export const Route = createFileRoute(
       session: { user: { role: string | null; name: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { loan: null, unauthorized: true, lenderName: null }
+      return { loan: null, unauthorized: true, lenderName: null, signatures: [] }
     }
 
     try {
       const loan = await getLoan({ data: params.loanId })
       if (!loan.isLender) {
-        return { loan: null, unauthorized: true, lenderName: null }
+        return { loan: null, unauthorized: true, lenderName: null, signatures: [] }
       }
-      return { loan, unauthorized: false, lenderName: session.user.name }
+
+      let signatures: Awaited<ReturnType<typeof getDocumentSignatures>> = []
+      try {
+        signatures = await getDocumentSignatures({
+          data: { loanId: params.loanId, documentType: "promissory_note" },
+        })
+      } catch {
+        // Signatures not available yet
+      }
+
+      return { loan, unauthorized: false, lenderName: session.user.name, signatures }
     } catch {
-      return { loan: null, unauthorized: false, lenderName: null }
+      return { loan: null, unauthorized: false, lenderName: null, signatures: [] }
     }
   },
   pendingComponent: SkeletonDetailPage,
@@ -113,14 +135,22 @@ const CLAUSE_NUMBERS: Record<ClauseKey, number> = {
 }
 
 function PromissoryNotePage() {
-  const { loan, unauthorized, lenderName } = Route.useLoaderData()
+  const { loan, unauthorized, lenderName, signatures } = Route.useLoaderData()
   const router = useRouter()
   const documentRef = useRef<HTMLDivElement>(null)
   const [generating, setGenerating] = useState(false)
   const [pdfMode, setPdfMode] = useState(false)
   const [lang, setLang] = useState<Lang>("en")
+  const [docStyle, setDocStyle] = useState<"full" | "simple">("full")
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showSignPad, setShowSignPad] = useState(false)
+  const [signingLoading, setSigningLoading] = useState(false)
+
+  const sigs = signatures ?? []
+  const lenderSig = sigs.find((s) => s.signerRole === "lender")
+  const borrowerSig = sigs.find((s) => s.signerRole === "borrower")
+  const coMakerSig = sigs.find((s) => s.signerRole === "co_maker")
   const [editingClauses, setEditingClauses] = useState<Record<ClauseKey, ClauseText>>(() => {
     const initial: Record<string, ClauseText> = {}
     for (const key of CLAUSE_KEYS) {
@@ -226,11 +256,7 @@ function PromissoryNotePage() {
     try {
       const customClauses: CustomClauses = {}
       for (const key of CLAUSE_KEYS) {
-        const edited = editingClauses[key]
-        const def = DEFAULT_CLAUSES[key]
-        if (edited.en.trim() !== def.en.trim() || edited.fil.trim() !== def.fil.trim()) {
-          customClauses[key] = edited
-        }
+        customClauses[key] = editingClauses[key]
       }
 
       await updateLoanClauses({
@@ -255,6 +281,56 @@ function PromissoryNotePage() {
       ...prev,
       [key]: { ...DEFAULT_CLAUSES[key] },
     }))
+  }
+
+  const handleSaveLenderSignature = async (dataUrl: string) => {
+    setSigningLoading(true)
+    try {
+      await saveLenderSignature({
+        data: {
+          loanId: loan.id,
+          documentType: "promissory_note",
+          signatureData: dataUrl,
+        },
+      })
+      toast.success("Signature saved")
+      setShowSignPad(false)
+      router.invalidate()
+    } catch {
+      toast.error("Failed to save signature")
+    } finally {
+      setSigningLoading(false)
+    }
+  }
+
+  const handleGenerateLink = async () => {
+    setSigningLoading(true)
+    try {
+      const result = await generateSigningLink({
+        data: {
+          loanId: loan.id,
+          documentType: "promissory_note",
+          signerRole: "borrower",
+        },
+      })
+      const url = `${window.location.origin}/share/sign/${result.token}`
+      await navigator.clipboard.writeText(url)
+      toast.success("Signing link copied to clipboard")
+    } catch {
+      toast.error("Failed to generate signing link")
+    } finally {
+      setSigningLoading(false)
+    }
+  }
+
+  const handleDeleteSignature = async (signatureId: string) => {
+    try {
+      await deleteSignature({ data: { signatureId } })
+      toast.success("Signature removed")
+      router.invalidate()
+    } catch {
+      toast.error("Failed to remove signature")
+    }
   }
 
   const handleClauseTextChange = (key: ClauseKey, langKey: Lang, value: string) => {
@@ -289,6 +365,9 @@ function PromissoryNotePage() {
     ? format(new Date(loan.maturityDate), "MMMM d, yyyy")
     : "—"
   const lenderDisplay = lenderName || (lang === "en" ? "the Lender" : "ang Lender")
+
+  const SIMPLE_CLAUSE_KEYS: ClauseKey[] = ["default"]
+  const activeClauses = docStyle === "simple" ? SIMPLE_CLAUSE_KEYS : CLAUSE_KEYS
 
   const getClauseText = (key: ClauseKey): string => {
     if (editMode) {
@@ -555,7 +634,7 @@ function PromissoryNotePage() {
               </li>
 
               {/* 3-7: Editable clauses (rendered from resolved text) */}
-              {CLAUSE_KEYS.map((key) => (
+              {activeClauses.map((key) => (
                 <li
                   key={key}
                   style={{
@@ -583,7 +662,7 @@ function PromissoryNotePage() {
         </div>
 
         {/* Collateral Section */}
-        {loan.collateralDescription && (
+        {docStyle === "full" && loan.collateralDescription && (
           <div style={{ marginBottom: "24px" }}>
             <h2
               className="font-semibold mb-3"
@@ -629,7 +708,7 @@ function PromissoryNotePage() {
         )}
 
         {/* Co-maker Undertaking */}
-        {loan.coMakerName && (
+        {docStyle === "full" && loan.coMakerName && (
           <div style={{ marginBottom: "24px" }}>
             <h2
               className="font-semibold mb-3"
@@ -695,67 +774,31 @@ function PromissoryNotePage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: loan.coMakerName ? "1fr 1fr" : "1fr",
+              gridTemplateColumns: loan.coMakerName && docStyle === "full" ? "1fr 1fr" : "1fr",
               gap: "32px",
               marginBottom: "40px",
             }}
           >
-            <div>
-              <div
-                style={{
-                  borderBottom: `1px solid ${c.borderSignature}`,
-                  height: "40px",
-                  marginBottom: "8px",
-                }}
-              ></div>
-              <p style={{ fontSize: "13px", fontWeight: 500 }}>
-                {loan.contact.name}
-              </p>
-              <p style={{ fontSize: "11px", color: c.muted }}>
-                Borrower / Maker
-              </p>
-              <div style={{ marginTop: "16px" }}>
-                <div
-                  style={{
-                    borderBottom: `1px solid ${c.borderSignature}`,
-                    width: "150px",
-                    marginBottom: "8px",
-                  }}
-                ></div>
-                <p style={{ fontSize: "11px", color: c.muted }}>
-                  {lang === "en" ? "Date" : "Petsa"}
-                </p>
-              </div>
-            </div>
+            <SignatureBlock
+              name={loan.contact.name}
+              label="Borrower / Maker"
+              signatureData={borrowerSig?.signatureData}
+              signedAt={borrowerSig?.signedAt}
+              borderColor={c.borderSignature}
+              mutedColor={c.muted}
+              lang={lang}
+            />
 
-            {loan.coMakerName && (
-              <div>
-                <div
-                  style={{
-                    borderBottom: `1px solid ${c.borderSignature}`,
-                    height: "40px",
-                    marginBottom: "8px",
-                  }}
-                ></div>
-                <p style={{ fontSize: "13px", fontWeight: 500 }}>
-                  {loan.coMakerName}
-                </p>
-                <p style={{ fontSize: "11px", color: c.muted }}>
-                  Co-maker / Guarantor
-                </p>
-                <div style={{ marginTop: "16px" }}>
-                  <div
-                    style={{
-                      borderBottom: `1px solid ${c.borderSignature}`,
-                      width: "150px",
-                      marginBottom: "8px",
-                    }}
-                  ></div>
-                  <p style={{ fontSize: "11px", color: c.muted }}>
-                    {lang === "en" ? "Date" : "Petsa"}
-                  </p>
-                </div>
-              </div>
+            {docStyle === "full" && loan.coMakerName && (
+              <SignatureBlock
+                name={loan.coMakerName}
+                label="Co-maker / Guarantor"
+                signatureData={coMakerSig?.signatureData}
+                signedAt={coMakerSig?.signedAt}
+                borderColor={c.borderSignature}
+                mutedColor={c.muted}
+                lang={lang}
+              />
             )}
           </div>
 
@@ -772,36 +815,20 @@ function PromissoryNotePage() {
               Conforme:
             </p>
             <div style={{ maxWidth: "300px" }}>
-              <div
-                style={{
-                  borderBottom: `1px solid ${c.borderSignature}`,
-                  height: "40px",
-                  marginBottom: "8px",
-                }}
-              ></div>
-              <p style={{ fontSize: "13px", fontWeight: 500 }}>
-                {lenderName || "—"}
-              </p>
-              <p style={{ fontSize: "11px", color: c.muted }}>
-                Lender / Payee
-              </p>
-              <div style={{ marginTop: "16px" }}>
-                <div
-                  style={{
-                    borderBottom: `1px solid ${c.borderSignature}`,
-                    width: "150px",
-                    marginBottom: "8px",
-                  }}
-                ></div>
-                <p style={{ fontSize: "11px", color: c.muted }}>
-                  {lang === "en" ? "Date" : "Petsa"}
-                </p>
-              </div>
+              <SignatureBlock
+                name={lenderName || "—"}
+                label="Lender / Payee"
+                signatureData={lenderSig?.signatureData}
+                signedAt={lenderSig?.signedAt}
+                borderColor={c.borderSignature}
+                mutedColor={c.muted}
+                lang={lang}
+              />
             </div>
           </div>
 
           {/* Facilitating Agent */}
-          {loan.assignedAgent && (
+          {docStyle === "full" && loan.assignedAgent && (
             <div style={{ marginBottom: "40px" }}>
               <p
                 style={{
@@ -848,6 +875,7 @@ function PromissoryNotePage() {
             </div>
           )}
 
+          {docStyle === "full" && (
           <div>
             <p
               style={{
@@ -895,6 +923,7 @@ function PromissoryNotePage() {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -950,6 +979,37 @@ function PromissoryNotePage() {
 
       {/* Actions Section */}
       <div className="px-4 pt-3 pb-3 space-y-3 border-b">
+        {/* Document Style Toggle */}
+        {!editMode && (
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
+            Document Style
+          </label>
+          <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+            <button
+              onClick={() => setDocStyle("simple")}
+              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                docStyle === "simple"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Simple
+            </button>
+            <button
+              onClick={() => setDocStyle("full")}
+              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                docStyle === "full"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Full
+            </button>
+          </div>
+        </div>
+        )}
+
         {/* Document Language Toggle */}
         <div>
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
@@ -987,7 +1047,7 @@ function PromissoryNotePage() {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-2">
-          {loan.isLender && !editMode && (
+          {loan.isLender && !editMode && docStyle === "full" && (
             <Button
               onClick={handleEnterEditMode}
               variant="outline"
@@ -1018,6 +1078,110 @@ function PromissoryNotePage() {
           </Button>
         </div>
       </div>
+
+      {/* E-Signing Section */}
+      {!editMode && (
+        <div className="px-4 pt-3 pb-4 border-t space-y-3">
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+              E-Signatures
+            </label>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Lender</span>
+                {lenderSig?.signatureData ? (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="text-[10px] h-5 text-green-600 border-green-200">
+                      <Check className="h-3 w-3 mr-0.5" />
+                      Signed
+                    </Badge>
+                    <button
+                      onClick={() => handleDeleteSignature(lenderSig.id)}
+                      className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                      title="Remove signature"
+                    >
+                      <Trash size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">
+                    Unsigned
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {loan.coMakerName ? "Borrower & Co-maker" : "Borrower"}
+                </span>
+                {borrowerSig?.signatureData ? (
+                  <Badge variant="outline" className="text-[10px] h-5 text-green-600 border-green-200">
+                    <Check className="h-3 w-3 mr-0.5" />
+                    Signed
+                  </Badge>
+                ) : borrowerSig?.signingToken && !borrowerSig?.tokenUsedAt ? (
+                  <Badge variant="outline" className="text-[10px] h-5 text-amber-600 border-amber-200">
+                    Pending
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">
+                    Unsigned
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {!lenderSig?.signatureData && !showSignPad && (
+            <Button
+              onClick={() => setShowSignPad(true)}
+              variant="outline"
+              className="gap-2 w-full justify-center"
+              size="sm"
+            >
+              <PenNib className="h-3.5 w-3.5" />
+              Sign as Lender
+            </Button>
+          )}
+
+          {showSignPad && (
+            <div className="space-y-2">
+              <SignaturePad
+                onSave={handleSaveLenderSignature}
+                disabled={signingLoading}
+                height={120}
+                label="Your Signature"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSignPad(false)}
+                className="w-full text-xs"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          {lenderSig?.signatureData && (
+            <Button
+              onClick={handleGenerateLink}
+              disabled={signingLoading}
+              variant="outline"
+              className="gap-2 w-full justify-center"
+              size="sm"
+            >
+              {signingLoading ? (
+                <Spinner className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <LinkSimple className="h-3.5 w-3.5" />
+              )}
+              Send to Borrower for Signing
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Clause Editor (edit mode only) */}
       {editMode && (

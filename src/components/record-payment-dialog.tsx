@@ -109,7 +109,7 @@ export function RecordPaymentDialog({
 
     setIsRecordingPayment(true)
     try {
-      await recordPayment({
+      const result = await recordPayment({
         data: {
           loanId,
           scheduleItemId: scheduleItem.id,
@@ -119,7 +119,16 @@ export function RecordPaymentDialog({
           notes: paymentNotes || undefined,
         },
       })
-      toast.success("Payment recorded successfully")
+      toast.success("Payment recorded successfully", {
+        action: {
+          label: "Share Receipt",
+          onClick: () => {
+            const url = `${window.location.origin}/share/receipt/${result.id}`
+            navigator.clipboard.writeText(url)
+            toast.success("Receipt link copied to clipboard")
+          },
+        },
+      })
       router.invalidate()
       onOpenChange(false)
     } catch (err) {

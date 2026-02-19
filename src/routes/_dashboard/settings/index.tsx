@@ -34,9 +34,14 @@ import {
   Warning,
   ArrowSquareOut,
   Wallet,
+  GlobeSimple,
+  FacebookLogo,
+  LinkSimple,
+  Copy,
 } from "@phosphor-icons/react"
 import { SkeletonFormPage } from "@/components/ui/skeleton"
 import { getLenderSettings, saveLenderSettings } from "@/server/lender-settings"
+import { getLenderProfileLinks, saveLenderProfileLinks } from "@/server/lender-profile"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 
 export const Route = createFileRoute("/_dashboard/settings/")({
@@ -45,8 +50,10 @@ export const Route = createFileRoute("/_dashboard/settings/")({
       session: { user: { role: string | null } }
     }
     const isLender = hasRole(session.user.role, ROLES.LENDER)
-    const lenderConfig = isLender ? await getLenderSettings() : null
-    return { lenderConfig }
+    const [lenderConfig, profileLinks] = isLender
+      ? await Promise.all([getLenderSettings(), getLenderProfileLinks()])
+      : [null, null]
+    return { lenderConfig, profileLinks }
   },
   pendingComponent: SkeletonFormPage,
   component: SettingsPage,
@@ -55,7 +62,7 @@ export const Route = createFileRoute("/_dashboard/settings/")({
 function SettingsPage() {
   const router = useRouter()
   const { data: session } = useSession()
-  const { lenderConfig } = Route.useLoaderData()
+  const { lenderConfig, profileLinks } = Route.useLoaderData()
 
   // Profile edit state
   const [isEditingName, setIsEditingName] = useState(false)
@@ -77,6 +84,17 @@ function SettingsPage() {
   const [capitalInput, setCapitalInput] = useState("")
   const [isSavingCapital, setIsSavingCapital] = useState(false)
   const [currentCapital, setCurrentCapital] = useState(lenderConfig?.initialCapital ?? 0)
+
+  // Profile links state
+  const [isEditingWebsite, setIsEditingWebsite] = useState(false)
+  const [websiteInput, setWebsiteInput] = useState("")
+  const [isSavingWebsite, setIsSavingWebsite] = useState(false)
+  const [currentWebsite, setCurrentWebsite] = useState(profileLinks?.websiteUrl ?? "")
+
+  const [isEditingFacebook, setIsEditingFacebook] = useState(false)
+  const [facebookInput, setFacebookInput] = useState("")
+  const [isSavingFacebook, setIsSavingFacebook] = useState(false)
+  const [currentFacebook, setCurrentFacebook] = useState(profileLinks?.facebookUrl ?? "")
 
   const user = session?.user
 
@@ -187,6 +205,58 @@ function SettingsPage() {
     } finally {
       setIsSavingCapital(false)
     }
+  }
+
+  const handleEditWebsite = () => {
+    setWebsiteInput(currentWebsite || "")
+    setIsEditingWebsite(true)
+  }
+
+  const handleSaveWebsite = async () => {
+    if (websiteInput && !websiteInput.startsWith("http")) {
+      toast.error("Please enter a valid URL starting with http:// or https://")
+      return
+    }
+    setIsSavingWebsite(true)
+    try {
+      await saveLenderProfileLinks({ data: { websiteUrl: websiteInput || null, facebookUrl: currentFacebook || null } })
+      setCurrentWebsite(websiteInput || "")
+      setIsEditingWebsite(false)
+      toast.success("Website URL updated")
+    } catch {
+      toast.error("Failed to save URL")
+    } finally {
+      setIsSavingWebsite(false)
+    }
+  }
+
+  const handleEditFacebook = () => {
+    setFacebookInput(currentFacebook || "")
+    setIsEditingFacebook(true)
+  }
+
+  const handleSaveFacebook = async () => {
+    if (facebookInput && !facebookInput.startsWith("http")) {
+      toast.error("Please enter a valid URL starting with http:// or https://")
+      return
+    }
+    setIsSavingFacebook(true)
+    try {
+      await saveLenderProfileLinks({ data: { websiteUrl: currentWebsite || null, facebookUrl: facebookInput || null } })
+      setCurrentFacebook(facebookInput || "")
+      setIsEditingFacebook(false)
+      toast.success("Facebook URL updated")
+    } catch {
+      toast.error("Failed to save URL")
+    } finally {
+      setIsSavingFacebook(false)
+    }
+  }
+
+  const handleCopyShareLink = () => {
+    const shareUrl = `${window.location.origin}/share/lender/${user?.id}`
+    navigator.clipboard.writeText(shareUrl)
+    toast.success("Share link copied to clipboard")
   }
 
   const isLender = hasRole(user?.role ?? null, ROLES.LENDER)
@@ -300,6 +370,157 @@ function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Public Profile Card */}
+          {isLender && (
+            <Card className="shadow-lg">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <LinkSimple className="h-5 w-5 text-primary" />
+                  Public Profile
+                </CardTitle>
+                <CardDescription>Shareable profile for potential borrowers</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 space-y-4">
+                {/* Website URL */}
+                <div className="space-y-2">
+                  <Label>Website URL</Label>
+                  {isEditingWebsite ? (
+                    <div className="flex gap-2">
+                      <Input
+                        value={websiteInput}
+                        onChange={(e) => setWebsiteInput(e.target.value)}
+                        placeholder="https://example.com"
+                        className="flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveWebsite()
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSaveWebsite}
+                        disabled={isSavingWebsite}
+                      >
+                        {isSavingWebsite ? (
+                          <Spinner className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsEditingWebsite(false)}
+                        disabled={isSavingWebsite}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <GlobeSimple className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <span className="font-medium truncate">
+                          {currentWebsite || "Not set"}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleEditWebsite}
+                        className="gap-1 shrink-0"
+                      >
+                        <PencilSimple className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Facebook URL */}
+                <div className="space-y-2">
+                  <Label>Facebook URL</Label>
+                  {isEditingFacebook ? (
+                    <div className="flex gap-2">
+                      <Input
+                        value={facebookInput}
+                        onChange={(e) => setFacebookInput(e.target.value)}
+                        placeholder="https://facebook.com/your-page"
+                        className="flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveFacebook()
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSaveFacebook}
+                        disabled={isSavingFacebook}
+                      >
+                        {isSavingFacebook ? (
+                          <Spinner className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsEditingFacebook(false)}
+                        disabled={isSavingFacebook}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FacebookLogo className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <span className="font-medium truncate">
+                          {currentFacebook || "Not set"}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleEditFacebook}
+                        className="gap-1 shrink-0"
+                      >
+                        <PencilSimple className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Share Link */}
+                <div className="space-y-2">
+                  <Label>Share Link</Label>
+                  <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <LinkSimple className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <span className="text-sm truncate text-muted-foreground">
+                        {typeof window !== "undefined"
+                          ? `${window.location.origin}/share/lender/${user?.id}`
+                          : `/share/lender/${user?.id}`}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCopyShareLink}
+                      className="gap-1 shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Share this link with potential borrowers to show your lender profile.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Security Card */}
           <Card className="shadow-lg">

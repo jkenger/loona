@@ -66,6 +66,9 @@ export const paymentTypeEnum = pgEnum("payment_type", ["credit", "debit"])
 
 export const blogPostStatusEnum = pgEnum("blog_post_status", ["draft", "published"])
 
+export const documentTypeEnum = pgEnum("document_type", ["disclosure", "promissory_note"])
+export const signerRoleEnum = pgEnum("signer_role", ["lender", "borrower", "co_maker"])
+
 // ============================================================================
 // Auth Tables (Better Auth)
 // ============================================================================
@@ -82,6 +85,8 @@ export const user = pgTable("user", {
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
   hasCompletedOnboarding: boolean("has_completed_onboarding").notNull().default(false),
+  websiteUrl: text("website_url"),
+  facebookUrl: text("facebook_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
@@ -383,6 +388,23 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
+// Document Signatures (e-signing for disclosure/promissory notes)
+export const documentSignatures = pgTable("document_signatures", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  loanId: text("loan_id")
+    .notNull()
+    .references(() => loans.id, { onDelete: "cascade" }),
+  documentType: documentTypeEnum("document_type").notNull(),
+  signerRole: signerRoleEnum("signer_role").notNull(),
+  signerName: text("signer_name").notNull(),
+  signatureData: text("signature_data"), // base64 PNG data URL — null until signed
+  signedAt: timestamp("signed_at"),
+  ipAddress: text("ip_address"),
+  signingToken: text("signing_token").unique(), // for public signing links
+  tokenUsedAt: timestamp("token_used_at"), // set when borrower submits via token
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
 // Playbook Sections (lender lending handbook)
 export const playbookSections = pgTable(
   "playbook_sections",
@@ -531,6 +553,7 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
   schedule: many(paymentSchedule),
   payments: many(payments),
   penalties: many(penalties),
+  documentSignatures: many(documentSignatures),
 }))
 
 export const paymentScheduleRelations = relations(paymentSchedule, ({ one, many }) => ({
@@ -617,6 +640,13 @@ export const penaltiesRelations = relations(penalties, ({ one }) => ({
   decidedByUser: one(user, { fields: [penalties.decidedBy], references: [user.id] }),
 }))
 
+export const documentSignaturesRelations = relations(documentSignatures, ({ one }) => ({
+  loan: one(loans, {
+    fields: [documentSignatures.loanId],
+    references: [loans.id],
+  }),
+}))
+
 export const playbookSectionsRelations = relations(playbookSections, ({ one }) => ({
   lender: one(user, { fields: [playbookSections.lenderId], references: [user.id] }),
 }))
@@ -692,3 +722,6 @@ export type BlogCategory = typeof blogCategories.$inferSelect
 export type BlogTag = typeof blogTags.$inferSelect
 export type BlogPost = typeof blogPosts.$inferSelect
 export type BlogPostTag = typeof blogPostTags.$inferSelect
+
+export type DocumentSignature = typeof documentSignatures.$inferSelect
+export type NewDocumentSignature = typeof documentSignatures.$inferInsert

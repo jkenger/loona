@@ -48,7 +48,8 @@
       "WebFetch(domain:community.cloudflare.com)",
       "WebFetch(domain:www.better-auth.com)",
       "WebFetch(domain:tanstack.com)",
-      "Bash(/dev/null --include=*.d.ts)"
+      "Bash(/dev/null --include=*.d.ts)",
+      "Bash(npm install:*)"
     ]
   }
 }

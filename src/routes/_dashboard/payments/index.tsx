@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   ArrowCounterClockwise,
   PencilSimple,
+  LinkSimple,
 } from "@phosphor-icons/react"
 import { subDays, startOfMonth, isAfter, format } from "date-fns"
 import { formatRelativeDate } from "@/lib/utils/date"
@@ -610,7 +611,19 @@ function PaymentsPage() {
                             +{formatCurrency(payment.amount)}
                           </p>
                           {payment.type === "credit" && !payment.reversedAt && (
-                            <div className="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[4rem] group-hover:opacity-100 transition-all duration-200">
+                            <div className="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[6rem] group-hover:opacity-100 transition-all duration-200">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                onClick={() => {
+                                  const url = `${window.location.origin}/share/receipt/${payment.id}`
+                                  navigator.clipboard.writeText(url)
+                                  toast.success("Receipt link copied to clipboard")
+                                }}
+                              >
+                                <LinkSimple className="h-3.5 w-3.5" />
+                              </Button>
                               <Button
                                 size="icon"
                                 variant="ghost"

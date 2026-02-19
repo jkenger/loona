@@ -707,3 +707,55 @@ export const reversePayment = createServerFn()
 
     return { success: true }
   })
+
+// Public receipt (no auth required)
+export const getPublicPaymentReceipt = createServerFn()
+  .inputValidator(z.string().min(1))
+  .handler(async ({ data: paymentId }) => {
+    const payment = await db.query.payments.findFirst({
+      where: eq(payments.id, paymentId),
+      with: {
+        loan: {
+          with: {
+            contact: true,
+            lender: true,
+          },
+        },
+        scheduleItem: true,
+        recordedByAgent: {
+          with: {
+            agentUser: true,
+          },
+        },
+      },
+    })
+
+    if (!payment) return null
+    if (payment.reversedAt) return null
+    if (payment.type !== "credit") return null
+
+    const scheduleItems = await db.query.paymentSchedule.findMany({
+      where: eq(paymentSchedule.loanId, payment.loanId),
+      orderBy: paymentSchedule.dueDate,
+    })
+    const installmentIndex = scheduleItems.findIndex((s) => s.id === payment.scheduleItemId)
+
+    return {
+      id: payment.id,
+      amount: payment.amount,
+      method: payment.method,
+      paidAt: payment.paidAt.toISOString(),
+      notes: payment.notes,
+      createdAt: payment.createdAt.toISOString(),
+      borrowerName: payment.loan.contact.name,
+      lenderName: payment.loan.lender.name,
+      scheduleItem: payment.scheduleItem
+        ? {
+            dueDate: payment.scheduleItem.dueDate.toISOString(),
+            amount: payment.scheduleItem.amount,
+            installmentLabel: installmentIndex >= 0 ? `#${installmentIndex + 1} of ${scheduleItems.length}` : null,
+          }
+        : null,
+      agentName: payment.recordedByAgent?.agentUser?.name ?? null,
+    }
+  })

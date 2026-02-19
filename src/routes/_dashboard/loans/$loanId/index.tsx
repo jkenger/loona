@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { getLoan, deleteLoan, approveLoan, rejectLoan } from "@/server/loans"
+import { getLoanSigningStatus } from "@/server/signatures"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
 import { PenaltyBadge } from "@/components/penalty-badge"
 import { RecordPaymentDialog } from "@/components/record-payment-dialog"
@@ -52,6 +53,7 @@ import {
   ChartLineUp,
   PencilSimple,
   UserCircle,
+  LinkSimple,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
@@ -61,14 +63,14 @@ export const Route = createFileRoute("/_dashboard/loans/$loanId/")({
   loader: async ({ params, context }) => {
     const { session } = context as { session: { user: { role: string | null } } }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { loan: null, agents: [], unauthorized: true }
+      return { loan: null, agents: [], unauthorized: true, signingStatus: null }
     }
 
     try {
       const loan = await getLoan({ data: params.loanId })
       // Only allow if user is the lender
       if (!loan.isLender) {
-        return { loan: null, agents: [], unauthorized: true }
+        return { loan: null, agents: [], unauthorized: true, signingStatus: null }
       }
 
       let agents: Awaited<ReturnType<typeof getAgents>> = []
@@ -78,9 +80,16 @@ export const Route = createFileRoute("/_dashboard/loans/$loanId/")({
         // Agents list not available
       }
 
-      return { loan, agents, unauthorized: false }
+      let signingStatus: Awaited<ReturnType<typeof getLoanSigningStatus>> | null = null
+      try {
+        signingStatus = await getLoanSigningStatus({ data: params.loanId })
+      } catch {
+        // Signing status not available
+      }
+
+      return { loan, agents, unauthorized: false, signingStatus }
     } catch {
-      return { loan: null, agents: [], unauthorized: false }
+      return { loan: null, agents: [], unauthorized: false, signingStatus: null }
     }
   },
   pendingComponent: SkeletonDetailPage,
@@ -90,7 +99,7 @@ export const Route = createFileRoute("/_dashboard/loans/$loanId/")({
 type ScheduleItem = NonNullable<Awaited<ReturnType<typeof getLoan>>>["schedule"][0]
 
 function LoanDetailPage() {
-  const { loan, agents, unauthorized } = Route.useLoaderData()
+  const { loan, agents, unauthorized, signingStatus } = Route.useLoaderData()
   const penaltyData = loan?.penaltyData ?? null
   const router = useRouter()
   const [assigning, setAssigning] = useState(false)
@@ -786,7 +795,19 @@ function LoanDetailPage() {
                         <p className="text-sm text-muted-foreground mr-1">{payment.notes}</p>
                       )}
                       {payment.type === "credit" && !payment.reversedAt && loan.isLender && (
-                        <div className="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[4rem] group-hover:opacity-100 transition-all duration-200">
+                        <div className="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[6rem] group-hover:opacity-100 transition-all duration-200">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            onClick={() => {
+                              const url = `${window.location.origin}/share/receipt/${payment.id}`
+                              navigator.clipboard.writeText(url)
+                              toast.success("Receipt link copied to clipboard")
+                            }}
+                          >
+                            <LinkSimple className="h-3.5 w-3.5" />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -870,6 +891,7 @@ function LoanDetailPage() {
                     Borrower's promise to pay
                   </p>
                 </div>
+                <SigningStatusBadge status={signingStatus?.promissory_note} />
                 <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
               </Link>
 
@@ -1158,4 +1180,34 @@ function formatCurrency(amount: string | number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(num)
+}
+
+function SigningStatusBadge({ status }: { status?: string | null }) {
+  if (!status || status === "unsigned") return null
+
+  if (status === "signed") {
+    return (
+      <Badge variant="outline" className="text-[10px] h-5 text-green-600 border-green-200 shrink-0">
+        Signed
+      </Badge>
+    )
+  }
+
+  if (status === "pending") {
+    return (
+      <Badge variant="outline" className="text-[10px] h-5 text-amber-600 border-amber-200 shrink-0">
+        Pending
+      </Badge>
+    )
+  }
+
+  if (status === "lender_signed") {
+    return (
+      <Badge variant="outline" className="text-[10px] h-5 text-blue-600 border-blue-200 shrink-0">
+        Lender Signed
+      </Badge>
+    )
+  }
+
+  return null
 }

@@ -1,9 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState } from "react"
 import { getPublicLoanRecap } from "@/server/loans"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { LoonaBrand } from "@/components/ui/loona-brand"
+import { Stagger, StaggerItem } from "@/components/ui/stagger"
 import { FilePdf, Spinner } from "@phosphor-icons/react"
 import { format, differenceInCalendarDays } from "date-fns"
+import { formatCurrency } from "@/lib/utils"
+import { useDocColors, generatePdf } from "@/lib/utils/share"
 
 export const Route = createFileRoute("/share/recap/$loanId")({
   loader: async ({ params }) => {
@@ -17,42 +23,18 @@ export const Route = createFileRoute("/share/recap/$loanId")({
   component: RecapPage,
 })
 
-function useDocColors(pdfMode: boolean) {
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    const check = () =>
-      setIsDark(document.documentElement.classList.contains("dark"))
-    check()
-    const observer = new MutationObserver(check)
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    })
-    return () => observer.disconnect()
-  }, [])
-
-  const dark = isDark && !pdfMode
-
-  return {
-    bg: dark ? "#1e293b" : "white",
-    text: dark ? "#e2e8f0" : "#374151",
-    textStrong: dark ? "#f1f5f9" : "#111827",
-    muted: dark ? "#94a3b8" : "#6b7280",
-    border: dark ? "#334155" : "#e5e7eb",
-    borderStrong: dark ? "#475569" : "#d1d5db",
-    rowAlt: dark ? "#253349" : "#f9fafb",
-    rowEven: dark ? "#1e293b" : "white",
-    mutedBg: dark ? "#334155" : "#f3f4f6",
-    headerBg: dark ? "#334155" : "#e5e7eb",
-    green: dark ? "#22c55e" : "#16a34a",
-    greenBg: dark ? "#14532d" : "#dcfce7",
-    amber: dark ? "#f59e0b" : "#d97706",
-    amberBg: dark ? "#78350f" : "#fef3c7",
-  }
-}
-
 type RecapData = NonNullable<Awaited<ReturnType<typeof getPublicLoanRecap>>>
+
+/** 2-decimal currency for the inline-styled PDF document zone */
+function formatCurrencyDoc(amount: string | number): string {
+  const num = typeof amount === "string" ? parseFloat(amount) : amount
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num)
+}
 
 function computeMetrics(recap: RecapData) {
   const schedule = recap.schedule
@@ -132,29 +114,8 @@ function RecapPage() {
     )
 
     try {
-      const html2pdf = (await import("html2pdf.js")).default
-
-      const element = documentRef.current
       const filename = `loan-recap-${recap.contactName.replace(/\s+/g, "-").toLowerCase()}-${format(new Date(), "yyyy-MM-dd")}.pdf`
-
-      const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] as const },
-      }
-
-      await html2pdf().set(opt).from(element).save()
+      await generatePdf(documentRef.current, filename)
     } catch (error) {
       console.error("Failed to generate PDF:", error)
     } finally {
@@ -166,17 +127,49 @@ function RecapPage() {
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white py-4">
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-          <h2 className="text-sm font-medium text-blue-200/70">Loan Completion Summary</h2>
+      <div className="py-6 border-b bg-card">
+        <div className="mx-auto max-w-4xl px-4 flex items-center justify-between">
+          <LoonaBrand size="sm" animated={false} />
+          <Badge variant="outline">Loan Summary</Badge>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
-          {/* Document Preview */}
-          <div className="min-w-0 order-2 lg:order-1">
+      {/* Content */}
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <Stagger className="space-y-4">
+          {/* PDF Action Card */}
+          <StaggerItem>
+            <Card>
+              <CardHeader>
+                <CardTitle>{recap.contactName}</CardTitle>
+                <CardDescription>
+                  Loan recap — {formatCurrency(metrics.totalPaid)} paid
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={handleGeneratePDF}
+                  disabled={generating}
+                  className="gap-2 w-full justify-center"
+                >
+                  {generating ? (
+                    <>
+                      <Spinner className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FilePdf className="h-4 w-4" weight="bold" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </StaggerItem>
+
+          {/* Document Zone — ALL inline styles preserved for html2canvas */}
+          <StaggerItem>
             <div
               ref={documentRef}
               className="shadow-lg rounded-lg overflow-hidden"
@@ -239,10 +232,10 @@ function RecapPage() {
                       Total Paid
                     </p>
                     <p style={{ fontSize: "20px", fontWeight: 700, color: c.textStrong }}>
-                      {formatCurrency(metrics.totalPaid)}
+                      {formatCurrencyDoc(metrics.totalPaid)}
                     </p>
                     <p style={{ fontSize: "11px", color: c.muted }}>
-                      of {formatCurrency(metrics.totalExpected)} expected
+                      of {formatCurrencyDoc(metrics.totalExpected)} expected
                     </p>
                   </div>
                   <div
@@ -295,7 +288,7 @@ function RecapPage() {
                           Penalties Paid
                         </p>
                         <p style={{ fontSize: "20px", fontWeight: 700, color: c.amber }}>
-                          {formatCurrency(metrics.totalPenalties)}
+                          {formatCurrencyDoc(metrics.totalPenalties)}
                         </p>
                         <p style={{ fontSize: "11px", color: c.muted }}>
                           total penalties applied
@@ -374,8 +367,8 @@ function RecapPage() {
                             }}
                             title={
                               item.paidAt
-                                ? `#${index + 1}: ${formatCurrency(item.amount)}\nDue: ${format(new Date(item.dueDate), "MMM d, yyyy")}\nPaid: ${format(new Date(item.paidAt), "MMM d, yyyy")}`
-                                : `#${index + 1}: ${formatCurrency(item.amount)}\nDue: ${format(new Date(item.dueDate), "MMM d, yyyy")}\nNot paid`
+                                ? `#${index + 1}: ${formatCurrencyDoc(item.amount)}\nDue: ${format(new Date(item.dueDate), "MMM d, yyyy")}\nPaid: ${format(new Date(item.paidAt), "MMM d, yyyy")}`
+                                : `#${index + 1}: ${formatCurrencyDoc(item.amount)}\nDue: ${format(new Date(item.dueDate), "MMM d, yyyy")}\nNot paid`
                             }
                           >
                             <div
@@ -505,7 +498,7 @@ function RecapPage() {
                                 textAlign: "right",
                               }}
                             >
-                              {formatCurrency(item.paidAmount !== "0" ? item.paidAmount : item.amount)}
+                              {formatCurrencyDoc(item.paidAmount !== "0" ? item.paidAmount : item.amount)}
                             </td>
                             <td
                               style={{
@@ -578,7 +571,7 @@ function RecapPage() {
                             textAlign: "right",
                           }}
                         >
-                          {formatCurrency(metrics.totalPaid)}
+                          {formatCurrencyDoc(metrics.totalPaid)}
                         </td>
                         <td
                           colSpan={2}
@@ -616,52 +609,9 @@ function RecapPage() {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="order-1 lg:order-2 lg:sticky lg:top-[20px] lg:max-h-[calc(100vh-56px)] rounded-lg border bg-background shadow-lg overflow-hidden flex flex-col">
-            <div className="flex flex-col h-full bg-background border-l">
-              <div className="p-4 border-b">
-                <h3 className="font-semibold text-sm">Loan Recap</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Payment behavior summary
-                </p>
-              </div>
-
-              <div className="px-4 pt-3 pb-3 space-y-3">
-                <Button
-                  onClick={handleGeneratePDF}
-                  disabled={generating}
-                  className="gap-2 w-full justify-center"
-                  size="sm"
-                >
-                  {generating ? (
-                    <>
-                      <Spinner className="h-3.5 w-3.5 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <FilePdf className="h-3.5 w-3.5" weight="bold" />
-                      Download PDF
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+          </StaggerItem>
+        </Stagger>
       </div>
     </div>
   )
-}
-
-function formatCurrency(amount: string | number): string {
-  const num = typeof amount === "string" ? parseFloat(amount) : amount
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(num)
 }

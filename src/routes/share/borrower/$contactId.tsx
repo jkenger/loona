@@ -1,9 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState } from "react"
 import { getPublicBorrowerProfile } from "@/server/contacts"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { LoonaBrand } from "@/components/ui/loona-brand"
+import { Stagger, StaggerItem } from "@/components/ui/stagger"
 import { ArrowSquareOut, FilePdf, Spinner } from "@phosphor-icons/react"
 import { format } from "date-fns"
+import { formatCurrency } from "@/lib/utils"
+import { useDocColors, generatePdf } from "@/lib/utils/share"
 
 export const Route = createFileRoute("/share/borrower/$contactId")({
   loader: async ({ params }) => {
@@ -16,45 +22,6 @@ export const Route = createFileRoute("/share/borrower/$contactId")({
   },
   component: BorrowerProfilePage,
 })
-
-function useDocColors(pdfMode: boolean) {
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    const check = () =>
-      setIsDark(document.documentElement.classList.contains("dark"))
-    check()
-    const observer = new MutationObserver(check)
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    })
-    return () => observer.disconnect()
-  }, [])
-
-  const dark = isDark && !pdfMode
-
-  return {
-    bg: dark ? "#1e293b" : "white",
-    text: dark ? "#e2e8f0" : "#374151",
-    textStrong: dark ? "#f1f5f9" : "#111827",
-    muted: dark ? "#94a3b8" : "#6b7280",
-    border: dark ? "#334155" : "#e5e7eb",
-    borderStrong: dark ? "#475569" : "#d1d5db",
-    rowAlt: dark ? "#253349" : "#f9fafb",
-    rowEven: dark ? "#1e293b" : "white",
-    mutedBg: dark ? "#334155" : "#f3f4f6",
-    headerBg: dark ? "#334155" : "#e5e7eb",
-    green: dark ? "#22c55e" : "#16a34a",
-    greenBg: dark ? "#14532d" : "#dcfce7",
-    amber: dark ? "#f59e0b" : "#d97706",
-    amberBg: dark ? "#78350f" : "#fef3c7",
-    purple: dark ? "#a78bfa" : "#7c3aed",
-    purpleBg: dark ? "#3b0764" : "#ede9fe",
-    blue: dark ? "#60a5fa" : "#2563eb",
-    blueBg: dark ? "#1e3a5f" : "#dbeafe",
-  }
-}
 
 type ProfileData = NonNullable<Awaited<ReturnType<typeof getPublicBorrowerProfile>>>
 
@@ -103,29 +70,8 @@ function BorrowerProfilePage() {
     )
 
     try {
-      const html2pdf = (await import("html2pdf.js")).default
-
-      const element = documentRef.current
       const filename = `borrower-profile-${profile.contactName.replace(/\s+/g, "-").toLowerCase()}-${format(new Date(), "yyyy-MM-dd")}.pdf`
-
-      const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] as const },
-      }
-
-      await html2pdf().set(opt).from(element).save()
+      await generatePdf(documentRef.current, filename)
     } catch (error) {
       console.error("Failed to generate PDF:", error)
     } finally {
@@ -145,17 +91,47 @@ function BorrowerProfilePage() {
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white py-4">
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-          <h2 className="text-sm font-medium text-blue-200/70">Borrower Profile</h2>
+      <div className="py-6 border-b bg-card">
+        <div className="mx-auto max-w-3xl px-4 flex items-center justify-between">
+          <LoonaBrand size="sm" animated={false} />
+          <Badge variant="outline">Borrower Profile</Badge>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
-          {/* Document Preview */}
-          <div className="min-w-0 order-2 lg:order-1">
+      {/* Content */}
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        <Stagger className="space-y-4">
+          {/* PDF Action Card */}
+          <StaggerItem>
+            <Card>
+              <CardHeader>
+                <CardTitle>{profile.contactName}</CardTitle>
+                <CardDescription>Credit standing summary</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={handleGeneratePDF}
+                  disabled={generating}
+                  className="gap-2 w-full justify-center"
+                >
+                  {generating ? (
+                    <>
+                      <Spinner className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FilePdf className="h-4 w-4" weight="bold" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </StaggerItem>
+
+          {/* Document Zone — ALL inline styles preserved for html2canvas */}
+          <StaggerItem>
             <div
               ref={documentRef}
               className="shadow-lg rounded-lg overflow-hidden"
@@ -450,52 +426,9 @@ function BorrowerProfilePage() {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="order-1 lg:order-2 lg:sticky lg:top-[20px] lg:max-h-[calc(100vh-56px)] rounded-lg border bg-background shadow-lg overflow-hidden flex flex-col">
-            <div className="flex flex-col h-full bg-background border-l">
-              <div className="p-4 border-b">
-                <h3 className="font-semibold text-sm">Borrower Profile</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Credit standing summary
-                </p>
-              </div>
-
-              <div className="px-4 pt-3 pb-3 space-y-3">
-                <Button
-                  onClick={handleGeneratePDF}
-                  disabled={generating}
-                  className="gap-2 w-full justify-center"
-                  size="sm"
-                >
-                  {generating ? (
-                    <>
-                      <Spinner className="h-3.5 w-3.5 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <FilePdf className="h-3.5 w-3.5" weight="bold" />
-                      Download PDF
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+          </StaggerItem>
+        </Stagger>
       </div>
     </div>
   )
-}
-
-function formatCurrency(amount: string | number): string {
-  const num = typeof amount === "string" ? parseFloat(amount) : amount
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num)
 }
