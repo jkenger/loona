@@ -4,7 +4,7 @@ import { format } from "date-fns"
 import { toast } from "sonner"
 import { z } from "zod"
 import { createContactAndLoan, getLoan } from "@/server/loans"
-import { getContacts } from "@/server/contacts"
+import { getContacts, getBorrowerScorecard } from "@/server/contacts"
 import { getCashPosition } from "@/server/lender-settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,14 +52,41 @@ import {
   Info,
   Warning,
   ChartBar,
+  TrendUp,
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
-import { resolveBorrowerTierForLoan, getTierConfigs } from "@/server/tier-configs"
-import { formatPenaltyForDisclosure } from "@/lib/constants/penalty-defaults"
+import { computeRenewalTier } from "@/lib/utils/renewal-tiers"
 import { InterestRateWarning } from "@/components/interest-rate-warning"
 
-type TierInfo = Awaited<ReturnType<typeof resolveBorrowerTierForLoan>> | null
+type Scorecard = NonNullable<Awaited<ReturnType<typeof getBorrowerScorecard>>>
+
+function getRenewalRecommendation(
+  scorecard: Scorecard,
+  currentRate: number,
+  currentTerm: number,
+) {
+  const tierResult = computeRenewalTier(scorecard)
+
+  // Clamp suggested rate (minimum 1%)
+  const suggestedRate = Math.max(1, currentRate + tierResult.interestDiscount)
+  const suggestedTerm = tierResult.termBenefit === "longer"
+    ? currentTerm + 3
+    : tierResult.termBenefit === "shorter"
+      ? Math.max(1, currentTerm - 3)
+      : currentTerm
+
+  return {
+    tier: tierResult.tier,
+    tierLabel: tierResult.tierLabel,
+    interestAdjustment: tierResult.interestDiscount,
+    termSuggestion: tierResult.termBenefit,
+    suggestedRate,
+    suggestedTerm,
+    reasoning: tierResult.reasoning,
+    hasDefaults: tierResult.hasDefaults,
+  }
+}
 
 const PURPOSE_TEMPLATES = [
   { label: "Bill Payment", icon: "\u{1F4B3}" },
@@ -89,33 +116,30 @@ export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
     if (!hasRole(session.user.role, ROLES.LENDER)) {
       return { contacts: [], cashPosition: null, unauthorized: true, renewFromLoan: null, scorecard: null }
     }
-    const [contacts, cashPosition, allTierConfigs] = await Promise.all([
+    const [contacts, cashPosition] = await Promise.all([
       getContacts(),
       getCashPosition().catch(() => null),
-      getTierConfigs().catch(() => null),
     ])
-    // Build a "New" tier default from lender's tier configs
-    const newTierConfig = allTierConfigs?.find((c) => c.tier === "new") ?? null
     let renewFromLoan: Awaited<ReturnType<typeof getLoan>> | null = null
-    let tierInfo: TierInfo = null
+    let scorecard: Awaited<ReturnType<typeof getBorrowerScorecard>> | null = null
     if (deps.renewFromLoanId) {
       try {
         renewFromLoan = await getLoan({ data: deps.renewFromLoanId })
         if (renewFromLoan) {
-          tierInfo = await resolveBorrowerTierForLoan({ data: renewFromLoan.contactId })
+          scorecard = await getBorrowerScorecard({ data: renewFromLoan.contactId })
         }
       } catch {
         // Source loan not found or not accessible
       }
     }
-    return { contacts, cashPosition, unauthorized: false, renewFromLoan, tierInfo, newTierConfig }
+    return { contacts, cashPosition, unauthorized: false, renewFromLoan, scorecard }
   },
   pendingComponent: SkeletonFormPage,
   component: NewLoanWizard,
 })
 
 function NewLoanWizard() {
-  const { contacts, cashPosition, unauthorized, renewFromLoan, tierInfo: initialTierInfo, newTierConfig } = Route.useLoaderData()
+  const { contacts, cashPosition, unauthorized, renewFromLoan, scorecard } = Route.useLoaderData()
   const { contactId: preselectedContactId } = Route.useSearch()
 
   const isRenewal = !!renewFromLoan
@@ -127,12 +151,6 @@ function NewLoanWizard() {
   const [loading, setLoading] = useState(false)
   const [stepError, setStepError] = useState("")
   const [createdLoanId, setCreatedLoanId] = useState<string | null>(null)
-
-  // Tier info for existing contacts
-  const [tierInfo, setTierInfo] = useState<TierInfo>(initialTierInfo ?? null)
-  const [penaltiesEnabled, setPenaltiesEnabled] = useState<boolean>(
-    initialTierInfo?.penaltyConfig.enabled ?? false
-  )
 
   // Step 1 — Borrower
   const [isNewContact, setIsNewContact] = useState(!hasPreselected)
@@ -270,31 +288,8 @@ function NewLoanWizard() {
     return true
   }
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (step === 1 && validateStep1()) {
-      if (isNewContact && newTierConfig && !tierInfo) {
-        // New contact: use the lender's "New" tier config
-        setTierInfo({
-          tier: "new",
-          tierLabel: "New Borrower",
-          interestRate: newTierConfig.interestRate,
-          penaltyConfig: newTierConfig.penaltyConfig,
-          reasoning: ["First-time borrower"],
-          scorecard: { completedLoans: 0, onTimeRate: 100, latePayments: 0, avgDaysLate: 0, totalLoans: 0 },
-        })
-        setInterestRate(String(newTierConfig.interestRate))
-        setPenaltiesEnabled(newTierConfig.penaltyConfig.enabled)
-      } else if (!isNewContact && contactId && !tierInfo) {
-        // Existing contact: resolve their actual tier
-        try {
-          const result = await resolveBorrowerTierForLoan({ data: contactId })
-          setTierInfo(result)
-          setInterestRate(String(result.interestRate))
-          setPenaltiesEnabled(result.penaltyConfig.enabled)
-        } catch {
-          // If tier resolution fails, continue with defaults
-        }
-      }
       setStep(2)
     } else if (step === 2 && validateStep2()) {
       setStep(3)
@@ -325,14 +320,6 @@ function NewLoanWizard() {
         coMakerPhone: hasCoMaker ? coMakerPhone : undefined,
         coMakerRelationship: hasCoMaker ? coMakerRelationship : undefined,
         renewedFromLoanId: renewFromLoan?.id || undefined,
-        // Tier-based penalty config
-        penaltiesEnabled,
-        penaltyConfigJson: tierInfo
-          ? JSON.stringify(tierInfo.penaltyConfig)
-          : undefined,
-        // Tier audit info
-        tierSuggestedRate: tierInfo?.interestRate,
-        borrowerTier: tierInfo?.tier,
       }
 
       const payload = isNewContact
@@ -489,7 +476,7 @@ function NewLoanWizard() {
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
-                  onClick={() => { setIsNewContact(true); setTierInfo(null); setPenaltiesEnabled(false) }}
+                  onClick={() => setIsNewContact(true)}
                 >
                   New Borrower
                 </button>
@@ -501,7 +488,7 @@ function NewLoanWizard() {
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
-                  onClick={() => { setIsNewContact(false); setTierInfo(null) }}
+                  onClick={() => setIsNewContact(false)}
                 >
                   Existing Contact
                 </button>
@@ -719,26 +706,6 @@ function NewLoanWizard() {
                   </div>
                 </div>
 
-                {/* Tier Badge */}
-                {tierInfo && (
-                  <div className="flex items-center gap-2 p-2 rounded bg-secondary text-sm">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                        tierInfo.tier === "loyal" && "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-                        tierInfo.tier === "established" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-                        tierInfo.tier === "returning" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-                        tierInfo.tier === "new" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-                      )}
-                    >
-                      {tierInfo.tierLabel}
-                    </span>
-                    <span className="text-muted-foreground">
-                      suggested {tierInfo.interestRate}%/mo
-                    </span>
-                  </div>
-                )}
-
                 {/* Interest Rate Warning */}
                 <InterestRateWarning rate={interestRate} />
 
@@ -919,32 +886,6 @@ function NewLoanWizard() {
                   )}
                 </div>
 
-                <Separator />
-
-                {/* Penalties */}
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <Checkbox
-                      checked={penaltiesEnabled}
-                      onCheckedChange={(checked) => setPenaltiesEnabled(!!checked)}
-                    />
-                    <div className="flex items-center gap-2">
-                      <Warning className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Enable penalties for this loan</span>
-                    </div>
-                  </label>
-                  {penaltiesEnabled && tierInfo && (
-                    <div className="p-3 rounded border bg-muted/30 text-sm text-muted-foreground">
-                      {formatPenaltyForDisclosure(tierInfo.penaltyConfig)}
-                    </div>
-                  )}
-                  {!tierInfo && (
-                    <p className="text-xs text-muted-foreground pl-7">
-                      Select a borrower to see tier-based penalty config
-                    </p>
-                  )}
-                </div>
-
                 {stepError && (
                   <div className="p-3 rounded bg-destructive/10 text-destructive text-sm">
                     {stepError}
@@ -1060,8 +1001,8 @@ function NewLoanWizard() {
                 </CardContent>
               </Card>
 
-              {/* Borrower History & Tier Card */}
-              {tierInfo && tierInfo.scorecard.completedLoans > 0 && (
+              {/* Borrower History Scorecard — renewals only */}
+              {isRenewal && scorecard && (
                 <Card className="h-fit shadow-lg">
                   <CardHeader className="p-4 pb-2">
                     <CardTitle className="flex items-center gap-2">
@@ -1069,96 +1010,213 @@ function NewLoanWizard() {
                       Borrower History
                     </CardTitle>
                     <CardDescription>
-                      Payment track record across {tierInfo.scorecard.totalLoans} loan{tierInfo.scorecard.totalLoans !== 1 ? "s" : ""}
+                      Payment track record across {scorecard.totalLoans} loan{scorecard.totalLoans !== 1 ? "s" : ""}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 pt-0 space-y-4">
-                    {/* Tier Badge */}
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                          tierInfo.tier === "loyal" && "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-                          tierInfo.tier === "established" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-                          tierInfo.tier === "returning" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-                          tierInfo.tier === "new" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-                        )}
-                      >
-                        {tierInfo.tierLabel}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {tierInfo.interestRate}%/mo
-                      </span>
-                    </div>
-
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-lg border p-3">
                         <p className="text-xs text-muted-foreground">Loans Completed</p>
                         <p className="text-lg font-bold">
-                          {tierInfo.scorecard.completedLoans}
-                          <span className="text-sm font-normal text-muted-foreground"> / {tierInfo.scorecard.totalLoans}</span>
+                          {scorecard.completedLoans}
+                          <span className="text-sm font-normal text-muted-foreground"> / {scorecard.totalLoans}</span>
                         </p>
                       </div>
                       <div className="rounded-lg border p-3">
                         <p className="text-xs text-muted-foreground">On-Time Rate</p>
                         <p className={cn(
                           "text-lg font-bold",
-                          tierInfo.scorecard.onTimeRate >= 85 ? "text-green-600 dark:text-green-400" :
-                          tierInfo.scorecard.onTimeRate >= 70 ? "text-amber-600 dark:text-amber-400" :
+                          scorecard.onTimeRate >= 90 ? "text-green-600 dark:text-green-400" :
+                          scorecard.onTimeRate >= 70 ? "text-amber-600 dark:text-amber-400" :
                           "text-red-600 dark:text-red-400"
                         )}>
-                          {tierInfo.scorecard.onTimeRate}%
+                          {scorecard.onTimeRate}%
+                        </p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Total Borrowed</p>
+                        <p className="text-lg font-bold">{formatCurrency(scorecard.totalBorrowed)}</p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Penalties</p>
+                        <p className={cn(
+                          "text-lg font-bold",
+                          scorecard.totalPenalties > 0 ? "text-red-600 dark:text-red-400" : ""
+                        )}>
+                          {scorecard.totalPenalties > 0 ? formatCurrency(scorecard.totalPenalties) : "None"}
                         </p>
                       </div>
                     </div>
 
                     {/* Extra stats */}
-                    {tierInfo.scorecard.latePayments > 0 && (
+                    {(scorecard.latePayments > 0 || scorecard.defaultedLoans > 0) && (
                       <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Late Payments</span>
-                          <span className="font-medium text-amber-600 dark:text-amber-400">
-                            {tierInfo.scorecard.latePayments} (avg {tierInfo.scorecard.avgDaysLate}d late)
-                          </span>
-                        </div>
+                        {scorecard.latePayments > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Late Payments</span>
+                            <span className="font-medium text-amber-600 dark:text-amber-400">
+                              {scorecard.latePayments} (avg {scorecard.avgDaysLate}d late)
+                            </span>
+                          </div>
+                        )}
+                        {scorecard.defaultedLoans > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Defaulted Loans</span>
+                            <span className="font-medium text-red-600 dark:text-red-400">
+                              {scorecard.defaultedLoans}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* Reasoning */}
-                    {tierInfo.reasoning.length > 0 && (
+                    {/* Previous Loans Trend */}
+                    {scorecard.previousLoans.length > 0 && (
                       <>
                         <Separator />
-                        <div className="space-y-1.5">
-                          {tierInfo.reasoning.map((r, i) => (
-                            <p key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                              <span className="shrink-0 mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
-                              {r}
-                            </p>
-                          ))}
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                            <TrendUp className="h-3.5 w-3.5" />
+                            Previous Loans
+                          </p>
+                          <div className="space-y-2">
+                            {scorecard.previousLoans.map((loan) => (
+                              <div
+                                key={loan.id}
+                                className="flex items-center justify-between text-sm p-2 rounded bg-secondary"
+                              >
+                                <span className="font-medium">
+                                  {formatCurrency(parseFloat(loan.principal))}
+                                </span>
+                                <span className="text-muted-foreground text-xs">
+                                  {loan.interestRate}% &middot; {loan.termMonths}mo
+                                  {loan.completedAt && (
+                                    <> &middot; {format(new Date(loan.completedAt), "MMM yyyy")}</>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </>
-                    )}
-
-                    {/* Apply Tier Rate */}
-                    {parseFloat(interestRate) !== tierInfo.interestRate && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-2"
-                        onClick={() => {
-                          setInterestRate(String(tierInfo.interestRate))
-                          toast.success("Tier rate applied")
-                        }}
-                      >
-                        <Check className="h-4 w-4" />
-                        Apply {tierInfo.interestRate}% Rate
-                      </Button>
                     )}
                   </CardContent>
                 </Card>
               )}
+
+              {/* Renewal Recommendation Card */}
+              {isRenewal && scorecard && scorecard.completedLoans > 0 && (() => {
+                const rec = getRenewalRecommendation(
+                  scorecard,
+                  parseFloat(interestRate) || 0,
+                  parseInt(termMonths) || 0,
+                )
+                const hasAdjustment = rec.interestAdjustment !== 0 || rec.termSuggestion !== "same"
+                const alreadyApplied =
+                  rec.suggestedRate === (parseFloat(interestRate) || 0) &&
+                  rec.suggestedTerm === (parseInt(termMonths) || 0)
+
+                return (
+                  <Card className={cn(
+                    "h-fit shadow-lg border-2",
+                    rec.hasDefaults
+                      ? "border-red-500/30"
+                      : hasAdjustment
+                        ? "border-green-500/30"
+                        : "border-border"
+                  )}>
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <TrendUp className="h-5 w-5 text-primary" />
+                        Renewal Recommendation
+                      </CardTitle>
+                      <CardDescription>
+                        <span className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+                          rec.tier === "loyal" && "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+                          rec.tier === "established" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+                          rec.tier === "returning" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+                          rec.tier === "new" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+                        )}>
+                          {rec.tierLabel}
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-4">
+                      {/* Reasoning */}
+                      <div className="space-y-1.5">
+                        {rec.reasoning.map((r, i) => (
+                          <p key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="shrink-0 mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+                            {r}
+                          </p>
+                        ))}
+                      </div>
+
+                      {/* Suggested adjustments */}
+                      {hasAdjustment && (
+                        <>
+                          <Separator />
+                          <div className="space-y-2">
+                            {rec.interestAdjustment !== 0 && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Suggested Rate</span>
+                                <span className="font-medium">
+                                  {rec.suggestedRate}% / mo
+                                  <span className={cn(
+                                    "ml-1.5 text-xs",
+                                    rec.interestAdjustment < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                                  )}>
+                                    ({rec.interestAdjustment > 0 ? "+" : ""}{rec.interestAdjustment}%)
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                            {rec.termSuggestion !== "same" && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Suggested Term</span>
+                                <span className="font-medium">
+                                  {rec.suggestedTerm} months
+                                  <span className="ml-1.5 text-xs text-muted-foreground">
+                                    ({rec.termSuggestion === "longer" ? "+3" : "-3"} mo)
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {!alreadyApplied ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full gap-2"
+                              onClick={() => {
+                                if (rec.interestAdjustment !== 0) {
+                                  setInterestRate(String(rec.suggestedRate))
+                                }
+                                if (rec.termSuggestion !== "same") {
+                                  setTermMonths(String(rec.suggestedTerm))
+                                }
+                                toast.success("Suggestion applied to loan terms")
+                              }}
+                            >
+                              <Check className="h-4 w-4" />
+                              Apply Suggestion
+                            </Button>
+                          ) : (
+                            <p className="text-xs text-center text-green-600 dark:text-green-400 font-medium flex items-center justify-center gap-1.5">
+                              <CheckCircle className="h-3.5 w-3.5" weight="fill" />
+                              Suggestion applied
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })()}
             </div>
           </div>
         )}

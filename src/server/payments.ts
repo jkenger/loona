@@ -13,7 +13,6 @@ import {
 } from "@/lib/db"
 import { eq, desc, and, sql, lte, gte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
-import { refreshContactTier } from "./tier-configs"
 import { assertTransition } from "./loans"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
@@ -369,9 +368,6 @@ export const recordPayment = createServerFn()
     loanCompleted: isCompleted,
   })
 
-  // Refresh cached tier (fire-and-forget)
-  refreshContactTier(loan.contactId)
-
   return {
     ...payment,
     paidAt: payment.paidAt.toISOString(),
@@ -708,9 +704,6 @@ export const reversePayment = createServerFn()
       reason: data.reason,
       penaltiesReverted: appliedPenalties.length,
     })
-
-    // Refresh cached tier (fire-and-forget)
-    refreshContactTier(payment.loan.contactId)
 
     return { success: true }
   })

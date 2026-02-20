@@ -549,24 +549,24 @@ function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Member Tiers Card */}
+          {/* Penalty Settings Card */}
           <Card className="shadow-lg">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="flex items-center gap-2">
-                <Warning className="h-5 w-5 text-primary" />
-                Member Tiers
+                <Warning className="h-5 w-5 text-destructive" />
+                Penalty Rules
               </CardTitle>
-              <CardDescription>Configure interest rates, grace periods, and penalty rules per borrower tier</CardDescription>
+              <CardDescription>Configure late fees and penalty interest for overdue payments</CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <Link
-                to="/settings/member-tiers"
+                to="/settings/penalty-settings"
                 className="group flex items-center justify-between p-3 rounded border bg-muted/30 hover:bg-muted/50 transition-colors"
               >
                 <div>
-                  <p className="font-medium">Tier-Based Benefits & Penalties</p>
+                  <p className="font-medium">Late Fees & Penalties</p>
                   <p className="text-sm text-muted-foreground">
-                    Set interest rates, grace periods, and late fees for New, Returning, Established, and Loyal borrowers
+                    Set up late fees, daily penalty interest, and caps
                   </p>
                 </div>
                 <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

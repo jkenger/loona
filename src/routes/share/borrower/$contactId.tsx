@@ -80,6 +80,14 @@ function BorrowerProfilePage() {
     }
   }
 
+  const benefitItems: string[] = []
+  if (profile.interestDiscount !== 0) {
+    benefitItems.push(`${Math.abs(profile.interestDiscount)}% lower interest rate`)
+  }
+  if (profile.termBenefit === "longer") {
+    benefitItems.push("Eligible for longer loan terms")
+  }
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
@@ -171,6 +179,48 @@ function BorrowerProfilePage() {
                   </div>
                 </div>
 
+                {/* Tier Benefit Highlight */}
+                <div
+                  className="mb-8"
+                  style={{
+                    padding: "20px",
+                    borderRadius: "12px",
+                    border: `2px solid ${tierColors.color}20`,
+                    backgroundColor: `${tierColors.bg}`,
+                  }}
+                >
+                  <h2
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: 700,
+                      color: tierColors.color,
+                      marginBottom: "12px",
+                    }}
+                  >
+                    {benefitItems.length > 0 ? "Your Next Loan Benefits" : "Unlock Benefits"}
+                  </h2>
+                  {benefitItems.length > 0 ? (
+                    <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px", color: c.text }}>
+                      {benefitItems.map((item, i) => (
+                        <li key={i} style={{ marginBottom: "6px" }}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p style={{ fontSize: "13px", color: c.muted }}>
+                      Complete your first loan to unlock benefits
+                    </p>
+                  )}
+                  {profile.reasoning.length > 0 && (
+                    <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${c.border}` }}>
+                      {profile.reasoning.map((r, i) => (
+                        <p key={i} style={{ fontSize: "11px", color: c.muted, marginBottom: "4px" }}>
+                          {r}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Stats Grid */}
                 <div
                   className="mb-8"
@@ -194,9 +244,11 @@ function BorrowerProfilePage() {
                     <p style={{ fontSize: "20px", fontWeight: 700, color: profile.onTimeRate >= 80 ? c.green : c.amber }}>
                       {profile.onTimeRate}%
                     </p>
-                    <p style={{ fontSize: "10px", color: c.muted }}>
-                      based on raw due date
-                    </p>
+                    {profile.gracePeriodDays > 0 && (
+                      <p style={{ fontSize: "10px", color: c.muted }}>
+                        with {profile.gracePeriodDays}-day grace period
+                      </p>
+                    )}
                   </div>
                   <div
                     style={{

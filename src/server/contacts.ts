@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, contacts, loans, agents } from "@/lib/db"
+import { db, contacts, loans, agents, penaltySettings } from "@/lib/db"
 import { eq, desc, sql, ilike, or, and } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
-import { calculateOnTimeStats } from "@/lib/utils/on-time-stats"
-import { resolveBorrowerTier } from "@/lib/utils/renewal-tiers"
+import { parsePenaltyConfig } from "@/lib/constants/penalty-defaults"
+import { computeRenewalTier } from "@/lib/utils/renewal-tiers"
 import { z } from "zod"
 
 // Validation schemas
@@ -280,9 +280,43 @@ export const getBorrowerScorecard = createServerFn()
     const defaultedLoans = allLoans.filter((l) => l.status === "defaulted").length
     const totalBorrowed = allLoans.reduce((sum, l) => sum + parseFloat(l.principal), 0)
 
-    // Collect all schedule items across all loans and calculate on-time stats (raw due date)
-    const allScheduleItems = allLoans.flatMap((loan) => loan.schedule)
-    const stats = calculateOnTimeStats(allScheduleItems)
+    // Fetch grace period from lender's penalty settings
+    const settingsRow = await db.query.penaltySettings.findFirst({
+      where: eq(penaltySettings.lenderId, contact.lenderId),
+    })
+    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
+    const gracePeriodDays = penaltyConfig.gracePeriodDays
+
+    // Collect all schedule items across all loans
+    let onTimeCount = 0
+    let lateCount = 0
+    let totalDaysLate = 0
+
+    for (const loan of allLoans) {
+      for (const item of loan.schedule) {
+        if (item.status !== "paid") continue
+        if (!item.paidAt) continue
+
+        const dueDate = new Date(item.dueDate)
+        const paidAt = new Date(item.paidAt)
+
+        // Compare dates only (ignore time), accounting for grace period
+        const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+        const paidDateOnly = new Date(paidAt.getFullYear(), paidAt.getMonth(), paidAt.getDate())
+        const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
+        const daysDiff = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+
+        if (daysDiff <= gracePeriodDays) {
+          onTimeCount++
+        } else {
+          lateCount++
+          totalDaysLate += daysDiff
+        }
+      }
+    }
+
+    const totalPaidItems = onTimeCount + lateCount
+    const onTimeRate = totalPaidItems > 0 ? Math.round((onTimeCount / totalPaidItems) * 100) : 100
 
     // Sum applied penalties
     const totalPenalties = allLoans.reduce((sum, loan) => {
@@ -291,7 +325,7 @@ export const getBorrowerScorecard = createServerFn()
         .reduce((pSum, p) => pSum + parseFloat(p.amount), 0)
     }, 0)
 
-    const avgDaysLate = stats.lateCount > 0 ? Math.round(stats.totalDaysLate / stats.lateCount) : 0
+    const avgDaysLate = lateCount > 0 ? Math.round(totalDaysLate / lateCount) : 0
 
     // Last 3 completed loans for trend
     const previousLoans = allLoans
@@ -310,8 +344,8 @@ export const getBorrowerScorecard = createServerFn()
       completedLoans,
       defaultedLoans,
       totalBorrowed,
-      onTimeRate: stats.onTimeRate,
-      latePayments: stats.lateCount,
+      onTimeRate,
+      latePayments: lateCount,
       totalPenalties,
       avgDaysLate,
       previousLoans,
@@ -343,11 +377,45 @@ export const getPublicBorrowerProfile = createServerFn()
     if (completedLoans.length === 0) return null
 
     const totalLoans = allLoans.length
+    const defaultedLoans = allLoans.filter((l) => l.status === "defaulted").length
     const totalBorrowed = allLoans.reduce((sum, l) => sum + parseFloat(l.principal), 0)
 
-    // Calculate on-time stats against raw due date
-    const allScheduleItems = allLoans.flatMap((loan) => loan.schedule)
-    const stats = calculateOnTimeStats(allScheduleItems)
+    // Fetch grace period from lender's penalty settings
+    const settingsRow = await db.query.penaltySettings.findFirst({
+      where: eq(penaltySettings.lenderId, contact.lenderId),
+    })
+    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
+    const gracePeriodDays = penaltyConfig.gracePeriodDays
+
+    // Collect all schedule items across all loans
+    let onTimeCount = 0
+    let lateCount = 0
+    let totalDaysLate = 0
+
+    for (const loan of allLoans) {
+      for (const item of loan.schedule) {
+        if (item.status !== "paid") continue
+        if (!item.paidAt) continue
+
+        const dueDate = new Date(item.dueDate)
+        const paidAt = new Date(item.paidAt)
+
+        const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+        const paidDateOnly = new Date(paidAt.getFullYear(), paidAt.getMonth(), paidAt.getDate())
+        const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
+        const daysDiff = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+
+        if (daysDiff <= gracePeriodDays) {
+          onTimeCount++
+        } else {
+          lateCount++
+          totalDaysLate += daysDiff
+        }
+      }
+    }
+
+    const totalPaidItems = onTimeCount + lateCount
+    const onTimeRate = totalPaidItems > 0 ? Math.round((onTimeCount / totalPaidItems) * 100) : 100
 
     // Sum applied penalties
     const totalPenalties = allLoans.reduce((sum, loan) => {
@@ -356,43 +424,63 @@ export const getPublicBorrowerProfile = createServerFn()
         .reduce((pSum, p) => pSum + parseFloat(p.amount), 0)
     }, 0)
 
-    const avgDaysLate = stats.lateCount > 0 ? Math.round(stats.totalDaysLate / stats.lateCount) : 0
+    const avgDaysLate = lateCount > 0 ? Math.round(totalDaysLate / lateCount) : 0
 
-    // Resolve borrower tier
-    const tierResult = resolveBorrowerTier({
+    // Compute renewal tier
+    const tierResult = computeRenewalTier({
       completedLoans: completedLoans.length,
-      onTimeRate: stats.onTimeRate,
+      defaultedLoans,
+      onTimeRate,
+      latePayments: lateCount,
+      avgDaysLate,
+      totalPenalties,
     })
 
     // Earliest loan createdAt
     const earliestLoan = allLoans[allLoans.length - 1]
     const memberSince = earliestLoan?.createdAt?.toISOString() ?? contact.createdAt.toISOString()
 
-    // Completed loan summaries with per-loan on-time rate (raw due date)
+    // Completed loan summaries with per-loan on-time rate
     const completedLoanSummaries = completedLoans.map((loan) => {
-      const loanStats = calculateOnTimeStats(loan.schedule)
+      const paidItems = loan.schedule.filter((s) => s.status === "paid" && s.paidAt)
+      let loanOnTime = 0
+      let loanTotal = 0
+      for (const item of paidItems) {
+        loanTotal++
+        const dueDate = new Date(item.dueDate)
+        const paidAt = new Date(item.paidAt!)
+        const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+        const paidDateOnly = new Date(paidAt.getFullYear(), paidAt.getMonth(), paidAt.getDate())
+        const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
+        const daysDiff = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+        if (daysDiff <= gracePeriodDays) loanOnTime++
+      }
+
       return {
         id: loan.id,
         principal: loan.principal,
         interestRate: loan.interestRate,
         termMonths: loan.termMonths,
         completedAt: loan.completedAt?.toISOString() ?? null,
-        onTimeRate: loanStats.onTimeRate,
+        onTimeRate: loanTotal > 0 ? Math.round((loanOnTime / loanTotal) * 100) : 100,
       }
     })
 
     return {
       contactName: contact.name,
       memberSince,
+      gracePeriodDays,
       totalLoans,
       completedLoans: completedLoans.length,
-      onTimeRate: stats.onTimeRate,
-      latePayments: stats.lateCount,
+      onTimeRate,
+      latePayments: lateCount,
       avgDaysLate,
       totalPenalties,
       totalBorrowed,
       tier: tierResult.tier,
       tierLabel: tierResult.tierLabel,
+      interestDiscount: tierResult.interestDiscount,
+      termBenefit: tierResult.termBenefit,
       reasoning: tierResult.reasoning,
       completedLoanSummaries,
     }
