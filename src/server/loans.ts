@@ -12,6 +12,7 @@ import {
   type PenaltyConfig,
 } from "@/lib/constants/penalty-defaults"
 import { parseCommissionConfig } from "@/lib/constants/commission-defaults"
+import { getTierConfigsForLender, refreshContactTier } from "./tier-configs"
 
 // Valid loan status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -146,11 +147,17 @@ export const getLoan = createServerFn()
       budgetRemaining: number
     } | null = null
 
-    // Resolve effective penalty config: prefer loan snapshot, fall back to global
-    const settingsRow = await db.query.penaltySettings.findFirst({
-      where: eq(penaltySettings.lenderId, result.lenderId),
-    })
-    const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig, settingsRow?.config ?? null)
+    // Resolve effective penalty config: loan snapshot → tier config → global settings → defaults
+    let penaltyConfig: PenaltyConfig
+    if (result.penaltyConfig) {
+      penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig, null)
+    } else {
+      // No loan snapshot — fall back to global settings for existing loans
+      const settingsRow = await db.query.penaltySettings.findFirst({
+        where: eq(penaltySettings.lenderId, result.lenderId),
+      })
+      penaltyConfig = getEffectivePenaltyConfig(null, settingsRow?.config ?? null)
+    }
 
     if (result.status === "active" && penaltyConfig.enabled) {
       const totalApplied = result.penalties
@@ -331,7 +338,7 @@ export const createLoan = createServerFn()
   const maturityDate = new Date(data.startDate)
   maturityDate.setMonth(maturityDate.getMonth() + termMonths)
 
-  // Snapshot penalty config at creation time
+  // Snapshot penalty config from global settings (standalone createLoan)
   const penaltySettingsRow = await db.query.penaltySettings.findFirst({
     where: eq(penaltySettings.lenderId, session.user.id),
   })
@@ -352,13 +359,11 @@ export const createLoan = createServerFn()
       status: "active",
       startDate: data.startDate,
       maturityDate,
-      // Optional fields
       purpose: data.purpose || null,
       collateralDescription: data.collateralDescription || null,
       coMakerName: data.coMakerName || null,
       coMakerPhone: data.coMakerPhone || null,
       coMakerRelationship: data.coMakerRelationship || null,
-      // Snapshot penalty config
       penaltyConfig: penaltySettingsRow?.config ?? null,
     })
     .returning()
@@ -381,6 +386,9 @@ export const createLoan = createServerFn()
     principal,
     termMonths,
   })
+
+  // Refresh cached tier (fire-and-forget)
+  refreshContactTier(data.contactId)
 
   return {
     ...loan,
@@ -496,10 +504,29 @@ function generatePaymentSchedule(
 }
 
 // Combined contact + loan creation for the new wizard
+const loanFieldsSchema = z.object({
+  principal: z.number().positive("Principal must be positive"),
+  interestRate: z.number().min(0).max(15),
+  termMonths: z.number().int().positive(),
+  paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
+  startDate: z.string().transform((s) => new Date(s)),
+  purpose: z.string().optional(),
+  collateralDescription: z.string().optional(),
+  coMakerName: z.string().optional(),
+  coMakerPhone: z.string().optional(),
+  coMakerRelationship: z.string().optional(),
+  renewedFromLoanId: z.string().optional(),
+  // Tier-based penalty control
+  penaltiesEnabled: z.boolean().optional(),
+  penaltyConfigJson: z.string().optional(), // JSON string of the tier's PenaltyConfig
+  // Tier audit info
+  tierSuggestedRate: z.number().optional(), // The rate the tier suggested (for audit trail)
+  borrowerTier: z.string().optional(), // The resolved tier name (for audit trail)
+})
+
 const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
   z.object({
     isNewContact: z.literal(true),
-    // Contact fields
     name: z.string().min(2, "Name must be at least 2 characters"),
     phone: z.string().optional(),
     email: z.string().email().optional().or(z.literal("")).or(z.literal(undefined)),
@@ -507,35 +534,11 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     city: z.string().optional(),
     facebookProfile: z.string().optional(),
     notes: z.string().optional(),
-    // Loan fields
-    principal: z.number().positive("Principal must be positive"),
-    interestRate: z.number().min(0).max(15),
-    termMonths: z.number().int().positive(),
-    paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
-    startDate: z.string().transform((s) => new Date(s)),
-    purpose: z.string().optional(),
-    collateralDescription: z.string().optional(),
-    coMakerName: z.string().optional(),
-    coMakerPhone: z.string().optional(),
-    coMakerRelationship: z.string().optional(),
-    renewedFromLoanId: z.string().optional(),
-  }),
+  }).merge(loanFieldsSchema),
   z.object({
     isNewContact: z.literal(false),
     contactId: z.string().min(1, "Contact is required"),
-    // Loan fields
-    principal: z.number().positive("Principal must be positive"),
-    interestRate: z.number().min(0).max(15),
-    termMonths: z.number().int().positive(),
-    paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
-    startDate: z.string().transform((s) => new Date(s)),
-    purpose: z.string().optional(),
-    collateralDescription: z.string().optional(),
-    coMakerName: z.string().optional(),
-    coMakerPhone: z.string().optional(),
-    coMakerRelationship: z.string().optional(),
-    renewedFromLoanId: z.string().optional(),
-  }),
+  }).merge(loanFieldsSchema),
 ])
 
 export const createContactAndLoan = createServerFn()
@@ -594,10 +597,30 @@ export const createContactAndLoan = createServerFn()
     const maturityDate = new Date(data.startDate)
     maturityDate.setMonth(maturityDate.getMonth() + termMonths)
 
-    // Snapshot penalty config at creation time
-    const penaltySettingsRow = await db.query.penaltySettings.findFirst({
-      where: eq(penaltySettings.lenderId, session.user.id),
-    })
+    // Snapshot penalty config: use tier config if provided, else fall back to global settings
+    let penaltySnapshot: string | null = null
+    if (data.penaltyConfigJson) {
+      if (data.penaltiesEnabled === false) {
+        // Disabled: snapshot with enabled=false
+        const parsed = JSON.parse(data.penaltyConfigJson)
+        parsed.enabled = false
+        penaltySnapshot = JSON.stringify(parsed)
+      } else {
+        penaltySnapshot = data.penaltyConfigJson
+      }
+    } else {
+      // No tier config provided: use lender's "New" tier config, fall back to global settings
+      const lenderTierConfigs = await getTierConfigsForLender(session.user.id)
+      const newTierConfig = lenderTierConfigs.find((c) => c.tier === "new")
+      if (newTierConfig) {
+        penaltySnapshot = JSON.stringify(newTierConfig.penaltyConfig)
+      } else {
+        const penaltySettingsRow = await db.query.penaltySettings.findFirst({
+          where: eq(penaltySettings.lenderId, session.user.id),
+        })
+        penaltySnapshot = penaltySettingsRow?.config ?? null
+      }
+    }
 
     // Create loan
     const [loan] = await db
@@ -621,7 +644,7 @@ export const createContactAndLoan = createServerFn()
         coMakerPhone: data.coMakerPhone || null,
         coMakerRelationship: data.coMakerRelationship || null,
         renewedFromLoanId: data.renewedFromLoanId || null,
-        penaltyConfig: penaltySettingsRow?.config ?? null,
+        penaltyConfig: penaltySnapshot,
       })
       .returning()
 
@@ -644,7 +667,14 @@ export const createContactAndLoan = createServerFn()
       termMonths,
       isNewContact: data.isNewContact,
       renewedFromLoanId: data.renewedFromLoanId || null,
+      borrowerTier: data.borrowerTier || null,
+      tierSuggestedRate: data.tierSuggestedRate ?? null,
+      actualRate: data.interestRate,
+      rateOverridden: data.tierSuggestedRate != null && data.interestRate !== data.tierSuggestedRate,
     })
+
+    // Refresh cached tier (fire-and-forget)
+    refreshContactTier(contactId)
 
     return {
       ...loan,

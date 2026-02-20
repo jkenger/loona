@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { getContact, updateContact, deleteContact } from "@/server/contacts"
+import { resolveBorrowerTierForLoan } from "@/server/tier-configs"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,8 @@ import {
 import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
+import type { BorrowerTier } from "@/lib/constants/tier-defaults"
+import { cn } from "@/lib/utils"
 import {
   ArrowLeft,
   Phone,
@@ -37,6 +40,10 @@ import {
   Copy,
   Check,
   ChatText,
+  Star,
+  Crown,
+  Medal,
+  UserCircle,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
@@ -50,19 +57,40 @@ export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
       const contact = await getContact({ data: params.contactId })
       // Only allow if user is the lender (not agent viewing via assignment)
       if (!contact.isLender) {
-        return { contact: null, unauthorized: true }
+        return { contact: null, tierInfo: null, unauthorized: true }
       }
-      return { contact, unauthorized: false }
+      // Resolve borrower tier (non-blocking — don't fail if tier resolution fails)
+      let tierInfo: Awaited<ReturnType<typeof resolveBorrowerTierForLoan>> | null = null
+      try {
+        tierInfo = await resolveBorrowerTierForLoan({ data: params.contactId })
+      } catch {
+        // Tier resolution may fail for contacts with no loans — that's ok
+      }
+      return { contact, tierInfo, unauthorized: false }
     } catch {
-      return { contact: null, unauthorized: false }
+      return { contact: null, tierInfo: null, unauthorized: false }
     }
   },
   pendingComponent: SkeletonDetailPage,
   component: ContactDetailPage,
 })
 
+const TIER_ICONS: Record<BorrowerTier, typeof Star> = {
+  new: UserCircle,
+  returning: Medal,
+  established: Star,
+  loyal: Crown,
+}
+
+const TIER_BADGE_COLORS: Record<BorrowerTier, string> = {
+  new: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  returning: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  established: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  loyal: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+}
+
 function ContactDetailPage() {
-  const { contact, unauthorized } = Route.useLoaderData()
+  const { contact, tierInfo, unauthorized } = Route.useLoaderData()
   const router = useRouter()
 
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -184,8 +212,17 @@ function ContactDetailPage() {
                 <User className="h-7 w-7 text-primary-foreground" weight="bold" />
               </div>
               <div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
+                  {tierInfo && (() => {
+                    const TierIcon = TIER_ICONS[tierInfo.tier]
+                    return (
+                      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", TIER_BADGE_COLORS[tierInfo.tier])}>
+                        <TierIcon className="h-3.5 w-3.5" weight="fill" />
+                        {tierInfo.tierLabel}
+                      </span>
+                    )
+                  })()}
                   {activeLoansCount > 0 && (
                     <Badge variant="secondary" className="bg-primary/20 text-primary-foreground border-0">
                       {activeLoansCount} active loan{activeLoansCount !== 1 ? "s" : ""}
@@ -270,6 +307,64 @@ function ContactDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Tier Info */}
+        {tierInfo && (() => {
+          const TierIcon = TIER_ICONS[tierInfo.tier]
+          return (
+            <Card className="shadow-lg">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <TierIcon className="h-5 w-5" weight="fill" />
+                  Member Tier
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Tier</span>
+                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", TIER_BADGE_COLORS[tierInfo.tier])}>
+                    {tierInfo.tierLabel}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Completed Loans</span>
+                  <span className="font-medium">{tierInfo.scorecard.completedLoans} of {tierInfo.scorecard.totalLoans}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">On-Time Rate</span>
+                  <span className={cn("font-medium", tierInfo.scorecard.onTimeRate >= 80 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400")}>
+                    {tierInfo.scorecard.onTimeRate}%
+                  </span>
+                </div>
+                {tierInfo.scorecard.latePayments > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Late Payments</span>
+                    <span className="font-medium text-amber-600 dark:text-amber-400">
+                      {tierInfo.scorecard.latePayments} (avg {tierInfo.scorecard.avgDaysLate}d late)
+                    </span>
+                  </div>
+                )}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Suggested Rate</span>
+                    <span className="font-medium">{tierInfo.interestRate}% / mo</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-sm text-muted-foreground">Grace Period</span>
+                    <span className="font-medium">{tierInfo.penaltyConfig.gracePeriodDays} day{tierInfo.penaltyConfig.gracePeriodDays !== 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+                {tierInfo.reasoning.length > 0 && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      {tierInfo.reasoning.join(" · ")}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })()}
 
         {/* Loans */}
         <Card className="lg:col-span-2 shadow-lg">

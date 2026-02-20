@@ -64,6 +64,8 @@ export const penaltyStatusEnum = pgEnum("penalty_status", ["pending", "applied",
 
 export const paymentTypeEnum = pgEnum("payment_type", ["credit", "debit"])
 
+export const borrowerTierEnum = pgEnum("borrower_tier", ["new", "returning", "established", "loyal"])
+
 export const blogPostStatusEnum = pgEnum("blog_post_status", ["draft", "published"])
 
 export const documentTypeEnum = pgEnum("document_type", ["disclosure", "promissory_note"])
@@ -150,6 +152,9 @@ export const contacts = pgTable("contacts", {
   facebookProfile: text("facebook_profile"),
   notes: text("notes"),
   createdByAgentId: text("created_by_agent_id").references(() => agents.id),
+  // Cached tier info (updated on payment/loan events)
+  tier: borrowerTierEnum("tier"),
+  onTimeRate: decimal("on_time_rate", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
@@ -351,6 +356,25 @@ export const penaltySettings = pgTable("penalty_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
 
+// Tier Configs (per-tier penalty/interest config per lender)
+export const tierConfigs = pgTable(
+  "tier_configs",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    lenderId: text("lender_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    tier: borrowerTierEnum("tier").notNull(),
+    interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).notNull(),
+    config: text("config").notNull(), // JSON PenaltyConfig
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    unique("unique_lender_tier").on(table.lenderId, table.tier),
+  ]
+)
+
 // Penalties (ledger of all penalty decisions)
 export const penalties = pgTable("penalties", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -494,6 +518,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   auditLogs: many(auditLogs),
   commissionSettings: one(commissionSettings),
   penaltySettings: one(penaltySettings),
+  tierConfigs: many(tierConfigs),
   lenderSettings: one(lenderSettings),
   blogPosts: many(blogPosts),
   playbookSections: many(playbookSections),
@@ -630,6 +655,10 @@ export const penaltySettingsRelations = relations(penaltySettings, ({ one }) => 
   lender: one(user, { fields: [penaltySettings.lenderId], references: [user.id] }),
 }))
 
+export const tierConfigsRelations = relations(tierConfigs, ({ one }) => ({
+  lender: one(user, { fields: [tierConfigs.lenderId], references: [user.id] }),
+}))
+
 export const lenderSettingsRelations = relations(lenderSettings, ({ one }) => ({
   lender: one(user, { fields: [lenderSettings.lenderId], references: [user.id] }),
 }))
@@ -712,6 +741,9 @@ export type NewCommissionSettingsRow = typeof commissionSettings.$inferInsert
 
 export type PenaltySettingsRow = typeof penaltySettings.$inferSelect
 export type PenaltyRow = typeof penalties.$inferSelect
+
+export type TierConfigRow = typeof tierConfigs.$inferSelect
+export type NewTierConfigRow = typeof tierConfigs.$inferInsert
 
 export type LenderSettingsRow = typeof lenderSettings.$inferSelect
 export type NewLenderSettingsRow = typeof lenderSettings.$inferInsert

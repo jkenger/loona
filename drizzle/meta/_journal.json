@@ -176,6 +176,20 @@
       "when": 1771456930361,
       "tag": "0024_bright_slyde",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1771539821723,
+      "tag": "0025_lowly_black_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1771559477802,
+      "tag": "0026_messy_saracen",
+      "breakpoints": true
     }
   ]
 }
