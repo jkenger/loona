@@ -23,21 +23,6 @@ export const Route = createFileRoute("/share/borrower/$contactId")({
   component: BorrowerProfilePage,
 })
 
-type ProfileData = NonNullable<Awaited<ReturnType<typeof getPublicBorrowerProfile>>>
-
-function getTierColors(tier: ProfileData["tier"], c: ReturnType<typeof useDocColors>) {
-  switch (tier) {
-    case "loyal":
-      return { color: c.purple, bg: c.purpleBg }
-    case "established":
-      return { color: c.blue, bg: c.blueBg }
-    case "returning":
-      return { color: c.green, bg: c.greenBg }
-    default:
-      return { color: c.muted, bg: c.mutedBg }
-  }
-}
-
 function BorrowerProfilePage() {
   const { profile } = Route.useLoaderData()
   const documentRef = useRef<HTMLDivElement>(null)
@@ -58,8 +43,6 @@ function BorrowerProfilePage() {
     )
   }
 
-  const tierColors = getTierColors(profile.tier, c)
-
   const handleGeneratePDF = async () => {
     if (!documentRef.current) return
 
@@ -78,14 +61,6 @@ function BorrowerProfilePage() {
       setPdfMode(false)
       setGenerating(false)
     }
-  }
-
-  const benefitItems: string[] = []
-  if (profile.interestDiscount !== 0) {
-    benefitItems.push(`${Math.abs(profile.interestDiscount)}% lower interest rate`)
-  }
-  if (profile.termBenefit === "longer") {
-    benefitItems.push("Eligible for longer loan terms")
   }
 
   return (
@@ -160,65 +135,6 @@ function BorrowerProfilePage() {
                   <p style={{ fontSize: "13px", color: c.muted }}>
                     Member since {format(new Date(profile.memberSince), "MMMM yyyy")}
                   </p>
-                  <div style={{ marginTop: "12px" }}>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "4px 16px",
-                        borderRadius: "9999px",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: tierColors.color,
-                        backgroundColor: tierColors.bg,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      {profile.tierLabel}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tier Benefit Highlight */}
-                <div
-                  className="mb-8"
-                  style={{
-                    padding: "20px",
-                    borderRadius: "12px",
-                    border: `2px solid ${tierColors.color}20`,
-                    backgroundColor: `${tierColors.bg}`,
-                  }}
-                >
-                  <h2
-                    style={{
-                      fontSize: "15px",
-                      fontWeight: 700,
-                      color: tierColors.color,
-                      marginBottom: "12px",
-                    }}
-                  >
-                    {benefitItems.length > 0 ? "Your Next Loan Benefits" : "Unlock Benefits"}
-                  </h2>
-                  {benefitItems.length > 0 ? (
-                    <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px", color: c.text }}>
-                      {benefitItems.map((item, i) => (
-                        <li key={i} style={{ marginBottom: "6px" }}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p style={{ fontSize: "13px", color: c.muted }}>
-                      Complete your first loan to unlock benefits
-                    </p>
-                  )}
-                  {profile.reasoning.length > 0 && (
-                    <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${c.border}` }}>
-                      {profile.reasoning.map((r, i) => (
-                        <p key={i} style={{ fontSize: "11px", color: c.muted, marginBottom: "4px" }}>
-                          {r}
-                        </p>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Stats Grid */}
@@ -244,11 +160,6 @@ function BorrowerProfilePage() {
                     <p style={{ fontSize: "20px", fontWeight: 700, color: profile.onTimeRate >= 80 ? c.green : c.amber }}>
                       {profile.onTimeRate}%
                     </p>
-                    {profile.gracePeriodDays > 0 && (
-                      <p style={{ fontSize: "10px", color: c.muted }}>
-                        with {profile.gracePeriodDays}-day grace period
-                      </p>
-                    )}
                   </div>
                   <div
                     style={{

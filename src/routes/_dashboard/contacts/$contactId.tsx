@@ -20,6 +20,7 @@ import {
 import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
+import { useRef, useEffect, useCallback } from "react"
 import {
   ArrowLeft,
   Phone,
@@ -33,10 +34,13 @@ import {
   Trash,
   Spinner,
   User,
-  ShareNetwork,
   Copy,
   Check,
   ChatText,
+  NoteBlank,
+  UserCircle,
+  ArrowSquareOut,
+  Lock,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
@@ -67,11 +71,46 @@ function ContactDetailPage() {
 
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showShareDialog, setShowShareDialog] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [copiedMessage, setCopiedMessage] = useState(false)
+
+  // Inline notes
+  const [inlineNotes, setInlineNotes] = useState(contact?.notes || "")
+  const [savingNotes, setSavingNotes] = useState(false)
+  const [notesSaved, setNotesSaved] = useState(false)
+  const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const saveNotes = useCallback(async (value: string) => {
+    if (!contact || value === (contact.notes || "")) return
+    setSavingNotes(true)
+    try {
+      await updateContact({
+        data: {
+          id: contact.id,
+          name: contact.name,
+          notes: value || undefined,
+        },
+      })
+      setNotesSaved(true)
+      setTimeout(() => setNotesSaved(false), 2000)
+    } catch {
+      toast.error("Failed to save notes")
+    } finally {
+      setSavingNotes(false)
+    }
+  }, [contact])
+
+  // Auto-save notes after 1s of inactivity
+  useEffect(() => {
+    if (!contact || inlineNotes === (contact.notes || "")) return
+    if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current)
+    notesTimeoutRef.current = setTimeout(() => saveNotes(inlineNotes), 1000)
+    return () => {
+      if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current)
+    }
+  }, [inlineNotes, contact, saveNotes])
 
   // Edit form state - use empty strings for null contact case
   const [editName, setEditName] = useState(contact?.name || "")
@@ -150,7 +189,7 @@ function ContactDetailPage() {
     ? `${window.location.origin}/share/borrower/${contact.id}`
     : `/share/borrower/${contact.id}`
 
-  const shareMessage = `Hi ${contact.name}! Here's your payment history summary with me — check out what you qualify for on your next loan: ${shareUrl}`
+  const shareMessage = `Hi ${contact.name}! Here's your payment history summary with me: ${shareUrl}`
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(shareUrl)
@@ -197,12 +236,6 @@ function ContactDetailPage() {
             </div>
             {contact.isLender && (
               <div className="flex gap-2">
-                {completedLoansCount > 0 && (
-                  <Button variant="outline" onClick={() => setShowShareDialog(true)} className="gap-2">
-                    <ShareNetwork className="h-4 w-4" weight="bold" />
-                    Share Profile
-                  </Button>
-                )}
                 <Button variant="outline" onClick={() => setShowEditDialog(true)} className="gap-2">
                   <PencilSimple className="h-4 w-4" weight="bold" />
                   Edit
@@ -226,50 +259,141 @@ function ContactDetailPage() {
       {/* Content - overlaps header */}
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Contact Info */}
-        <Card className="shadow-lg">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle>Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0 space-y-4">
-            {contact.phone && (
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{contact.phone}</span>
+        {/* Left Column */}
+        <div className="space-y-6">
+          {/* Contact Info */}
+          <Card className="shadow-lg">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle>Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-4">
+              {contact.phone && (
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{contact.phone}</span>
+                </div>
+              )}
+              {contact.email && (
+                <div className="flex items-center gap-3">
+                  <Envelope className="h-4 w-4 text-muted-foreground" />
+                  <span>{contact.email}</span>
+                </div>
+              )}
+              {contact.address && (
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span>{contact.address}</span>
+                </div>
+              )}
+              {contact.facebookProfile && (
+                <div className="flex items-center gap-3">
+                  <FacebookLogo className="h-4 w-4 text-muted-foreground" />
+                  <a
+                    href={contact.facebookProfile.startsWith("http") ? contact.facebookProfile : `https://${contact.facebookProfile}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Facebook Profile
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Inline Notes */}
+          <Card className="shadow-lg">
+            <CardHeader className="p-4 pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <NoteBlank className="h-4 w-4" />
+                  Notes
+                </CardTitle>
+                {savingNotes && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Spinner className="h-3 w-3 animate-spin" />
+                    Saving...
+                  </span>
+                )}
+                {notesSaved && !savingNotes && (
+                  <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <Check className="h-3 w-3" weight="bold" />
+                    Saved
+                  </span>
+                )}
               </div>
-            )}
-            {contact.email && (
-              <div className="flex items-center gap-3">
-                <Envelope className="h-4 w-4 text-muted-foreground" />
-                <span>{contact.email}</span>
-              </div>
-            )}
-            {contact.address && (
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{contact.address}</span>
-              </div>
-            )}
-            {contact.facebookProfile && (
-              <div className="flex items-center gap-3">
-                <FacebookLogo className="h-4 w-4 text-muted-foreground" />
-                <a
-                  href={contact.facebookProfile.startsWith("http") ? contact.facebookProfile : `https://${contact.facebookProfile}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  Facebook Profile
-                </a>
-              </div>
-            )}
-            {contact.notes && (
-              <div className="pt-2 border-t">
-                <p className="text-sm text-muted-foreground">{contact.notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <Textarea
+                placeholder="Add notes about this borrower..."
+                value={inlineNotes}
+                onChange={(e) => setInlineNotes(e.target.value)}
+                onBlur={() => saveNotes(inlineNotes)}
+                rows={4}
+                className="resize-none text-sm"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Borrower Profile */}
+          <Card className="shadow-lg">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <UserCircle className="h-4 w-4" />
+                Borrower Profile
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              {completedLoansCount > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Share {contact.name}'s credit standing summary.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      readOnly
+                      value={shareUrl}
+                      className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm select-all min-w-0"
+                      onFocus={(e) => e.target.select()}
+                    />
+                    <Button size="sm" variant="outline" onClick={handleCopyLink} className="gap-2 shrink-0">
+                      {copiedLink ? (
+                        <Check className="h-4 w-4" weight="bold" />
+                      ) : (
+                        <Copy className="h-4 w-4" weight="bold" />
+                      )}
+                      {copiedLink ? "Copied" : "Copy"}
+                    </Button>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={handleCopyMessage} className="gap-2 w-full">
+                    {copiedMessage ? (
+                      <Check className="h-4 w-4" weight="bold" />
+                    ) : (
+                      <ChatText className="h-4 w-4" weight="bold" />
+                    )}
+                    {copiedMessage ? "Copied" : "Copy with Message"}
+                  </Button>
+                  <Link
+                    to="/share/borrower/$contactId"
+                    params={{ contactId: contact.id }}
+                    target="_blank"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                  >
+                    Preview
+                    <ArrowSquareOut className="h-3 w-3" />
+                  </Link>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <Lock className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Complete a loan to unlock the borrower profile
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Loans */}
         <Card className="lg:col-span-2 shadow-lg">
@@ -467,52 +591,6 @@ function ContactDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Share Profile Dialog */}
-      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Share Borrower Profile</DialogTitle>
-            <DialogDescription>
-              Share {contact.name}'s credit standing and renewal benefits
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Shareable Link</p>
-              <div className="flex gap-2">
-                <input
-                  readOnly
-                  value={shareUrl}
-                  className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm select-all"
-                  onFocus={(e) => e.target.select()}
-                />
-                <Button size="sm" variant="outline" onClick={handleCopyLink} className="gap-2 shrink-0">
-                  {copiedLink ? (
-                    <Check className="h-4 w-4" weight="bold" />
-                  ) : (
-                    <Copy className="h-4 w-4" weight="bold" />
-                  )}
-                  {copiedLink ? "Copied" : "Copy"}
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Copy with Message</p>
-              <p className="text-xs text-muted-foreground rounded-md border bg-muted p-3">
-                {shareMessage}
-              </p>
-              <Button size="sm" variant="outline" onClick={handleCopyMessage} className="gap-2 w-full">
-                {copiedMessage ? (
-                  <Check className="h-4 w-4" weight="bold" />
-                ) : (
-                  <ChatText className="h-4 w-4" weight="bold" />
-                )}
-                {copiedMessage ? "Copied" : "Copy Link + Message"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

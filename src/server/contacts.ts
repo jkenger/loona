@@ -1,10 +1,8 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, contacts, loans, agents, penaltySettings } from "@/lib/db"
+import { db, contacts, loans, agents } from "@/lib/db"
 import { eq, desc, sql, ilike, or, and } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
-import { parsePenaltyConfig } from "@/lib/constants/penalty-defaults"
-import { computeRenewalTier } from "@/lib/utils/renewal-tiers"
 import { z } from "zod"
 
 // Validation schemas
@@ -280,13 +278,6 @@ export const getBorrowerScorecard = createServerFn()
     const defaultedLoans = allLoans.filter((l) => l.status === "defaulted").length
     const totalBorrowed = allLoans.reduce((sum, l) => sum + parseFloat(l.principal), 0)
 
-    // Fetch grace period from lender's penalty settings
-    const settingsRow = await db.query.penaltySettings.findFirst({
-      where: eq(penaltySettings.lenderId, contact.lenderId),
-    })
-    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
-    const gracePeriodDays = penaltyConfig.gracePeriodDays
-
     // Collect all schedule items across all loans
     let onTimeCount = 0
     let lateCount = 0
@@ -300,13 +291,13 @@ export const getBorrowerScorecard = createServerFn()
         const dueDate = new Date(item.dueDate)
         const paidAt = new Date(item.paidAt)
 
-        // Compare dates only (ignore time), accounting for grace period
+        // Compare dates only (ignore time) — on-time = paid on or before due date
         const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
         const paidDateOnly = new Date(paidAt.getFullYear(), paidAt.getMonth(), paidAt.getDate())
         const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
         const daysDiff = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
 
-        if (daysDiff <= gracePeriodDays) {
+        if (daysDiff <= 0) {
           onTimeCount++
         } else {
           lateCount++
@@ -380,13 +371,6 @@ export const getPublicBorrowerProfile = createServerFn()
     const defaultedLoans = allLoans.filter((l) => l.status === "defaulted").length
     const totalBorrowed = allLoans.reduce((sum, l) => sum + parseFloat(l.principal), 0)
 
-    // Fetch grace period from lender's penalty settings
-    const settingsRow = await db.query.penaltySettings.findFirst({
-      where: eq(penaltySettings.lenderId, contact.lenderId),
-    })
-    const penaltyConfig = parsePenaltyConfig(settingsRow?.config ?? null)
-    const gracePeriodDays = penaltyConfig.gracePeriodDays
-
     // Collect all schedule items across all loans
     let onTimeCount = 0
     let lateCount = 0
@@ -400,12 +384,13 @@ export const getPublicBorrowerProfile = createServerFn()
         const dueDate = new Date(item.dueDate)
         const paidAt = new Date(item.paidAt)
 
+        // On-time = paid on or before due date (raw due date, no grace period)
         const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
         const paidDateOnly = new Date(paidAt.getFullYear(), paidAt.getMonth(), paidAt.getDate())
         const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
         const daysDiff = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
 
-        if (daysDiff <= gracePeriodDays) {
+        if (daysDiff <= 0) {
           onTimeCount++
         } else {
           lateCount++
@@ -426,16 +411,6 @@ export const getPublicBorrowerProfile = createServerFn()
 
     const avgDaysLate = lateCount > 0 ? Math.round(totalDaysLate / lateCount) : 0
 
-    // Compute renewal tier
-    const tierResult = computeRenewalTier({
-      completedLoans: completedLoans.length,
-      defaultedLoans,
-      onTimeRate,
-      latePayments: lateCount,
-      avgDaysLate,
-      totalPenalties,
-    })
-
     // Earliest loan createdAt
     const earliestLoan = allLoans[allLoans.length - 1]
     const memberSince = earliestLoan?.createdAt?.toISOString() ?? contact.createdAt.toISOString()
@@ -453,7 +428,7 @@ export const getPublicBorrowerProfile = createServerFn()
         const paidDateOnly = new Date(paidAt.getFullYear(), paidAt.getMonth(), paidAt.getDate())
         const diffMs = paidDateOnly.getTime() - dueDateOnly.getTime()
         const daysDiff = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-        if (daysDiff <= gracePeriodDays) loanOnTime++
+        if (daysDiff <= 0) loanOnTime++
       }
 
       return {
@@ -469,7 +444,6 @@ export const getPublicBorrowerProfile = createServerFn()
     return {
       contactName: contact.name,
       memberSince,
-      gracePeriodDays,
       totalLoans,
       completedLoans: completedLoans.length,
       onTimeRate,
@@ -477,11 +451,6 @@ export const getPublicBorrowerProfile = createServerFn()
       avgDaysLate,
       totalPenalties,
       totalBorrowed,
-      tier: tierResult.tier,
-      tierLabel: tierResult.tierLabel,
-      interestDiscount: tierResult.interestDiscount,
-      termBenefit: tierResult.termBenefit,
-      reasoning: tierResult.reasoning,
       completedLoanSummaries,
     }
   })
