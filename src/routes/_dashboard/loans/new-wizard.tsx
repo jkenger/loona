@@ -6,6 +6,7 @@ import { z } from "zod"
 import { createContactAndLoan, getLoan } from "@/server/loans"
 import { getContacts, getBorrowerScorecard } from "@/server/contacts"
 import { getCashPosition } from "@/server/lender-settings"
+import { getPenaltySettings } from "@/server/penalty-settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -51,10 +52,13 @@ import {
   Plus,
   Info,
   Warning,
+  Gavel,
   ChartBar,
   TrendUp,
 } from "@phosphor-icons/react"
+import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
+import { type PenaltyConfig, DEFAULT_PENALTY_CONFIG } from "@/lib/constants/penalty-defaults"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 import { computeRenewalTier } from "@/lib/utils/renewal-tiers"
 import { InterestRateWarning } from "@/components/interest-rate-warning"
@@ -114,11 +118,12 @@ export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
       session: { user: { role: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { contacts: [], cashPosition: null, unauthorized: true, renewFromLoan: null, scorecard: null }
+      return { contacts: [], cashPosition: null, unauthorized: true, renewFromLoan: null, scorecard: null, penaltyConfig: null }
     }
-    const [contacts, cashPosition] = await Promise.all([
+    const [contacts, cashPosition, penaltyConfig] = await Promise.all([
       getContacts(),
       getCashPosition().catch(() => null),
+      getPenaltySettings().catch(() => null),
     ])
     let renewFromLoan: Awaited<ReturnType<typeof getLoan>> | null = null
     let scorecard: Awaited<ReturnType<typeof getBorrowerScorecard>> | null = null
@@ -132,14 +137,14 @@ export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
         // Source loan not found or not accessible
       }
     }
-    return { contacts, cashPosition, unauthorized: false, renewFromLoan, scorecard }
+    return { contacts, cashPosition, unauthorized: false, renewFromLoan, scorecard, penaltyConfig }
   },
   pendingComponent: SkeletonFormPage,
   component: NewLoanWizard,
 })
 
 function NewLoanWizard() {
-  const { contacts, cashPosition, unauthorized, renewFromLoan, scorecard } = Route.useLoaderData()
+  const { contacts, cashPosition, unauthorized, renewFromLoan, scorecard, penaltyConfig: loaderPenaltyConfig } = Route.useLoaderData()
   const { contactId: preselectedContactId } = Route.useSearch()
 
   const isRenewal = !!renewFromLoan
@@ -180,6 +185,14 @@ function NewLoanWizard() {
   const [coMakerName, setCoMakerName] = useState(renewFromLoan?.coMakerName || "")
   const [coMakerPhone, setCoMakerPhone] = useState(renewFromLoan?.coMakerPhone || "")
   const [coMakerRelationship, setCoMakerRelationship] = useState(renewFromLoan?.coMakerRelationship || "")
+
+  // Penalty config — pre-filled from lender's global settings
+  const [penaltyConfig, setPenaltyConfig] = useState<PenaltyConfig>(
+    loaderPenaltyConfig ?? DEFAULT_PENALTY_CONFIG
+  )
+  const lenderHasPenaltySettings = loaderPenaltyConfig?.enabled === true
+  const updatePenalty = (partial: Partial<PenaltyConfig>) =>
+    setPenaltyConfig(prev => ({ ...prev, ...partial }))
 
   if (unauthorized) {
     return (
@@ -320,6 +333,7 @@ function NewLoanWizard() {
         coMakerPhone: hasCoMaker ? coMakerPhone : undefined,
         coMakerRelationship: hasCoMaker ? coMakerRelationship : undefined,
         renewedFromLoanId: renewFromLoan?.id || undefined,
+        penaltyConfigJson: JSON.stringify(penaltyConfig),
       }
 
       const payload = isNewContact
@@ -886,6 +900,175 @@ function NewLoanWizard() {
                   )}
                 </div>
 
+                <Separator />
+
+                {/* Penalty Config */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Gavel className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Enable Penalties</span>
+                    </div>
+                    <Switch
+                      checked={penaltyConfig.enabled}
+                      onCheckedChange={(enabled) => updatePenalty({ enabled })}
+                    />
+                  </div>
+                  {lenderHasPenaltySettings && penaltyConfig.enabled && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Info className="h-3.5 w-3.5 shrink-0" />
+                      Pre-filled from your penalty settings
+                    </p>
+                  )}
+                  {penaltyConfig.enabled && (
+                    <div className="space-y-4 pl-6 border-l-2 border-border">
+                      {/* Grace Period */}
+                      <div className="space-y-1">
+                        <Label>Grace Period (days)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="90"
+                          value={penaltyConfig.gracePeriodDays}
+                          onChange={(e) =>
+                            updatePenalty({ gracePeriodDays: parseInt(e.target.value) || 0 })
+                          }
+                          className="max-w-[120px]"
+                        />
+                      </div>
+
+                      {/* Late Fee */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Late Fee</Label>
+                          <Switch
+                            checked={penaltyConfig.lateFee.enabled}
+                            onCheckedChange={(enabled) =>
+                              updatePenalty({ lateFee: { ...penaltyConfig.lateFee, enabled } })
+                            }
+                          />
+                        </div>
+                        {penaltyConfig.lateFee.enabled && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <Select
+                              value={penaltyConfig.lateFee.type}
+                              onValueChange={(type) => {
+                                if (type) updatePenalty({ lateFee: { ...penaltyConfig.lateFee, type: type as "fixed" | "percentage" } })
+                              }}
+                            >
+                              <SelectTrigger>
+                                {penaltyConfig.lateFee.type === "fixed" ? "Fixed" : "% of Overdue"}
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="fixed">Fixed Amount</SelectItem>
+                                <SelectItem value="percentage">% of Overdue</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="number"
+                              min="0"
+                              step={penaltyConfig.lateFee.type === "fixed" ? "1" : "0.1"}
+                              value={penaltyConfig.lateFee.amount}
+                              onChange={(e) =>
+                                updatePenalty({
+                                  lateFee: { ...penaltyConfig.lateFee, amount: parseFloat(e.target.value) || 0 },
+                                })
+                              }
+                              placeholder={penaltyConfig.lateFee.type === "fixed" ? "₱ amount" : "%"}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Daily Penalty Interest */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Daily Penalty Interest</Label>
+                          <Switch
+                            checked={penaltyConfig.dailyPenaltyInterest.enabled}
+                            onCheckedChange={(enabled) =>
+                              updatePenalty({
+                                dailyPenaltyInterest: { ...penaltyConfig.dailyPenaltyInterest, enabled },
+                              })
+                            }
+                          />
+                        </div>
+                        {penaltyConfig.dailyPenaltyInterest.enabled && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">Rate/day (%)</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="10"
+                                step="0.01"
+                                value={penaltyConfig.dailyPenaltyInterest.ratePerDay}
+                                onChange={(e) =>
+                                  updatePenalty({
+                                    dailyPenaltyInterest: {
+                                      ...penaltyConfig.dailyPenaltyInterest,
+                                      ratePerDay: parseFloat(e.target.value) || 0,
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">Max days</span>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="365"
+                                value={penaltyConfig.dailyPenaltyInterest.maxDays}
+                                onChange={(e) =>
+                                  updatePenalty({
+                                    dailyPenaltyInterest: {
+                                      ...penaltyConfig.dailyPenaltyInterest,
+                                      maxDays: parseInt(e.target.value) || 1,
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Penalty Cap */}
+                      <div className="space-y-2">
+                        <Label>Penalty Cap</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Select
+                            value={penaltyConfig.penaltyCap.type}
+                            onValueChange={(type) => {
+                              if (type) updatePenalty({ penaltyCap: { ...penaltyConfig.penaltyCap, type: type as "fixed" | "percentage" } })
+                            }}
+                          >
+                            <SelectTrigger>
+                              {penaltyConfig.penaltyCap.type === "fixed" ? "Fixed" : "% of Principal"}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">% of Principal</SelectItem>
+                              <SelectItem value="fixed">Fixed Amount</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={penaltyConfig.penaltyCap.amount}
+                            onChange={(e) =>
+                              updatePenalty({
+                                penaltyCap: { ...penaltyConfig.penaltyCap, amount: parseFloat(e.target.value) || 0 },
+                              })
+                            }
+                            placeholder={penaltyConfig.penaltyCap.type === "fixed" ? "₱ amount" : "%"}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {stepError && (
                   <div className="p-3 rounded bg-destructive/10 text-destructive text-sm">
                     {stepError}
@@ -1408,6 +1591,54 @@ function NewLoanWizard() {
                       )}
                     </div>
                   </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Penalties Summary */}
+            <Card className="shadow-lg">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Gavel className="h-5 w-5 text-primary" />
+                  Penalties
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                {!penaltyConfig.enabled ? (
+                  <p className="text-sm text-muted-foreground">Disabled</p>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Grace Period</span>
+                      <span className="font-medium">{penaltyConfig.gracePeriodDays} day{penaltyConfig.gracePeriodDays !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Late Fee</span>
+                      <span className="font-medium">
+                        {penaltyConfig.lateFee.enabled
+                          ? penaltyConfig.lateFee.type === "fixed"
+                            ? `₱${penaltyConfig.lateFee.amount.toLocaleString()}`
+                            : `${penaltyConfig.lateFee.amount}% of overdue`
+                          : "Off"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Daily Interest</span>
+                      <span className="font-medium">
+                        {penaltyConfig.dailyPenaltyInterest.enabled
+                          ? `${penaltyConfig.dailyPenaltyInterest.ratePerDay}%/day (max ${penaltyConfig.dailyPenaltyInterest.maxDays}d)`
+                          : "Off"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Penalty Cap</span>
+                      <span className="font-medium">
+                        {penaltyConfig.penaltyCap.type === "fixed"
+                          ? `₱${penaltyConfig.penaltyCap.amount.toLocaleString()}`
+                          : `${penaltyConfig.penaltyCap.amount}% of principal`}
+                      </span>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>

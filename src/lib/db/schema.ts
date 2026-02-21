@@ -234,6 +234,7 @@ export const payments = pgTable("payments", {
     .notNull()
     .references(() => loans.id, { onDelete: "cascade" }),
   scheduleItemId: text("schedule_item_id").references(() => paymentSchedule.id),
+  penaltyId: text("penalty_id").references(() => penalties.id),
 
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   method: paymentMethodEnum("method").notNull().default("cash"),
@@ -363,6 +364,7 @@ export const penalties = pgTable("penalties", {
   waivedAt: timestamp("waived_at"),
   decidedBy: text("decided_by").references(() => user.id, { onDelete: "set null" }),
   notes: text("notes"),
+  metadata: text("metadata"), // JSON: calculation inputs at generation time
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
@@ -573,6 +575,10 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   scheduleItem: one(paymentSchedule, {
     fields: [payments.scheduleItemId],
     references: [paymentSchedule.id],
+  }),
+  penalty: one(penalties, {
+    fields: [payments.penaltyId],
+    references: [penalties.id],
   }),
   recordedByAgent: one(agents, {
     fields: [payments.recordedByAgentId],

@@ -9,6 +9,7 @@ import {
   calculateDailyPenaltyInterest,
   calendarDaysOverdue,
   type PenaltyConfig,
+  type PenaltyMetadata,
 } from '@/lib/constants/penalty-defaults'
 
 /**
@@ -68,11 +69,19 @@ export async function ensurePendingPenalties(
           daysOverdue,
         )
         if (lateFeeAmount > 0) {
+          const meta: PenaltyMetadata = {
+            overdueAmount,
+            daysOverdue,
+            gracePeriodDays: config.gracePeriodDays,
+            feeType: config.lateFee.type,
+            feeConfigAmount: config.lateFee.amount,
+          }
           await db.insert(penalties).values({
             loanId: loan.id,
             scheduleItemId: item.id,
             penaltyType: 'late_fee',
             amount: lateFeeAmount.toFixed(2),
+            metadata: JSON.stringify(meta),
           })
         }
       }
@@ -99,10 +108,24 @@ export async function ensurePendingPenalties(
         daysOverdue,
       )
       if (dailyAmount > 0) {
+        const applicableDays = Math.min(
+          daysOverdue - config.gracePeriodDays,
+          config.dailyPenaltyInterest.maxDays,
+        )
+        const meta: PenaltyMetadata = {
+          overdueAmount,
+          daysOverdue,
+          gracePeriodDays: config.gracePeriodDays,
+          ratePerDay: config.dailyPenaltyInterest.ratePerDay,
+          applicableDays,
+          maxDays: config.dailyPenaltyInterest.maxDays,
+        }
+        const metadataJson = JSON.stringify(meta)
+
         if (pendingDailyInterest) {
           await db
             .update(penalties)
-            .set({ amount: dailyAmount.toFixed(2) })
+            .set({ amount: dailyAmount.toFixed(2), metadata: metadataJson })
             .where(eq(penalties.id, pendingDailyInterest.id))
         } else if (!hasDecidedDailyInterest) {
           await db.insert(penalties).values({
@@ -110,6 +133,7 @@ export async function ensurePendingPenalties(
             scheduleItemId: item.id,
             penaltyType: 'daily_interest',
             amount: dailyAmount.toFixed(2),
+            metadata: metadataJson,
           })
         }
       }

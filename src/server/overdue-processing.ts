@@ -5,7 +5,7 @@
 import { db, paymentSchedule, loans, contacts, user } from "@/lib/db"
 import { eq, and, lte } from "drizzle-orm"
 import { sendEmail, paymentReminderEmail } from "@/lib/email"
-import { parsePenaltyConfig, getEffectivePenaltyConfig } from "@/lib/constants/penalty-defaults"
+import { getEffectivePenaltyConfig } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
 
 /**
@@ -62,29 +62,18 @@ export async function processOverdueAndPenalties() {
       and(eq(paymentSchedule.status, "pending"), lte(paymentSchedule.dueDate, now))
     )
 
-  // 4. Get all penalty settings (for all lenders who have them)
-  const allSettings = await db.query.penaltySettings.findMany()
+  // 4. Generate penalties — each loan's own snapshot config decides
+  const activeLoans = await db.query.loans.findMany({
+    where: eq(loans.status, "active"),
+    with: {
+      schedule: true,
+      penalties: true,
+    },
+  })
 
-  for (const settingsRow of allSettings) {
-    const globalConfig = parsePenaltyConfig(settingsRow.config)
-    if (!globalConfig.enabled) continue
-
-    // Get active loans for this lender with overdue items
-    const activeLoans = await db.query.loans.findMany({
-      where: and(
-        eq(loans.lenderId, settingsRow.lenderId),
-        eq(loans.status, "active"),
-      ),
-      with: {
-        schedule: true,
-        penalties: true,
-      },
-    })
-
-    for (const loan of activeLoans) {
-      const config = getEffectivePenaltyConfig(loan.penaltyConfig, settingsRow.config)
-      if (!config.enabled) continue
-      await ensurePendingPenalties(loan, config, loan.penalties)
-    }
+  for (const loan of activeLoans) {
+    const config = getEffectivePenaltyConfig(loan.penaltyConfig)
+    if (!config.enabled) continue
+    await ensurePendingPenalties(loan, config, loan.penalties)
   }
 }

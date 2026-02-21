@@ -103,10 +103,12 @@ export function calendarDaysOverdue(dueDate: Date, now: Date = new Date()): numb
  */
 export function getEffectivePenaltyConfig(
   loanSnapshot: string | null,
-  globalSettingsJson: string | null,
+  _globalSettingsJson?: string | null,
 ): PenaltyConfig {
-  if (loanSnapshot) return parsePenaltyConfig(loanSnapshot)
-  return parsePenaltyConfig(globalSettingsJson)
+  // Only use the loan-level snapshot. If no snapshot was saved at loan creation,
+  // penalties are disabled for that loan. The global config is only used for
+  // prefilling the loan wizard — never retroactively applied to existing loans.
+  return parsePenaltyConfig(loanSnapshot)
 }
 
 export function parsePenaltyConfig(json: string | null): PenaltyConfig {
@@ -219,6 +221,64 @@ export function calculateSuggestedPenalty(
     cappedTotal,
     budgetRemaining,
     wouldExceedCap,
+  }
+}
+
+// ============================================================================
+// Penalty Calculation Metadata
+// ============================================================================
+
+export interface PenaltyMetadata {
+  overdueAmount: number
+  daysOverdue: number
+  gracePeriodDays: number
+  // Late fee specific
+  feeType?: "fixed" | "percentage"
+  feeConfigAmount?: number
+  // Daily interest specific
+  ratePerDay?: number
+  applicableDays?: number
+  maxDays?: number
+}
+
+/**
+ * Format a human-readable calculation breakdown from stored metadata.
+ */
+export function formatPenaltyCalculation(
+  metadata: PenaltyMetadata,
+  penaltyType: string,
+): string {
+  const amt = `₱${metadata.overdueAmount.toLocaleString()}`
+
+  if (penaltyType === "late_fee") {
+    if (metadata.feeType === "fixed") {
+      return `${amt} overdue × fixed ₱${(metadata.feeConfigAmount ?? 0).toLocaleString()}`
+    }
+    return `${amt} overdue × ${metadata.feeConfigAmount ?? 0}%`
+  }
+
+  // daily_interest
+  const days = metadata.applicableDays ?? 0
+  const rate = metadata.ratePerDay ?? 0
+  return `${amt} overdue × ${rate}%/day × ${days}d`
+}
+
+/**
+ * Format the grace/overdue context line.
+ */
+export function formatPenaltyContext(metadata: PenaltyMetadata): string {
+  return `${metadata.gracePeriodDays}d grace, ${metadata.daysOverdue}d overdue`
+}
+
+/**
+ * Safely parse a penalty metadata JSON string.
+ */
+export function parsePenaltyMetadata(json: string | null): PenaltyMetadata | null {
+  if (!json) return null
+  try {
+    return JSON.parse(json) as PenaltyMetadata
+  } catch {
+    return null
   }
 }
 

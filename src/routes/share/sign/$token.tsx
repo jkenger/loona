@@ -12,7 +12,7 @@ import { Spinner, Check, Warning } from "@phosphor-icons/react"
 import { format } from "date-fns"
 import { useDocColors } from "@/lib/utils/share"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
-import { formatPenaltyForDisclosure, formatDailyInterestForDisclosure } from "@/lib/constants/penalty-defaults"
+import { parsePenaltyConfig, formatPenaltyForDisclosure, formatDailyInterestForDisclosure } from "@/lib/constants/penalty-defaults"
 import {
   parseCustomClauses,
   resolveClause,
@@ -287,13 +287,7 @@ function DisclosureDocumentBody({
   }
 
   const penaltyConfig = loan.penaltyConfig
-    ? (() => {
-        try {
-          return JSON.parse(loan.penaltyConfig)
-        } catch {
-          return null
-        }
-      })()
+    ? parsePenaltyConfig(loan.penaltyConfig)
     : null
 
   return (

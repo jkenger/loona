@@ -3,18 +3,20 @@ import { useState, useMemo } from "react"
 import { toast } from "sonner"
 import {
   getAllPenalties,
-  applyPenalty,
   waivePenalty,
   revertPenalty,
-  batchApplyPenalties,
+  batchPayPenalties,
   batchWaivePenalties,
   type AllPenaltyRecord,
 } from "@/server/penalties"
+import { PayPenaltyDialog } from "@/components/pay-penalty-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
@@ -29,6 +31,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { DatePicker } from "@/components/ui/date-picker"
+import {
   Gavel,
   MagnifyingGlass,
   Spinner,
@@ -36,8 +47,17 @@ import {
   Check,
   Clock,
   X,
+  Money,
+  Bank,
 } from "@phosphor-icons/react"
 import { formatRelativeDate } from "@/lib/utils/date"
+import {
+  parsePenaltyMetadata,
+  formatPenaltyCalculation,
+  formatPenaltyContext,
+} from "@/lib/constants/penalty-defaults"
+import { PenaltyTimeline } from "@/components/penalty-items"
+import { format } from "date-fns"
 
 export const Route = createFileRoute("/_dashboard/penalties/")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -90,6 +110,28 @@ function PenaltiesPageSkeleton() {
   )
 }
 
+const PAYMENT_METHODS = [
+  { value: "cash", label: "Cash" },
+  { value: "gcash", label: "GCash" },
+  { value: "maya", label: "Maya" },
+  { value: "bank", label: "Bank" },
+] as const
+
+function MethodIcon({ method, className, selected }: { method: string; className?: string; selected?: boolean }) {
+  switch (method) {
+    case "cash":
+      return <Money className={className} weight={selected ? "fill" : "regular"} />
+    case "gcash":
+      return <img src="/icons/gcash.svg" alt="GCash" className={className} />
+    case "maya":
+      return <img src="/icons/maya.svg" alt="Maya" className={className} />
+    case "bank":
+      return <Bank className={className} weight={selected ? "fill" : "regular"} />
+    default:
+      return null
+  }
+}
+
 type StatusFilter = "all" | "pending" | "applied" | "waived"
 
 function PenaltiesPage() {
@@ -104,15 +146,19 @@ function PenaltiesPage() {
   const PAGE_SIZE = 20
 
   // Action states
-  const [applyingId, setApplyingId] = useState<string | null>(null)
+  const [payingPenalty, setPayingPenalty] = useState<AllPenaltyRecord | null>(null)
   const [waivingId, setWaivingId] = useState<string | null>(null)
   const [revertingId, setRevertingId] = useState<string | null>(null)
-  const [batchLoading, setBatchLoading] = useState<"apply" | "waive" | null>(null)
+  const [batchLoading, setBatchLoading] = useState<"pay" | "waive" | null>(null)
   const [confirmAction, setConfirmAction] = useState<{
-    type: "apply" | "waive" | "revert"
+    type: "waive" | "revert"
     penalty: AllPenaltyRecord
   } | null>(null)
-  const [confirmBatch, setConfirmBatch] = useState<"apply" | "waive" | null>(null)
+  const [confirmBatch, setConfirmBatch] = useState<"pay" | "waive" | null>(null)
+
+  // Batch pay dialog state
+  const [batchPayMethod, setBatchPayMethod] = useState<"cash" | "gcash" | "maya" | "bank">("cash")
+  const [batchPayDate, setBatchPayDate] = useState<Date>(new Date())
 
   if (unauthorized) {
     return (
@@ -127,7 +173,6 @@ function PenaltiesPage() {
   if (!data) return null
 
   const { penalties, summary } = data
-
   // Filter
   const filtered = useMemo(() => {
     let items = penalties
@@ -176,20 +221,6 @@ function PenaltiesPage() {
     }
   }
 
-  const handleApply = async (penaltyId: string) => {
-    setConfirmAction(null)
-    setApplyingId(penaltyId)
-    try {
-      await applyPenalty({ data: { penaltyId } })
-      toast.success("Penalty applied")
-      router.invalidate()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to apply penalty")
-    } finally {
-      setApplyingId(null)
-    }
-  }
-
   const handleWaive = async (penaltyId: string) => {
     setConfirmAction(null)
     setWaivingId(penaltyId)
@@ -218,17 +249,23 @@ function PenaltiesPage() {
     }
   }
 
-  const handleBatchApply = async () => {
+  const handleBatchPay = async () => {
     setConfirmBatch(null)
-    setBatchLoading("apply")
+    setBatchLoading("pay")
     try {
       const ids = Array.from(selected)
-      const result = await batchApplyPenalties({ data: { penaltyIds: ids } })
-      toast.success(`${result.success} penalt${result.success !== 1 ? "ies" : "y"} applied${result.failed > 0 ? `, ${result.failed} failed` : ""}`)
+      const result = await batchPayPenalties({
+        data: {
+          penaltyIds: ids,
+          method: batchPayMethod,
+          paidAt: format(batchPayDate, "yyyy-MM-dd"),
+        },
+      })
+      toast.success(`${result.success} penalt${result.success !== 1 ? "ies" : "y"} paid${result.failed > 0 ? `, ${result.failed} failed` : ""}`)
       setSelected(new Set())
       router.invalidate()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Batch apply failed")
+      toast.error(err instanceof Error ? err.message : "Batch pay failed")
     } finally {
       setBatchLoading(null)
     }
@@ -253,7 +290,7 @@ function PenaltiesPage() {
   const statusTabs: { key: StatusFilter; label: string }[] = [
     { key: "all", label: `All (${penalties.length})` },
     { key: "pending", label: `Pending (${summary.totalPending})` },
-    { key: "applied", label: `Applied (${summary.totalApplied})` },
+    { key: "applied", label: `Paid (${summary.totalApplied})` },
     { key: "waived", label: `Waived (${summary.totalWaived})` },
   ]
 
@@ -315,7 +352,7 @@ function PenaltiesPage() {
           <Card className="shadow-sm">
             <CardContent className="p-3 md:p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs md:text-sm text-muted-foreground">Applied</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Paid</p>
                 <Check className="h-4 w-4 text-primary" />
               </div>
               <p className="text-lg md:text-2xl font-bold mt-1">{summary.totalApplied}</p>
@@ -395,12 +432,16 @@ function PenaltiesPage() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => setConfirmBatch("apply")}
+                onClick={() => {
+                  setBatchPayMethod("cash")
+                  setBatchPayDate(new Date())
+                  setConfirmBatch("pay")
+                }}
                 disabled={!!batchLoading}
                 className="h-8 text-xs"
               >
-                {batchLoading === "apply" ? <Spinner className="h-3 w-3 animate-spin mr-1" /> : null}
-                Apply {selected.size}
+                {batchLoading === "pay" ? <Spinner className="h-3 w-3 animate-spin mr-1" /> : null}
+                Pay {selected.size}
               </Button>
             </div>
           </div>
@@ -467,7 +508,7 @@ function PenaltiesPage() {
                             )}
                             {isApplied && (
                               <Badge className="text-[10px] bg-green-100 text-green-700 border-green-300 hover:bg-green-100">
-                                Applied
+                                Paid
                               </Badge>
                             )}
                             {isWaived && (
@@ -484,6 +525,26 @@ function PenaltiesPage() {
                               </span>
                             )}
                           </p>
+                          <PenaltyTimeline
+                            metadata={penalty.metadata}
+                            status={penalty.status}
+                            appliedAt={penalty.appliedAt}
+                            waivedAt={penalty.waivedAt}
+                            daysOverdue={penalty.daysOverdue}
+                          />
+                          {(() => {
+                            const meta = parsePenaltyMetadata(penalty.metadata)
+                            if (!meta) return null
+                            return (
+                              <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                                {formatPenaltyCalculation(meta, penalty.penaltyType)}
+                                {" "}
+                                <span className="text-muted-foreground/50">
+                                  ({formatPenaltyContext(meta)})
+                                </span>
+                              </p>
+                            )
+                          })()}
                         </div>
 
                         {/* Amount */}
@@ -509,10 +570,9 @@ function PenaltiesPage() {
                               <Button
                                 size="sm"
                                 className="h-7 text-xs px-2"
-                                disabled={applyingId === penalty.id}
-                                onClick={() => setConfirmAction({ type: "apply", penalty })}
+                                onClick={() => setPayingPenalty(penalty)}
                               >
-                                {applyingId === penalty.id ? <Spinner className="h-3 w-3 animate-spin" /> : "Apply"}
+                                Pay
                               </Button>
                             </>
                           )}
@@ -586,27 +646,27 @@ function PenaltiesPage() {
         </StaggerItem>
       </Stagger>
 
-      {/* Single Action Confirmation Dialog */}
+      {/* Pay Penalty Dialog (single) */}
+      <PayPenaltyDialog
+        open={!!payingPenalty}
+        onOpenChange={(open) => { if (!open) setPayingPenalty(null) }}
+        penalty={payingPenalty ? {
+          id: payingPenalty.id,
+          penaltyType: payingPenalty.penaltyType,
+          amount: payingPenalty.amount,
+          contactName: payingPenalty.contactName,
+        } : null}
+      />
+
+      {/* Single Action Confirmation Dialog (waive / revert only) */}
       <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction?.type === "apply"
-                ? "Apply Penalty"
-                : confirmAction?.type === "waive"
-                  ? "Waive Penalty"
-                  : "Revert Penalty"}
+              {confirmAction?.type === "waive" ? "Waive Penalty" : "Revert Penalty"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmAction?.type === "apply" ? (
-                <>
-                  This will add{" "}
-                  <span className="font-semibold text-foreground">
-                    {confirmAction ? formatCurrency(confirmAction.penalty.amount) : ""}
-                  </span>{" "}
-                  to {confirmAction?.penalty.contactName}'s loan balance.
-                </>
-              ) : confirmAction?.type === "waive" ? (
+              {confirmAction?.type === "waive" ? (
                 <>
                   This will waive the{" "}
                   <span className="font-semibold text-foreground">
@@ -622,7 +682,7 @@ function PenaltiesPage() {
                   </span>{" "}
                   penalty back to pending.
                   {confirmAction?.penalty.status === "applied" && (
-                    <> The amount will be subtracted from the loan balance.</>
+                    <> The payment will be reversed and the amount removed from the loan.</>
                   )}
                 </>
               )}
@@ -633,51 +693,95 @@ function PenaltiesPage() {
             <AlertDialogAction
               onClick={() => {
                 if (!confirmAction) return
-                if (confirmAction.type === "apply") handleApply(confirmAction.penalty.id)
-                else if (confirmAction.type === "waive") handleWaive(confirmAction.penalty.id)
+                if (confirmAction.type === "waive") handleWaive(confirmAction.penalty.id)
                 else handleRevert(confirmAction.penalty.id)
               }}
             >
-              {confirmAction?.type === "apply"
-                ? "Apply"
-                : confirmAction?.type === "waive"
-                  ? "Waive"
-                  : "Revert"}
+              {confirmAction?.type === "waive" ? "Waive" : "Revert"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Batch Confirmation Dialog */}
-      <AlertDialog open={!!confirmBatch} onOpenChange={(open) => !open && setConfirmBatch(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmBatch === "apply" ? "Batch Apply Penalties" : "Batch Waive Penalties"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmBatch === "apply" ? (
+      {/* Batch Pay Dialog */}
+      <Dialog open={confirmBatch === "pay"} onOpenChange={(open) => !open && setConfirmBatch(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pay {selected.size} Penalties</DialogTitle>
+            <DialogDescription>
+              Choose a payment method and date for all {selected.size} selected penalties.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Payment Method</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {PAYMENT_METHODS.map((m) => {
+                  const isSelected = batchPayMethod === m.value
+                  return (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setBatchPayMethod(m.value as any)}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-all",
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
+                      )}
+                    >
+                      <MethodIcon method={m.value} className="h-5 w-5" selected={isSelected} />
+                      {m.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Payment Date</Label>
+              <DatePicker
+                value={batchPayDate}
+                onChange={(date) => date && setBatchPayDate(date)}
+                disabledDates={{ after: new Date() }}
+                disabledTooltip="Payment date cannot be in the future"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmBatch(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBatchPay} disabled={!!batchLoading}>
+              {batchLoading === "pay" ? (
                 <>
-                  This will apply <span className="font-semibold text-foreground">{selected.size}</span> pending
-                  penalt{selected.size !== 1 ? "ies" : "y"} and add the amounts to their respective loan balances.
+                  <Spinner className="h-4 w-4 animate-spin mr-2" />
+                  Paying...
                 </>
               ) : (
-                <>
-                  This will waive <span className="font-semibold text-foreground">{selected.size}</span> pending
-                  penalt{selected.size !== 1 ? "ies" : "y"}. No amounts will be charged.
-                </>
+                `Pay ${selected.size}`
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Waive Confirmation Dialog */}
+      <AlertDialog open={confirmBatch === "waive"} onOpenChange={(open) => !open && setConfirmBatch(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batch Waive Penalties</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will waive <span className="font-semibold text-foreground">{selected.size}</span> pending
+              penalt{selected.size !== 1 ? "ies" : "y"}. No amounts will be charged.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (confirmBatch === "apply") handleBatchApply()
-                else handleBatchWaive()
-              }}
-            >
-              {confirmBatch === "apply" ? `Apply ${selected.size}` : `Waive ${selected.size}`}
+            <AlertDialogAction onClick={handleBatchWaive}>
+              Waive {selected.size}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

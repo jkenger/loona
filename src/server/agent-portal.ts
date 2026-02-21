@@ -8,7 +8,6 @@ import {
   contacts,
   paymentSchedule,
   penalties,
-  penaltySettings,
 } from "@/lib/db"
 import { eq, desc, and, sql, ne, lte } from "drizzle-orm"
 import { requireAuth } from "./session"
@@ -317,16 +316,6 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
     )
     .orderBy(paymentSchedule.dueDate)
 
-  // Load global penalty config JSON per lender (used as fallback)
-  const uniqueLenderIds = [...new Set(result.map((r) => r.lenderId))]
-  const globalConfigMap = new Map<string, string | null>()
-
-  for (const lenderId of uniqueLenderIds) {
-    const settingsRow = await db.query.penaltySettings.findFirst({
-      where: eq(penaltySettings.lenderId, lenderId),
-    })
-    globalConfigMap.set(lenderId, settingsRow?.config ?? null)
-  }
 
   // Load penalties for overdue schedule items
   const overdueIds = result.filter((r) => r.status === "overdue").map((r) => r.id)
@@ -349,10 +338,7 @@ export const getAgentUpcomingPayments = createServerFn().handler(async () => {
 
   return result.map((p) => {
     const daysOverdue = p.status === "overdue" ? calendarDaysOverdue(p.dueDate, now) : 0
-    const penaltyConfig = getEffectivePenaltyConfig(
-      p.loanPenaltyConfig,
-      globalConfigMap.get(p.lenderId) ?? null,
-    )
+    const penaltyConfig = getEffectivePenaltyConfig(p.loanPenaltyConfig)
     let penaltyIn = -1
     if (penaltyConfig.enabled && penaltyConfig.lateFee.enabled && p.status === "overdue") {
       const remaining = penaltyConfig.gracePeriodDays - daysOverdue

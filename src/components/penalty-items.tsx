@@ -13,13 +13,25 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Gavel, Spinner, CaretDown, ArrowCounterClockwise } from "@phosphor-icons/react"
-import { applyPenalty, waivePenalty, revertPenalty } from "@/server/penalties"
+import { waivePenalty, revertPenalty } from "@/server/penalties"
+import { PayPenaltyDialog } from "@/components/pay-penalty-dialog"
+import {
+  parsePenaltyMetadata,
+  formatPenaltyCalculation,
+  formatPenaltyContext,
+} from "@/lib/constants/penalty-defaults"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
 
 export interface PenaltyItem {
   id: string
   penaltyType: string
   amount: string
   status: string
+  metadata?: string | null
+  createdAt?: string | null
+  appliedAt?: string | null
+  waivedAt?: string | null
 }
 
 interface PenaltyItemsProps {
@@ -56,11 +68,11 @@ export function PenaltyItems({
 }: PenaltyItemsProps) {
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
-  const [applyingId, setApplyingId] = useState<string | null>(null)
+  const [payingPenalty, setPayingPenalty] = useState<PenaltyItem | null>(null)
   const [waivingId, setWaivingId] = useState<string | null>(null)
   const [revertingId, setRevertingId] = useState<string | null>(null)
   const [confirmAction, setConfirmAction] = useState<{
-    type: "apply" | "waive" | "revert"
+    type: "waive" | "revert"
     penalty: PenaltyItem
   } | null>(null)
 
@@ -72,24 +84,10 @@ export function PenaltyItems({
   const summaryLabel = pending.length > 0
     ? `${pending.length} pending`
     : applied.length > 0
-      ? `${applied.length} applied`
+      ? `${applied.length} paid`
       : waived.length > 0
         ? `${waived.length} waived`
         : `in ${penaltyIn}d`
-
-  const handleApply = async (penaltyId: string) => {
-    setConfirmAction(null)
-    setApplyingId(penaltyId)
-    try {
-      await applyPenalty({ data: { penaltyId } })
-      toast.success("Penalty applied")
-      router.invalidate()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to apply penalty")
-    } finally {
-      setApplyingId(null)
-    }
-  }
 
   const handleWaive = async (penaltyId: string) => {
     setConfirmAction(null)
@@ -134,78 +132,109 @@ export function PenaltyItems({
   // Detail panel — rendered below the schedule item row
   const detailPanel = hasInfo && expanded ? (
     <div className="space-y-1.5">
-      {/* Applied */}
-      {applied.map((p) => (
-        <div
-          key={p.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground mr-1.5"
-        >
-          <Gavel className="h-3 w-3" />
-          {penaltyTypeLabel(p, daysOverdue)}: {formatCurrency(p.amount)} — Applied
-          <button
-            className="ml-1 text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
-            disabled={revertingId === p.id}
-            onClick={() => setConfirmAction({ type: "revert", penalty: p })}
-            title="Undo"
-          >
-            {revertingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : <ArrowCounterClockwise className="h-3 w-3" />}
-          </button>
-        </div>
-      ))}
+      {/* Applied (Paid) */}
+      {applied.map((p) => {
+        const meta = parsePenaltyMetadata(p.metadata ?? null)
+        return (
+          <div key={p.id}>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground mr-1.5">
+              <Gavel className="h-3 w-3" />
+              {penaltyTypeLabel(p, daysOverdue)}: {formatCurrency(p.amount)} — Paid
+              <button
+                className="ml-1 text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
+                disabled={revertingId === p.id}
+                onClick={() => setConfirmAction({ type: "revert", penalty: p })}
+                title="Undo"
+              >
+                {revertingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : <ArrowCounterClockwise className="h-3 w-3" />}
+              </button>
+            </div>
+            <PenaltyTimeline metadata={p.metadata} status={p.status} appliedAt={p.appliedAt} waivedAt={p.waivedAt} daysOverdue={daysOverdue} />
+            {meta && (
+              <p className="text-[11px] text-muted-foreground/60 pl-2 mt-0.5">
+                {formatPenaltyCalculation(meta, p.penaltyType)} ({formatPenaltyContext(meta)})
+              </p>
+            )}
+          </div>
+        )
+      })}
 
       {/* Waived */}
-      {waived.map((p) => (
-        <div
-          key={p.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground/60 line-through mr-1.5"
-        >
-          <Gavel className="h-3 w-3" />
-          {penaltyTypeLabel(p, daysOverdue)}: {formatCurrency(p.amount)} — Waived
-          <button
-            className="ml-1 no-underline text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
-            disabled={revertingId === p.id}
-            onClick={() => setConfirmAction({ type: "revert", penalty: p })}
-            title="Undo"
-          >
-            {revertingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : <ArrowCounterClockwise className="h-3 w-3" />}
-          </button>
-        </div>
-      ))}
+      {waived.map((p) => {
+        const meta = parsePenaltyMetadata(p.metadata ?? null)
+        return (
+          <div key={p.id}>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground/60 line-through mr-1.5">
+              <Gavel className="h-3 w-3" />
+              {penaltyTypeLabel(p, daysOverdue)}: {formatCurrency(p.amount)} — Waived
+              <button
+                className="ml-1 no-underline text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
+                disabled={revertingId === p.id}
+                onClick={() => setConfirmAction({ type: "revert", penalty: p })}
+                title="Undo"
+              >
+                {revertingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : <ArrowCounterClockwise className="h-3 w-3" />}
+              </button>
+            </div>
+            <PenaltyTimeline metadata={p.metadata} status={p.status} appliedAt={p.appliedAt} waivedAt={p.waivedAt} daysOverdue={daysOverdue} />
+            {meta && (
+              <p className="text-[11px] text-muted-foreground/60 pl-2 mt-0.5">
+                {formatPenaltyCalculation(meta, p.penaltyType)} ({formatPenaltyContext(meta)})
+              </p>
+            )}
+          </div>
+        )
+      })}
 
       {/* Pending */}
-      {pending.map((p) => (
-        <div
-          key={p.id}
-          className="flex items-center justify-between gap-2 px-3 py-1.5 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
-        >
-          <div className="flex items-center gap-1.5 text-sm">
-            <Gavel className="h-3.5 w-3.5 text-amber-600" />
-            <span className="font-medium text-amber-700 dark:text-amber-400">
-              {penaltyTypeLabel(p, daysOverdue)}:
-            </span>
-            <span className="font-semibold">{formatCurrency(p.amount)}</span>
+      {pending.map((p) => {
+        const meta = parsePenaltyMetadata(p.metadata ?? null)
+        return (
+          <div
+            key={p.id}
+            className="px-3 py-1.5 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-sm">
+                <Gavel className="h-3.5 w-3.5 text-amber-600" />
+                <span className="font-medium text-amber-700 dark:text-amber-400">
+                  {penaltyTypeLabel(p, daysOverdue)}:
+                </span>
+                <span className="font-semibold">{formatCurrency(p.amount)}</span>
+                {p.createdAt && (
+                  <span className="text-[11px] text-muted-foreground ml-1">
+                    — {format(new Date(p.createdAt), "MMM d")}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-xs px-2"
+                  disabled={waivingId === p.id}
+                  onClick={() => setConfirmAction({ type: "waive", penalty: p })}
+                >
+                  {waivingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : "Waive"}
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-6 text-xs px-2"
+                  onClick={() => setPayingPenalty(p)}
+                >
+                  Pay
+                </Button>
+              </div>
+            </div>
+            <PenaltyTimeline metadata={p.metadata} status={p.status} appliedAt={p.appliedAt} waivedAt={p.waivedAt} daysOverdue={daysOverdue} />
+            {meta && (
+              <p className="text-[11px] text-muted-foreground/70 mt-0.5 pl-5">
+                {formatPenaltyCalculation(meta, p.penaltyType)} ({formatPenaltyContext(meta)})
+              </p>
+            )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 text-xs px-2"
-              disabled={waivingId === p.id}
-              onClick={() => setConfirmAction({ type: "waive", penalty: p })}
-            >
-              {waivingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : "Waive"}
-            </Button>
-            <Button
-              size="sm"
-              className="h-6 text-xs px-2"
-              disabled={applyingId === p.id}
-              onClick={() => setConfirmAction({ type: "apply", penalty: p })}
-            >
-              {applyingId === p.id ? <Spinner className="h-3 w-3 animate-spin" /> : "Apply"}
-            </Button>
-          </div>
-        </div>
-      ))}
+        )
+      })}
 
       {/* Grace period indicator */}
       {pending.length === 0 && applied.length === 0 && penaltyIn > 0 && (
@@ -220,28 +249,26 @@ export function PenaltyItems({
     <>
       {children({ toggleButton, detailPanel })}
 
-      {/* Confirmation dialog */}
+      {/* Pay Penalty Dialog (moved below PenaltyTimeline definition) */}
+      <PayPenaltyDialog
+        open={!!payingPenalty}
+        onOpenChange={(open) => { if (!open) setPayingPenalty(null) }}
+        penalty={payingPenalty ? {
+          id: payingPenalty.id,
+          penaltyType: payingPenalty.penaltyType,
+          amount: payingPenalty.amount,
+        } : null}
+      />
+
+      {/* Confirmation dialog (waive / revert only) */}
       <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction?.type === "apply"
-                ? "Apply Penalty"
-                : confirmAction?.type === "waive"
-                  ? "Waive Penalty"
-                  : "Revert Penalty"}
+              {confirmAction?.type === "waive" ? "Waive Penalty" : "Revert Penalty"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmAction?.type === "apply" ? (
-                <>
-                  This will add{" "}
-                  <span className="font-semibold text-foreground">
-                    {confirmAction ? formatCurrency(confirmAction.penalty.amount) : ""}
-                  </span>{" "}
-                  ({confirmAction ? penaltyTypeLabel(confirmAction.penalty, daysOverdue) : ""}) to the
-                  loan balance.
-                </>
-              ) : confirmAction?.type === "waive" ? (
+              {confirmAction?.type === "waive" ? (
                 <>
                   This will waive the{" "}
                   <span className="font-semibold text-foreground">
@@ -259,7 +286,7 @@ export function PenaltyItems({
                   {confirmAction ? penaltyTypeLabel(confirmAction.penalty, daysOverdue).toLowerCase() : ""} penalty
                   back to pending.
                   {confirmAction?.penalty.status === "applied" && (
-                    <> The amount will be subtracted from the loan balance.</>
+                    <> The payment will be reversed and the amount removed from the loan.</>
                   )}
                 </>
               )}
@@ -270,24 +297,77 @@ export function PenaltyItems({
             <AlertDialogAction
               onClick={() => {
                 if (!confirmAction) return
-                if (confirmAction.type === "apply") {
-                  handleApply(confirmAction.penalty.id)
-                } else if (confirmAction.type === "waive") {
+                if (confirmAction.type === "waive") {
                   handleWaive(confirmAction.penalty.id)
                 } else {
                   handleRevert(confirmAction.penalty.id)
                 }
               }}
             >
-              {confirmAction?.type === "apply"
-                ? "Apply"
-                : confirmAction?.type === "waive"
-                  ? "Waive"
-                  : "Revert"}
+              {confirmAction?.type === "waive" ? "Waive" : "Revert"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
+  )
+}
+
+export function PenaltyTimeline({ metadata, status, appliedAt, waivedAt, daysOverdue: daysOverdueProp, gracePeriodDays: gracePeriodDaysProp }: {
+  metadata?: string | null
+  status: string
+  appliedAt?: string | null
+  waivedAt?: string | null
+  /** Fallback when metadata is null */
+  daysOverdue?: number
+  /** Fallback when metadata is null */
+  gracePeriodDays?: number
+}) {
+  const meta = parsePenaltyMetadata(metadata ?? null)
+
+  const graceDays = meta?.gracePeriodDays ?? gracePeriodDaysProp ?? 0
+  const rawOverdue = meta?.daysOverdue ?? daysOverdueProp ?? 0
+
+  // Nothing to show if no overdue info at all
+  if (graceDays === 0 && rawOverdue === 0) return null
+
+  const penaltyDays = meta?.applicableDays != null
+    ? meta.applicableDays
+    : Math.max(rawOverdue > graceDays ? 1 : 0, rawOverdue - graceDays)
+  const totalDays = graceDays + penaltyDays
+
+  const gracePercent = totalDays > 0 ? (graceDays / totalDays) * 100 : 0
+  const penaltyPercent = totalDays > 0 ? (penaltyDays / totalDays) * 100 : 100
+
+  const isApplied = status === "applied"
+  const isWaived = status === "waived"
+
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <div className="flex h-1.5 rounded-full overflow-hidden w-24 bg-muted/30">
+        {graceDays > 0 && (
+          <div
+            style={{ width: `${gracePercent}%`, minWidth: 4 }}
+            className="bg-muted-foreground/20 rounded-l-full"
+          />
+        )}
+        {penaltyDays > 0 && (
+          <div
+            style={{ width: `${penaltyPercent}%`, minWidth: 4 }}
+            className={cn(
+              isApplied ? "bg-green-500" : isWaived ? "bg-muted-foreground/30" : "bg-amber-500",
+              graceDays === 0 ? "rounded-l-full" : "",
+              "rounded-r-full",
+            )}
+          />
+        )}
+      </div>
+      <span className="text-[11px] text-muted-foreground">
+        {graceDays > 0 ? `${graceDays}d grace · ` : ""}
+        {penaltyDays}d penalty
+        {isApplied && appliedAt && ` · Paid ${format(new Date(appliedAt), "MMM d")}`}
+        {isWaived && waivedAt && ` · Waived ${format(new Date(waivedAt), "MMM d")}`}
+      </span>
+    </div>
   )
 }

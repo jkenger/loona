@@ -30,6 +30,7 @@ interface RecordPaymentDialogProps {
     paidAmount: string
     dueDate: string
   } | null
+  /** @deprecated No longer displayed — applied penalties are now separate payments */
   appliedPenalties?: number
   scheduleIndex?: number
 }
@@ -76,7 +77,7 @@ export function RecordPaymentDialog({
   loanId,
   borrowerName,
   scheduleItem,
-  appliedPenalties = 0,
+  appliedPenalties: _appliedPenalties = 0,
   scheduleIndex,
 }: RecordPaymentDialogProps) {
   const router = useRouter()
@@ -176,21 +177,6 @@ export function RecordPaymentDialog({
                     {formatCurrency(parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount))}
                   </span>
                 </div>
-                {appliedPenalties > 0 && (() => {
-                  const remaining = parseFloat(scheduleItem.amount) - parseFloat(scheduleItem.paidAmount)
-                  return (
-                    <>
-                      <div className="flex justify-between text-amber-600">
-                        <span>Applied Penalties</span>
-                        <span className="font-medium">+{formatCurrency(appliedPenalties)}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-1 mt-1 font-semibold">
-                        <span>Total Due</span>
-                        <span>{formatCurrency(remaining + appliedPenalties)}</span>
-                      </div>
-                    </>
-                  )
-                })()}
               </div>
 
               <div className="space-y-4">

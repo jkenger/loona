@@ -2,7 +2,8 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { getLoan, deleteLoan, approveLoan, rejectLoan } from "@/server/loans"
 import { getLoanSigningStatus } from "@/server/signatures"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
-import { PenaltyBadge } from "@/components/penalty-badge"
+import { PenaltyItems } from "@/components/penalty-items"
+import { calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { RecordPaymentDialog } from "@/components/record-payment-dialog"
 import { ReversePaymentDialog } from "@/components/reverse-payment-dialog"
 import { EditPaymentDateDialog } from "@/components/edit-payment-date-dialog"
@@ -634,9 +635,6 @@ function LoanDetailPage() {
               const itemPenalties = penaltyData?.penalties.filter(
                 (p) => p.scheduleItemId === item.id,
               ) ?? []
-              const appliedPenaltyTotal = itemPenalties
-                .filter((p) => p.status === "applied")
-                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
               // Determine if paid late — compare calendar dates, accounting for grace period
               const gracePeriodDays = loan.gracePeriodDays ?? 0
               const paidLate = item.paidAt && (() => {
@@ -645,69 +643,75 @@ function LoanDetailPage() {
                 const graceMs = gracePeriodDays * 24 * 60 * 60 * 1000
                 return paid > due + graceMs
               })()
+              const daysOverdue = calendarDaysOverdue(new Date(item.dueDate))
 
               return (
-                <div key={item.id} className="space-y-1">
-                  <div
-                    className={`flex items-center justify-between p-3 rounded border ${
-                      item.status === "overdue" ? "border-destructive/50" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
-                        <StatusIcon className="h-4 w-4" weight="bold" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Payment #{index + 1}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
-                          <PenaltyBadge
-                            penalties={itemPenalties}
-                            formatCurrency={formatCurrency}
-                            loanId={loan.id}
-                          />
+                <PenaltyItems
+                  key={item.id}
+                  penalties={itemPenalties}
+                  daysOverdue={daysOverdue}
+                  formatCurrency={formatCurrency}
+                >
+                  {({ toggleButton, detailPanel }) => (
+                    <div className="space-y-1">
+                      <div
+                        className={`flex items-center justify-between p-3 rounded border ${
+                          item.status === "overdue" ? "border-destructive/50" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
+                            <StatusIcon className="h-4 w-4" weight="bold" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Payment #{index + 1}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
+                              {toggleButton}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                        {appliedPenaltyTotal > 0 && (
-                          <p className="text-xs text-amber-600">
-                            + {formatCurrency(appliedPenaltyTotal)} penalty
-                          </p>
-                        )}
-                        {item.status === "paid" && item.paidAt && (
-                          <>
-                            {parseFloat(item.paidAmount) !== parseFloat(item.amount) && (
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-semibold">{formatCurrency(item.amount)}</p>
+                            {item.status === "paid" && item.paidAt && (
+                              <>
+                                {parseFloat(item.paidAmount) !== parseFloat(item.amount) && (
+                                  <p className="text-xs text-primary">
+                                    Paid: {formatCurrency(item.paidAmount)}
+                                  </p>
+                                )}
+                                <p className={`text-xs ${paidLate ? "text-amber-600" : "text-muted-foreground"}`}>
+                                  {new Date(item.paidAt).toLocaleDateString()}
+                                  {paidLate ? " (late)" : ""}
+                                </p>
+                              </>
+                            )}
+                            {item.status === "partial" && (
                               <p className="text-xs text-primary">
                                 Paid: {formatCurrency(item.paidAmount)}
                               </p>
                             )}
-                            <p className={`text-xs ${paidLate ? "text-amber-600" : "text-muted-foreground"}`}>
-                              {new Date(item.paidAt).toLocaleDateString()}
-                              {paidLate ? " (late)" : ""}
-                            </p>
-                          </>
-                        )}
-                        {item.status === "partial" && (
-                          <p className="text-xs text-primary">
-                            Paid: {formatCurrency(item.paidAmount)}
-                          </p>
-                        )}
+                          </div>
+                          {item.status !== "paid" && loan.status === "active" && (
+                            <Button
+                              size="sm"
+                              variant={item.status === "overdue" ? "default" : "outline"}
+                              onClick={() => setSelectedScheduleItem(item)}
+                            >
+                              Pay
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      {item.status !== "paid" && loan.status === "active" && (
-                        <Button
-                          size="sm"
-                          variant={item.status === "overdue" ? "default" : "outline"}
-                          onClick={() => setSelectedScheduleItem(item)}
-                        >
-                          Pay
-                        </Button>
+                      {detailPanel && (
+                        <div className="pl-14 pr-3 pb-1">
+                          {detailPanel}
+                        </div>
                       )}
                     </div>
-                  </div>
-                </div>
+                  )}
+                </PenaltyItems>
               )
             })}
           </div>
@@ -725,14 +729,20 @@ function LoanDetailPage() {
               {loan.payments.slice(0, 5).map((payment) => {
                 const isDebit = payment.type === "debit"
                 const isReversed = payment.type === "credit" && !!payment.reversedAt
+                const isPenaltyPayment = !!payment.penaltyId && !payment.scheduleItemId
                 // Check if this credit is the most recent non-reversed credit for its schedule item
-                const canReverse = payment.type === "credit" && !payment.reversedAt && payment.scheduleItemId && !loan.payments.some(
-                  (other) =>
-                    other.id !== payment.id &&
-                    other.type === "credit" &&
-                    !other.reversedAt &&
-                    other.scheduleItemId === payment.scheduleItemId &&
-                    new Date(other.createdAt) > new Date(payment.createdAt)
+                // Penalty payments can always be reversed (no "most recent" check needed)
+                const canReverse = payment.type === "credit" && !payment.reversedAt && (
+                  isPenaltyPayment || (
+                    payment.scheduleItemId && !loan.payments.some(
+                      (other) =>
+                        other.id !== payment.id &&
+                        other.type === "credit" &&
+                        !other.reversedAt &&
+                        other.scheduleItemId === payment.scheduleItemId &&
+                        new Date(other.createdAt) > new Date(payment.createdAt)
+                    )
+                  )
                 )
 
                 if (isDebit) {
@@ -773,6 +783,11 @@ function LoanDetailPage() {
                         <p className={`font-medium ${isReversed ? "line-through" : ""}`}>
                           {formatCurrency(payment.amount)}
                         </p>
+                        {isPenaltyPayment && !isReversed && (
+                          <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">
+                            Penalty
+                          </Badge>
+                        )}
                         {isReversed && (
                           <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">
                             Reversed
@@ -968,9 +983,7 @@ function LoanDetailPage() {
         scheduleItem={selectedScheduleItem}
         appliedPenalties={
           selectedScheduleItem
-            ? (penaltyData?.penalties ?? [])
-                .filter((p) => p.scheduleItemId === selectedScheduleItem.id && p.status === "applied")
-                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+            ? 0
             : 0
         }
         scheduleIndex={

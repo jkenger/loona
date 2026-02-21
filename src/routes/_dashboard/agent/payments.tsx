@@ -256,9 +256,6 @@ function AgentPaymentsPage() {
                     {overdueItems.map((item) => {
                       const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
                       const itemPenalties = item.penalties ?? []
-                      const appliedPenaltyTotal = itemPenalties
-                        .filter((p) => p.status === 'applied')
-                        .reduce((sum, p) => sum + parseFloat(p.amount), 0)
                       return (
                         <div key={item.id} className="space-y-1">
                           <div
@@ -279,11 +276,6 @@ function AgentPaymentsPage() {
                             <div className="flex items-center gap-2 ml-2">
                               <div className="text-right">
                                 <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
-                                {appliedPenaltyTotal > 0 && (
-                                  <p className="text-xs text-amber-600">
-                                    + {formatCurrency(appliedPenaltyTotal)} penalty
-                                  </p>
-                                )}
                               </div>
                               {canRecordPayments && (
                                 <Button
@@ -501,13 +493,7 @@ function AgentPaymentsPage() {
         loanId={selectedScheduleItem?.loanId ?? ''}
         borrowerName={selectedScheduleItem?.contactName ?? ''}
         scheduleItem={selectedScheduleItem}
-        appliedPenalties={
-          selectedScheduleItem
-            ? (selectedScheduleItem.penalties ?? [])
-                .filter((p) => p.status === 'applied')
-                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-            : 0
-        }
+        appliedPenalties={0}
       />
     </div>
   )

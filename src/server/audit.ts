@@ -31,6 +31,7 @@ type AuditAction =
   | "commission.updateSettings"
   // Penalties
   | "penalty.apply"
+  | "penalty.pay"
   | "penalty.waive"
   | "penalty.revert"
   | "penalty.updateSettings"

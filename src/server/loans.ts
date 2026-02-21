@@ -9,6 +9,7 @@ import { type CustomClauses, DEFAULT_CLAUSES, type ClauseKey } from "@/lib/const
 import {
   getEffectivePenaltyConfig,
   getRemainingPenaltyBudget,
+  parsePenaltyConfig,
   type PenaltyConfig,
 } from "@/lib/constants/penalty-defaults"
 import { parseCommissionConfig } from "@/lib/constants/commission-defaults"
@@ -139,6 +140,7 @@ export const getLoan = createServerFn()
         waivedAt: string | null
         decidedBy: string | null
         notes: string | null
+        metadata: string | null
         createdAt: string
       }[]
       totalApplied: number
@@ -146,13 +148,11 @@ export const getLoan = createServerFn()
       budgetRemaining: number
     } | null = null
 
-    // Resolve effective penalty config: prefer loan snapshot, fall back to global
-    const settingsRow = await db.query.penaltySettings.findFirst({
-      where: eq(penaltySettings.lenderId, result.lenderId),
-    })
-    const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig, settingsRow?.config ?? null)
+    // Resolve effective penalty config from loan snapshot only
+    const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig)
 
-    if (result.status === "active" && penaltyConfig.enabled) {
+    // Always load existing penalties from DB (they may exist from before config changes)
+    if (result.penalties.length > 0 || (result.status === "active" && penaltyConfig.enabled)) {
       const totalApplied = result.penalties
         .filter((p) => p.status === "applied")
         .reduce((sum, p) => sum + parseFloat(p.amount), 0)
@@ -174,6 +174,7 @@ export const getLoan = createServerFn()
           waivedAt: p.waivedAt?.toISOString() ?? null,
           decidedBy: p.decidedBy,
           notes: p.notes,
+          metadata: p.metadata,
           createdAt: p.createdAt.toISOString(),
         })),
         totalApplied,
@@ -225,6 +226,7 @@ export const getLoan = createServerFn()
       })),
       payments: result.payments.map((p) => ({
         ...p,
+        penaltyId: p.penaltyId,
         paidAt: p.paidAt.toISOString(),
         createdAt: p.createdAt.toISOString(),
         reversedAt: p.reversedAt?.toISOString() ?? null,
@@ -267,10 +269,7 @@ export const getPublicLoanRecap = createServerFn()
       return null
     }
 
-    const settingsRow = await db.query.penaltySettings.findFirst({
-      where: eq(penaltySettings.lenderId, result.lenderId),
-    })
-    const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig, settingsRow?.config ?? null)
+    const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig)
 
     const totalApplied = result.penalties
       .filter((p) => p.status === "applied")
@@ -519,6 +518,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     coMakerPhone: z.string().optional(),
     coMakerRelationship: z.string().optional(),
     renewedFromLoanId: z.string().optional(),
+    penaltyConfigJson: z.string().optional(),
   }),
   z.object({
     isNewContact: z.literal(false),
@@ -535,6 +535,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     coMakerPhone: z.string().optional(),
     coMakerRelationship: z.string().optional(),
     renewedFromLoanId: z.string().optional(),
+    penaltyConfigJson: z.string().optional(),
   }),
 ])
 
@@ -594,10 +595,17 @@ export const createContactAndLoan = createServerFn()
     const maturityDate = new Date(data.startDate)
     maturityDate.setMonth(maturityDate.getMonth() + termMonths)
 
-    // Snapshot penalty config at creation time
-    const penaltySettingsRow = await db.query.penaltySettings.findFirst({
-      where: eq(penaltySettings.lenderId, session.user.id),
-    })
+    // Use wizard-provided penalty config if available, otherwise fall back to global
+    let penaltyConfigSnapshot: string | null = null
+    if (data.penaltyConfigJson) {
+      const parsed = parsePenaltyConfig(data.penaltyConfigJson)
+      penaltyConfigSnapshot = JSON.stringify(parsed)
+    } else {
+      const penaltySettingsRow = await db.query.penaltySettings.findFirst({
+        where: eq(penaltySettings.lenderId, session.user.id),
+      })
+      penaltyConfigSnapshot = penaltySettingsRow?.config ?? null
+    }
 
     // Create loan
     const [loan] = await db
@@ -621,7 +629,7 @@ export const createContactAndLoan = createServerFn()
         coMakerPhone: data.coMakerPhone || null,
         coMakerRelationship: data.coMakerRelationship || null,
         renewedFromLoanId: data.renewedFromLoanId || null,
-        penaltyConfig: penaltySettingsRow?.config ?? null,
+        penaltyConfig: penaltyConfigSnapshot,
       })
       .returning()
 

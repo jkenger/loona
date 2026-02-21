@@ -260,13 +260,7 @@ function AgentHomePage() {
         loanId={selectedItem?.loanId ?? ""}
         borrowerName={selectedItem?.contactName ?? ""}
         scheduleItem={selectedItem}
-        appliedPenalties={
-          selectedItem
-            ? (selectedItem.penalties ?? [])
-                .filter((p) => p.status === "applied")
-                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-            : 0
-        }
+        appliedPenalties={0}
       />
     </div>
   )
@@ -301,9 +295,6 @@ function TaskRow({
   onCollect: () => void
 }) {
   const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-  const appliedPenaltyTotal = (item.penalties ?? [])
-    .filter((p) => p.status === "applied")
-    .reduce((sum, p) => sum + parseFloat(p.amount), 0)
 
   const isOverdue = variant === "overdue"
 
@@ -364,11 +355,6 @@ function TaskRow({
             <div className="flex items-center gap-2 shrink-0">
               <div className="text-right">
                 <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
-                {appliedPenaltyTotal > 0 && (
-                  <p className="text-[11px] text-amber-600">
-                    + {formatCurrency(appliedPenaltyTotal)} pen.
-                  </p>
-                )}
               </div>
               {canRecordPayments && (
                 <Button

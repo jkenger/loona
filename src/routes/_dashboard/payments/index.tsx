@@ -313,9 +313,6 @@ function PaymentsPage() {
                   <div className="space-y-2">
                     {overdueItems.map((item) => {
                       const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-                      const appliedPenaltyTotal = item.penalties
-                        .filter((p) => p.status === "applied")
-                        .reduce((sum, p) => sum + parseFloat(p.amount), 0)
                       return (
                         <div key={item.id} className="space-y-1">
                           <div className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5">
@@ -339,11 +336,6 @@ function PaymentsPage() {
                             <div className="flex items-center gap-2 ml-2">
                               <div className="text-right">
                                 <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
-                                {appliedPenaltyTotal > 0 && (
-                                  <p className="text-xs text-amber-600">
-                                    + {formatCurrency(appliedPenaltyTotal)} penalty
-                                  </p>
-                                )}
                               </div>
                               <Button
                                 size="sm"
@@ -696,13 +688,7 @@ function PaymentsPage() {
         loanId={selectedScheduleItem?.loanId ?? ""}
         borrowerName={selectedScheduleItem?.contactName ?? ""}
         scheduleItem={selectedScheduleItem}
-        appliedPenalties={
-          selectedScheduleItem
-            ? selectedScheduleItem.penalties
-                .filter((p) => p.status === "applied")
-                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-            : 0
-        }
+        appliedPenalties={0}
       />
 
       {/* Reverse Payment Dialog */}

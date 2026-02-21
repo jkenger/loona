@@ -411,9 +411,6 @@ function AgentLoanDetailPage() {
                 const itemPenalties = penaltyData?.penalties.filter(
                   (p) => p.scheduleItemId === item.id,
                 ) ?? []
-                const appliedPenaltyTotal = itemPenalties
-                  .filter((p) => p.status === 'applied')
-                  .reduce((sum, p) => sum + parseFloat(p.amount), 0)
                 return (
                   <div key={item.id} className="space-y-1">
                     <div
@@ -439,11 +436,6 @@ function AgentLoanDetailPage() {
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                          {appliedPenaltyTotal > 0 && (
-                            <p className="text-xs text-amber-600">
-                              + {formatCurrency(appliedPenaltyTotal)} penalty
-                            </p>
-                          )}
                           {item.status === 'paid' && item.paidAt && (
                             <p className="text-xs text-muted-foreground">
                               Paid: {new Date(item.paidAt).toLocaleDateString()}
@@ -516,13 +508,7 @@ function AgentLoanDetailPage() {
         loanId={loan.id}
         borrowerName={loan.contact.name}
         scheduleItem={selectedScheduleItem}
-        appliedPenalties={
-          selectedScheduleItem
-            ? (penaltyData?.penalties ?? [])
-                .filter((p) => p.scheduleItemId === selectedScheduleItem.id && p.status === 'applied')
-                .reduce((sum, p) => sum + parseFloat(p.amount), 0)
-            : 0
-        }
+        appliedPenalties={0}
         scheduleIndex={
           selectedScheduleItem
             ? loan.schedule.findIndex((s) => s.id === selectedScheduleItem.id)

@@ -8,16 +8,15 @@ import {
   commissions,
   agents,
   commissionSettings,
-  penaltySettings,
   penalties,
 } from "@/lib/db"
-import { eq, desc, and, sql, lte, gte, ne } from "drizzle-orm"
+import { eq, desc, and, sql, lte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { assertTransition } from "./loans"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
 import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/commission-defaults"
-import { parsePenaltyConfig, getEffectivePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
+import { getEffectivePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
 import { revertPenaltyCore } from "./penalties"
 
@@ -60,6 +59,7 @@ export const getPayments = createServerFn().handler(async () => {
       contactName: contacts.name,
       principal: loans.principal,
       scheduleItemId: payments.scheduleItemId,
+      penaltyId: payments.penaltyId,
       reversedAt: payments.reversedAt,
       reversalReason: payments.reversalReason,
       createdAt: payments.createdAt,
@@ -112,12 +112,6 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
     )
     .orderBy(paymentSchedule.dueDate)
 
-  // Load global penalty config as fallback
-  const settingsRow = await db.query.penaltySettings.findFirst({
-    where: eq(penaltySettings.lenderId, session.user.id),
-  })
-  const globalConfigJson = settingsRow?.config ?? null
-
   const overdueIds = result.filter((r) => r.status === "overdue").map((r) => r.id)
   let penaltyMap: Record<string, { id: string; penaltyType: string; amount: string; status: string }[]> = {}
 
@@ -139,7 +133,7 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
   return result.map((p) => {
     const daysOverdue = p.status === "overdue" ? calendarDaysOverdue(p.dueDate, now) : 0
     // How many days until late fee applies (0 = already applies, -1 = penalties disabled)
-    const penaltyConfig = getEffectivePenaltyConfig(p.loanPenaltyConfig, globalConfigJson)
+    const penaltyConfig = getEffectivePenaltyConfig(p.loanPenaltyConfig)
     let penaltyIn = -1
     if (penaltyConfig.enabled && penaltyConfig.lateFee.enabled && p.status === "overdue") {
       const remaining = penaltyConfig.gracePeriodDays - daysOverdue
@@ -467,30 +461,22 @@ export const updateOverduePayments = createServerFn().handler(async () => {
       and(eq(paymentSchedule.status, "pending"), lte(paymentSchedule.dueDate, now))
     )
 
-  // Generate penalties for this lender
-  const settingsRow = await db.query.penaltySettings.findFirst({
-    where: eq(penaltySettings.lenderId, session.user.id),
+  // Generate penalties — each loan's own snapshot config decides
+  const activeLoans = await db.query.loans.findMany({
+    where: and(
+      eq(loans.lenderId, session.user.id),
+      eq(loans.status, "active"),
+    ),
+    with: {
+      schedule: true,
+      penalties: true,
+    },
   })
-  const globalConfigJson = settingsRow?.config ?? null
-  const globalConfig = parsePenaltyConfig(globalConfigJson)
 
-  if (globalConfig.enabled) {
-    const activeLoans = await db.query.loans.findMany({
-      where: and(
-        eq(loans.lenderId, session.user.id),
-        eq(loans.status, "active"),
-      ),
-      with: {
-        schedule: true,
-        penalties: true,
-      },
-    })
-
-    for (const loan of activeLoans) {
-      const config = getEffectivePenaltyConfig(loan.penaltyConfig, globalConfigJson)
-      if (!config.enabled) continue
-      await ensurePendingPenalties(loan, config, loan.penalties)
-    }
+  for (const loan of activeLoans) {
+    const config = getEffectivePenaltyConfig(loan.penaltyConfig)
+    if (!config.enabled) continue
+    await ensurePendingPenalties(loan, config, loan.penalties)
   }
 
   return { success: true }
@@ -530,34 +516,72 @@ export const reversePayment = createServerFn()
       throw new Error("Payment has already been reversed")
     }
 
-    // Must have a schedule item to check "most recent" rule
-    if (!payment.scheduleItemId) {
-      throw new Error("Cannot reverse a payment without a schedule item")
-    }
+    // Penalty payments (penaltyId set, no scheduleItemId) can always be reversed
+    const isPenaltyPayment = !!payment.penaltyId && !payment.scheduleItemId
 
-    // Check this is the most recent non-reversed credit payment for this schedule item
-    const laterPayment = await db.query.payments.findFirst({
-      where: and(
-        eq(payments.scheduleItemId, payment.scheduleItemId),
-        eq(payments.type, "credit"),
-        sql`${payments.reversedAt} IS NULL`,
-        sql`${payments.createdAt} > ${payment.createdAt}`
-      ),
-    })
+    if (!isPenaltyPayment) {
+      // Must have a schedule item to check "most recent" rule
+      if (!payment.scheduleItemId) {
+        throw new Error("Cannot reverse a payment without a schedule item")
+      }
 
-    if (laterPayment) {
-      throw new Error("Only the most recent payment for a schedule item can be reversed")
+      // Check this is the most recent non-reversed credit payment for this schedule item
+      const laterPayment = await db.query.payments.findFirst({
+        where: and(
+          eq(payments.scheduleItemId, payment.scheduleItemId),
+          eq(payments.type, "credit"),
+          sql`${payments.reversedAt} IS NULL`,
+          sql`${payments.createdAt} > ${payment.createdAt}`
+        ),
+      })
+
+      if (laterPayment) {
+        throw new Error("Only the most recent payment for a schedule item can be reversed")
+      }
     }
 
     const now = new Date()
+    const paymentAmount = parseFloat(payment.amount)
+
+    // === Penalty payment reversal (separate path) ===
+    if (isPenaltyPayment) {
+      // Revert penalty back to pending (this also soft-reverses the payment)
+      await revertPenaltyCore(payment.penaltyId!, payment.loanId, session.user.id)
+
+      // Insert debit (reversal) transaction into the ledger
+      await db.insert(payments).values({
+        id: crypto.randomUUID(),
+        loanId: payment.loanId,
+        penaltyId: payment.penaltyId,
+        scheduleItemId: null,
+        amount: payment.amount,
+        method: payment.method,
+        type: "debit",
+        reversesPaymentId: data.paymentId,
+        paidAt: now,
+        notes: data.reason,
+      })
+
+      const log = createAuditLogger(session.user)
+      log("payment.reverse", "payment", data.paymentId, {
+        loanId: payment.loanId,
+        amount: paymentAmount,
+        reason: data.reason,
+        isPenaltyPayment: true,
+        penaltyId: payment.penaltyId,
+      })
+
+      return { success: true }
+    }
+
+    // === Regular payment reversal ===
 
     // === Reads phase (before batch) ===
     const scheduleItem = await db.query.paymentSchedule.findFirst({
-      where: eq(paymentSchedule.id, payment.scheduleItemId),
+      where: eq(paymentSchedule.id, payment.scheduleItemId!),
     })
 
     // === Compute phase ===
-    const paymentAmount = parseFloat(payment.amount)
     const newAmountPaid = Math.max(0, parseFloat(payment.loan.amountPaid) - paymentAmount)
     const newRemainingBalance = parseFloat(payment.loan.totalToRepay) - newAmountPaid
 
@@ -664,20 +688,20 @@ export const reversePayment = createServerFn()
           paidAmount: newPaidAmount.toFixed(2),
           status: newStatus,
           paidAt: null,
-        }).where(eq(paymentSchedule.id, payment.scheduleItemId)),
+        }).where(eq(paymentSchedule.id, payment.scheduleItemId!)),
       )
     }
 
     // 4. Revert applied penalties for this schedule item
-    const appliedPenalties = await db.query.penalties.findMany({
+    const appliedPenalties = payment.scheduleItemId ? await db.query.penalties.findMany({
       where: and(
         eq(penalties.scheduleItemId, payment.scheduleItemId),
         eq(penalties.status, "applied"),
       ),
-    })
+    }) : []
 
     for (const penalty of appliedPenalties) {
-      await revertPenaltyCore(penalty.id, payment.loanId)
+      await revertPenaltyCore(penalty.id, payment.loanId, session.user.id)
     }
 
     // 5. Reverse commission if exists
@@ -734,11 +758,24 @@ export const getPublicPaymentReceipt = createServerFn()
     if (payment.reversedAt) return null
     if (payment.type !== "credit") return null
 
-    const scheduleItems = await db.query.paymentSchedule.findMany({
-      where: eq(paymentSchedule.loanId, payment.loanId),
-      orderBy: paymentSchedule.dueDate,
-    })
-    const installmentIndex = scheduleItems.findIndex((s) => s.id === payment.scheduleItemId)
+    let scheduleItemData: {
+      dueDate: string
+      amount: string
+      installmentLabel: string | null
+    } | null = null
+
+    if (payment.scheduleItem) {
+      const scheduleItems = await db.query.paymentSchedule.findMany({
+        where: eq(paymentSchedule.loanId, payment.loanId),
+        orderBy: paymentSchedule.dueDate,
+      })
+      const installmentIndex = scheduleItems.findIndex((s) => s.id === payment.scheduleItemId)
+      scheduleItemData = {
+        dueDate: payment.scheduleItem.dueDate.toISOString(),
+        amount: payment.scheduleItem.amount,
+        installmentLabel: installmentIndex >= 0 ? `#${installmentIndex + 1} of ${scheduleItems.length}` : null,
+      }
+    }
 
     return {
       id: payment.id,
@@ -749,13 +786,9 @@ export const getPublicPaymentReceipt = createServerFn()
       createdAt: payment.createdAt.toISOString(),
       borrowerName: payment.loan.contact.name,
       lenderName: payment.loan.lender.name,
-      scheduleItem: payment.scheduleItem
-        ? {
-            dueDate: payment.scheduleItem.dueDate.toISOString(),
-            amount: payment.scheduleItem.amount,
-            installmentLabel: installmentIndex >= 0 ? `#${installmentIndex + 1} of ${scheduleItems.length}` : null,
-          }
-        : null,
+      penaltyId: payment.penaltyId,
+      isPenaltyPayment: !!payment.penaltyId,
+      scheduleItem: scheduleItemData,
       agentName: payment.recordedByAgent?.agentUser?.name ?? null,
     }
   })

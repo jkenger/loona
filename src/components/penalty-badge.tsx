@@ -9,23 +9,16 @@ interface PenaltyBadgeProps {
 }
 
 /**
- * Read-only inline badge showing penalty summary for a schedule item.
+ * Read-only inline badge showing pending penalty count for a schedule item.
  * Lender: clicking navigates to the penalties page filtered by loan.
  * Agent: no click behavior (omit loanId prop).
  */
-export function PenaltyBadge({ penalties, formatCurrency, loanId }: PenaltyBadgeProps) {
-  const applied = penalties.filter((p) => p.status === "applied")
+export function PenaltyBadge({ penalties, loanId }: PenaltyBadgeProps) {
   const pending = penalties.filter((p) => p.status === "pending")
 
-  const appliedTotal = applied.reduce((sum, p) => sum + parseFloat(p.amount), 0)
+  if (pending.length === 0) return null
 
-  if (applied.length === 0 && pending.length === 0) return null
-
-  const parts: string[] = []
-  if (appliedTotal > 0) parts.push(`+${formatCurrency(appliedTotal)} penalty`)
-  if (pending.length > 0) parts.push(`${pending.length} pending`)
-
-  const label = parts.join(" · ")
+  const label = `${pending.length} pending`
 
   const badge = (
     <span

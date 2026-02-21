@@ -1,0 +1,1 @@
+ALTER TABLE "penalties" ADD COLUMN "metadata" text;
