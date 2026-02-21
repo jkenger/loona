@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start"
-import { db, loans, paymentSchedule, contacts, agents, penaltySettings, commissionSettings } from "@/lib/db"
+import { db, loans, paymentSchedule, contacts, agents, penaltySettings, commissionSettings, penalties, payments } from "@/lib/db"
 import { eq, desc, and, sql, inArray } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
@@ -1196,4 +1196,145 @@ export const rejectLoan = createServerFn()
       createdAt: updated.createdAt.toISOString(),
       updatedAt: updated.updatedAt.toISOString(),
     }
+  })
+
+// ============================================================================
+// Regenerate Remaining Schedule
+// ============================================================================
+
+export const regenerateSchedule = createServerFn()
+  .inputValidator(z.object({ loanId: z.string() }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    // Fetch loan with schedule + penalties
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+      with: {
+        schedule: { orderBy: paymentSchedule.dueDate },
+        penalties: true,
+      },
+    })
+
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    if (loan.status !== "active") {
+      throw new Error("Only active loans can have their schedule regenerated")
+    }
+
+    // Separate paid vs unpaid items
+    const paidItems = loan.schedule.filter((s) => s.status === "paid")
+    const unpaidItems = loan.schedule.filter((s) => s.status !== "paid")
+
+    if (unpaidItems.length === 0) {
+      throw new Error("No unpaid items to regenerate")
+    }
+
+    // Identify schedule items with applied/waived penalties (must be skipped)
+    const appliedOrWaivedPenaltyItemIds = new Set(
+      loan.penalties
+        .filter((p) => p.status === "applied" || p.status === "waived")
+        .map((p) => p.scheduleItemId)
+    )
+
+    const skippedItems = unpaidItems.filter((s) => appliedOrWaivedPenaltyItemIds.has(s.id))
+    const regenerableItems = unpaidItems.filter((s) => !appliedOrWaivedPenaltyItemIds.has(s.id))
+
+    if (regenerableItems.length === 0) {
+      throw new Error("All unpaid items have applied or waived penalties and cannot be regenerated")
+    }
+
+    // Calculate adjusted balance before any mutations
+    const regenerableItemIds = regenerableItems.map((s) => s.id)
+    const originalPayment = parseFloat(loan.paymentAmount)
+
+    const skippedUnpaidTotal = skippedItems.reduce(
+      (sum, s) => sum + (parseFloat(s.amount) - parseFloat(s.paidAmount)),
+      0
+    )
+    const adjustedBalance = parseFloat(loan.remainingBalance) - skippedUnpaidTotal
+
+    if (adjustedBalance <= 0) {
+      throw new Error("No remaining balance to regenerate — loan may be overpaid")
+    }
+
+    // Determine remaining count: try to keep original count, but reduce if balance
+    // is too small (e.g. due to overpayments) to avoid negative first item
+    const totalOriginalItems = loan.schedule.length
+    let remainingCount = totalOriginalItems - paidItems.length - skippedItems.length
+    while (remainingCount > 1 && adjustedBalance <= (remainingCount - 1) * originalPayment) {
+      remainingCount--
+    }
+
+    // First item absorbs the difference, rest keep original payment amount
+    const firstItemAmount = remainingCount === 1
+      ? adjustedBalance
+      : adjustedBalance - (remainingCount - 1) * originalPayment
+
+    // Generate new schedule items starting from today
+    const today = new Date()
+    const newItems = generatePaymentSchedule(
+      loan.id,
+      today,
+      remainingCount,
+      originalPayment,
+      loan.paymentFrequency as any,
+    )
+
+    // Override first item amount
+    if (newItems.length > 0) {
+      newItems[0].amount = firstItemAmount.toFixed(2)
+    }
+
+    // Identify pending penalties to delete
+    const pendingPenaltiesToDelete = loan.penalties.filter(
+      (p) => p.status === "pending" && regenerableItemIds.includes(p.scheduleItemId)
+    )
+
+    // Build all writes for atomic batch execution
+    const writes: any[] = []
+
+    // 1. Delete pending penalties on regenerable items
+    if (pendingPenaltiesToDelete.length > 0) {
+      writes.push(
+        db.delete(penalties).where(inArray(penalties.id, pendingPenaltiesToDelete.map((p) => p.id)))
+      )
+    }
+
+    // 2. Unlink payments from regenerable schedule items (FK has no cascade)
+    writes.push(
+      db.update(payments).set({ scheduleItemId: null }).where(inArray(payments.scheduleItemId, regenerableItemIds))
+    )
+
+    // 3. Delete regenerable schedule items
+    writes.push(
+      db.delete(paymentSchedule).where(inArray(paymentSchedule.id, regenerableItemIds))
+    )
+
+    // 4. Insert new schedule items
+    writes.push(
+      db.insert(paymentSchedule).values(newItems)
+    )
+
+    // 5. Touch loan updatedAt
+    writes.push(
+      db.update(loans).set({ updatedAt: new Date() }).where(eq(loans.id, data.loanId))
+    )
+
+    await db.batch(writes as any)
+
+    log("loan.regenerate_schedule", "loan", data.loanId, {
+      originalPaymentAmount: loan.paymentAmount,
+      firstItemAmount: firstItemAmount.toFixed(2),
+      paidItems: paidItems.length,
+      skippedItems: skippedItems.length,
+      regeneratedItems: remainingCount,
+      pendingPenaltiesDeleted: pendingPenaltiesToDelete.length,
+      adjustedBalance: adjustedBalance.toFixed(2),
+    })
+
+    return { success: true }
   })

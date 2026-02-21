@@ -7,6 +7,7 @@ import { calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { RecordPaymentDialog } from "@/components/record-payment-dialog"
 import { ReversePaymentDialog } from "@/components/reverse-payment-dialog"
 import { EditPaymentDateDialog } from "@/components/edit-payment-date-dialog"
+import { RegenerateScheduleDialog } from "@/components/regenerate-schedule-dialog"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -54,6 +55,7 @@ import {
   ChartLineUp,
   PencilSimple,
   LinkSimple,
+  ArrowsClockwise,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
@@ -121,6 +123,9 @@ function LoanDetailPage() {
   const [selectedPaymentForReversal, setSelectedPaymentForReversal] = useState<{
     id: string; amount: string; method: string; paidAt: string; scheduleItemId: string | null
   } | null>(null)
+
+  // Regenerate schedule dialog state
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
 
   // Edit payment date dialog state
   const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState<{
@@ -621,11 +626,26 @@ function LoanDetailPage() {
       {/* Payment Schedule */}
       <Card className="shadow-sm">
         <CardHeader className="p-4 pb-2">
-          <CardTitle>Payment Schedule</CardTitle>
-          <CardDescription>
-            {loan.schedule.filter((s) => s.status === "paid").length} of{" "}
-            {loan.schedule.length} payments completed
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Payment Schedule</CardTitle>
+              <CardDescription>
+                {loan.schedule.filter((s) => s.status === "paid").length} of{" "}
+                {loan.schedule.length} payments completed
+              </CardDescription>
+            </div>
+            {loan.status === "active" && loan.isLender && loan.schedule.some((s) => s.status !== "paid") && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowRegenerateDialog(true)}
+              >
+                <ArrowsClockwise className="h-4 w-4" weight="bold" />
+                Regenerate
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="space-y-2">
@@ -1008,6 +1028,51 @@ function LoanDetailPage() {
         payment={selectedPaymentForEdit}
         scheduleInfo={selectedPaymentForEdit ? getScheduleInfo(selectedPaymentForEdit.scheduleItemId) : null}
       />
+
+      {/* Regenerate Schedule Dialog */}
+      {(() => {
+        const unpaidItems = loan.schedule.filter((s) => s.status !== "paid")
+        const appliedOrWaivedItemIds = new Set(
+          (penaltyData?.penalties ?? [])
+            .filter((p) => p.status === "applied" || p.status === "waived")
+            .map((p) => p.scheduleItemId)
+        )
+        const skippedItems = unpaidItems.filter((s) => appliedOrWaivedItemIds.has(s.id))
+        const regenerableItems = unpaidItems.filter((s) => !appliedOrWaivedItemIds.has(s.id))
+        const skippedUnpaid = skippedItems.reduce(
+          (sum, s) => sum + (parseFloat(s.amount) - parseFloat(s.paidAmount)),
+          0
+        )
+        const adjustedBalance = parseFloat(loan.remainingBalance) - skippedUnpaid
+        const originalPayment = parseFloat(loan.paymentAmount)
+
+        // Mirror server logic: reduce count if balance is too small for original payment
+        let remainingCount = regenerableItems.length
+        while (remainingCount > 1 && adjustedBalance <= (remainingCount - 1) * originalPayment) {
+          remainingCount--
+        }
+        const firstItemAmount = remainingCount === 1
+          ? adjustedBalance
+          : adjustedBalance - (remainingCount - 1) * originalPayment
+
+        const pendingPenaltyCount = (penaltyData?.penalties ?? []).filter(
+          (p) => p.status === "pending" && regenerableItems.some((s) => s.id === p.scheduleItemId)
+        ).length
+
+        return (
+          <RegenerateScheduleDialog
+            open={showRegenerateDialog}
+            onOpenChange={setShowRegenerateDialog}
+            loanId={loan.id}
+            remainingBalance={adjustedBalance}
+            remainingCount={remainingCount}
+            originalPaymentAmount={originalPayment}
+            firstItemAmount={firstItemAmount}
+            skippedCount={skippedItems.length}
+            pendingPenaltyCount={pendingPenaltyCount}
+          />
+        )
+      })()}
 
       {/* Approve Loan Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>

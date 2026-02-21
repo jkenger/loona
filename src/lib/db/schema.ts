@@ -150,6 +150,8 @@ export const contacts = pgTable("contacts", {
   facebookProfile: text("facebook_profile"),
   notes: text("notes"),
   createdByAgentId: text("created_by_agent_id").references(() => agents.id),
+  tier: text("tier"),
+  onTimeRate: decimal("on_time_rate", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
