@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { getPublicPaymentReceipt } from "@/server/payments"
 import { format } from "date-fns"
 import { formatCurrency } from "@/lib/utils"
-import { LoonaBrand } from "@/components/ui/loona-brand"
+import { LoonaBrand, FloatingCircle } from "@/components/ui/loona-brand"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
+import { motion } from "framer-motion"
 
 export const Route = createFileRoute("/share/receipt/$paymentId")({
   loader: async ({ params }) => {
@@ -41,7 +42,7 @@ function ReceiptPage() {
 
   if (!receipt) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-page">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold">Receipt Not Found</h1>
           <p className="text-muted-foreground">
@@ -53,17 +54,29 @@ function ReceiptPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-gradient-page relative overflow-hidden">
+      <FloatingCircle
+        className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2"
+        delay={0} duration={8}
+      />
+      <FloatingCircle
+        className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2"
+        delay={0.5} duration={7}
+      />
+
       {/* Header */}
-      <div className="py-6 border-b bg-card">
-        <div className="mx-auto max-w-2xl px-4 flex items-center justify-between">
-          <LoonaBrand size="sm" animated={false} />
-          <Badge variant="outline">Payment Receipt</Badge>
-        </div>
-      </div>
+      <nav className="relative z-10 flex items-center justify-between px-6 sm:px-12 py-6">
+        <LoonaBrand size="sm" variant="gradient" animated={false} />
+        <Badge variant="outline">Payment Receipt</Badge>
+      </nav>
 
       {/* Content */}
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="relative z-10 mx-auto max-w-2xl px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
         <Stagger className="space-y-4">
           <StaggerItem>
             <Card>
@@ -130,7 +143,13 @@ function ReceiptPage() {
             </Card>
           </StaggerItem>
         </Stagger>
+        </motion.div>
       </div>
+
+      <footer className="relative z-10 px-6 sm:px-12 py-6 flex justify-center gap-6 text-xs text-muted-foreground">
+        <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+        <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+      </footer>
     </div>
   )
 }

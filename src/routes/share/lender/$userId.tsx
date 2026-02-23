@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { getPublicLenderProfile } from "@/server/lender-profile"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -355,9 +355,15 @@ function LenderProfilePage() {
 
             {/* Footer */}
             <StaggerItem>
-              <p className="text-xs text-muted-foreground text-center pt-4">
-                Powered by Loona
-              </p>
+              <div className="text-center pt-4 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Powered by Loona
+                </p>
+                <div className="flex justify-center gap-6 text-xs text-muted-foreground">
+                  <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+                  <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+                </div>
+              </div>
             </StaggerItem>
           </Stagger>
         </motion.div>
