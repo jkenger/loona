@@ -12,7 +12,7 @@ import { Spinner, Check, Warning } from "@phosphor-icons/react"
 import { format } from "date-fns"
 import { useDocColors } from "@/lib/utils/share"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
-import { parsePenaltyConfig, formatPenaltyForDisclosure, formatDailyInterestForDisclosure } from "@/lib/constants/penalty-defaults"
+import { parsePenaltyConfig, formatPenaltyForDisclosure } from "@/lib/constants/penalty-defaults"
 import {
   parseCustomClauses,
   resolveClause,
@@ -375,7 +375,7 @@ function DisclosureDocumentBody({
               },
               { label: "12. Maturity Date", value: loan.maturityDate ? format(new Date(loan.maturityDate), "MMMM d, yyyy") : "—" },
               { label: "13. Late Payment Penalty", value: penaltyConfig ? formatPenaltyForDisclosure(penaltyConfig) : "None" },
-              { label: "14. Default / Acceleration Charges", value: penaltyConfig ? formatDailyInterestForDisclosure(penaltyConfig) : "None" },
+              { label: "14. Default / Acceleration Charges", value: "None" },
               { label: "15. Prepayment Policy", value: "No penalty for early repayment" },
             ].map((row, i) => (
               <tr key={i} style={{ backgroundColor: i % 2 === 0 ? c.rowAlt : c.rowEven }}>

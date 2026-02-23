@@ -1,13 +1,8 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Envelope, ArrowRight, CheckCircle, Spinner, WarningCircle } from "@phosphor-icons/react"
 import { motion } from "framer-motion"
 import { LoonaBrand, AnimatedTagline, FloatingCircle } from "@/components/ui/loona-brand"
 import { getServerSession } from "@/server/session"
 import { getDashboardPath } from "@/lib/constants/roles"
-import { joinWaitlist } from "@/server/waitlist"
 import { buildMeta, SITE_DESCRIPTION, SITE_URL } from "@/lib/constants/seo"
 
 export const Route = createFileRoute("/")({
@@ -26,25 +21,6 @@ export const Route = createFileRoute("/")({
 })
 
 function LandingPage() {
-  const [email, setEmail] = useState("")
-  const [submitted, setSubmitted] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    try {
-      await joinWaitlist({ data: { email } })
-      setSubmitted(true)
-    } catch {
-      setError("Something went wrong. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gradient-page flex flex-col relative overflow-hidden">
       {/* Background decorations */}
@@ -92,56 +68,6 @@ function LandingPage() {
             />
           </div>
 
-          {/* Waitlist form */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            {submitted ? (
-              <div className="flex items-center justify-center gap-2 text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400 rounded-xl p-4">
-                <CheckCircle className="h-5 w-5" weight="fill" />
-                <span className="font-medium">You're on the list! We'll be in touch.</span>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="flex gap-3 max-w-md mx-auto">
-                <div className="relative flex-1">
-                  <Envelope className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-11"
-                    required
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="h-11 px-6 bg-gradient-primary hover:opacity-90 transition-opacity"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <Spinner className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      Join beta
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </form>
-            )}
-            {error && (
-              <div className="flex items-center justify-center gap-2 text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-xl p-3 mt-3">
-                <WarningCircle className="h-4 w-4" weight="fill" />
-                <span className="text-sm font-medium">{error}</span>
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground mt-3">
-              Currently in closed beta. Sign up to get early access.
-            </p>
-          </motion.div>
         </motion.div>
       </main>
 

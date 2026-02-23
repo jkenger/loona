@@ -14,6 +14,7 @@ const createContactSchema = z.object({
   city: z.string().optional(),
   facebookProfile: z.string().optional(),
   notes: z.string().optional(),
+  income: z.string().optional(),
 })
 
 const updateContactSchema = createContactSchema.partial().extend({
@@ -34,6 +35,7 @@ export const getContacts = createServerFn().handler(async () => {
       city: contacts.city,
       facebookProfile: contacts.facebookProfile,
       notes: contacts.notes,
+      income: contacts.income,
       createdAt: contacts.createdAt,
       activeLoans: sql<number>`count(${loans.id}) filter (where ${loans.status} = 'active')::int`,
       totalLoans: sql<number>`count(${loans.id})::int`,

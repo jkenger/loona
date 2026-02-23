@@ -60,37 +60,8 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { type PenaltyConfig, DEFAULT_PENALTY_CONFIG } from "@/lib/constants/penalty-defaults"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
-import { computeRenewalTier } from "@/lib/utils/renewal-tiers"
 import { InterestRateWarning } from "@/components/interest-rate-warning"
 
-type Scorecard = NonNullable<Awaited<ReturnType<typeof getBorrowerScorecard>>>
-
-function getRenewalRecommendation(
-  scorecard: Scorecard,
-  currentRate: number,
-  currentTerm: number,
-) {
-  const tierResult = computeRenewalTier(scorecard)
-
-  // Clamp suggested rate (minimum 1%)
-  const suggestedRate = Math.max(1, currentRate + tierResult.interestDiscount)
-  const suggestedTerm = tierResult.termBenefit === "longer"
-    ? currentTerm + 3
-    : tierResult.termBenefit === "shorter"
-      ? Math.max(1, currentTerm - 3)
-      : currentTerm
-
-  return {
-    tier: tierResult.tier,
-    tierLabel: tierResult.tierLabel,
-    interestAdjustment: tierResult.interestDiscount,
-    termSuggestion: tierResult.termBenefit,
-    suggestedRate,
-    suggestedTerm,
-    reasoning: tierResult.reasoning,
-    hasDefaults: tierResult.hasDefaults,
-  }
-}
 
 const PURPOSE_TEMPLATES = [
   { label: "Bill Payment", icon: "\u{1F4B3}" },
@@ -108,6 +79,10 @@ const STEP_LABELS = ["Borrower", "Loan Terms", "Review", "Done"]
 const searchSchema = z.object({
   contactId: z.string().optional(),
   renewFromLoanId: z.string().optional(),
+  principal: z.string().optional(),
+  interestRate: z.string().optional(),
+  termMonths: z.string().optional(),
+  paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]).optional(),
 })
 
 export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
@@ -145,7 +120,13 @@ export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
 
 function NewLoanWizard() {
   const { contacts, cashPosition, unauthorized, renewFromLoan, scorecard, penaltyConfig: loaderPenaltyConfig } = Route.useLoaderData()
-  const { contactId: preselectedContactId } = Route.useSearch()
+  const {
+    contactId: preselectedContactId,
+    principal: searchPrincipal,
+    interestRate: searchInterestRate,
+    termMonths: searchTermMonths,
+    paymentFrequency: searchPaymentFrequency,
+  } = Route.useSearch()
 
   const isRenewal = !!renewFromLoan
   const renewalContactId = renewFromLoan?.contactId
@@ -167,16 +148,17 @@ function NewLoanWizard() {
   const [city, setCity] = useState("")
   const [facebookProfile, setFacebookProfile] = useState("")
   const [contactNotes, setContactNotes] = useState("")
+  const [contactIncome, setContactIncome] = useState("")
   // Existing borrower
   const [contactId, setContactId] = useState(effectivePreselectedContactId || "")
 
   // Step 2 — Loan Terms (pre-fill from renewal source if available)
-  const [principal, setPrincipal] = useState(renewFromLoan ? renewFromLoan.principal : "")
-  const [interestRate, setInterestRate] = useState(renewFromLoan ? renewFromLoan.interestRate : "5")
-  const [termMonths, setTermMonths] = useState(renewFromLoan ? String(renewFromLoan.termMonths) : "6")
+  const [principal, setPrincipal] = useState(renewFromLoan ? renewFromLoan.principal : searchPrincipal || "")
+  const [interestRate, setInterestRate] = useState(renewFromLoan ? renewFromLoan.interestRate : searchInterestRate || "5")
+  const [termMonths, setTermMonths] = useState(renewFromLoan ? String(renewFromLoan.termMonths) : searchTermMonths || "6")
   const [paymentFrequency, setPaymentFrequency] = useState<
     "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
-  >(renewFromLoan?.paymentFrequency as any || "monthly")
+  >(renewFromLoan?.paymentFrequency as any || searchPaymentFrequency || "monthly")
   const [startDate, setStartDate] = useState<Date>(new Date())
   const [purpose, setPurpose] = useState(renewFromLoan?.purpose || "")
   const [hasCollateral, setHasCollateral] = useState(!!renewFromLoan?.collateralDescription)
@@ -346,6 +328,7 @@ function NewLoanWizard() {
             city: city || undefined,
             facebookProfile: facebookProfile || undefined,
             notes: contactNotes || undefined,
+            income: contactIncome || undefined,
             ...loanFields,
           }
         : {
@@ -592,6 +575,20 @@ function NewLoanWizard() {
                         className="pl-10"
                       />
                     </div>
+                  </div>
+
+                  {/* Income */}
+                  <div className="space-y-2">
+                    <Label htmlFor="contactIncome">
+                      Net Monthly Income{" "}
+                      <span className="text-muted-foreground font-normal">(optional)</span>
+                    </Label>
+                    <CurrencyInput
+                      id="contactIncome"
+                      value={contactIncome}
+                      onValueChange={setContactIncome}
+                      placeholder="0"
+                    />
                   </div>
 
                   {/* Notes */}
@@ -1288,118 +1285,6 @@ function NewLoanWizard() {
                 </Card>
               )}
 
-              {/* Renewal Recommendation Card */}
-              {isRenewal && scorecard && scorecard.completedLoans > 0 && (() => {
-                const rec = getRenewalRecommendation(
-                  scorecard,
-                  parseFloat(interestRate) || 0,
-                  parseInt(termMonths) || 0,
-                )
-                const hasAdjustment = rec.interestAdjustment !== 0 || rec.termSuggestion !== "same"
-                const alreadyApplied =
-                  rec.suggestedRate === (parseFloat(interestRate) || 0) &&
-                  rec.suggestedTerm === (parseInt(termMonths) || 0)
-
-                return (
-                  <Card className={cn(
-                    "h-fit shadow-lg border-2",
-                    rec.hasDefaults
-                      ? "border-red-500/30"
-                      : hasAdjustment
-                        ? "border-green-500/30"
-                        : "border-border"
-                  )}>
-                    <CardHeader className="p-4 pb-2">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <TrendUp className="h-5 w-5 text-primary" />
-                        Renewal Recommendation
-                      </CardTitle>
-                      <CardDescription>
-                        <span className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                          rec.tier === "loyal" && "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-                          rec.tier === "established" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-                          rec.tier === "returning" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-                          rec.tier === "new" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-                        )}>
-                          {rec.tierLabel}
-                        </span>
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0 space-y-4">
-                      {/* Reasoning */}
-                      <div className="space-y-1.5">
-                        {rec.reasoning.map((r, i) => (
-                          <p key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="shrink-0 mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
-                            {r}
-                          </p>
-                        ))}
-                      </div>
-
-                      {/* Suggested adjustments */}
-                      {hasAdjustment && (
-                        <>
-                          <Separator />
-                          <div className="space-y-2">
-                            {rec.interestAdjustment !== 0 && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Suggested Rate</span>
-                                <span className="font-medium">
-                                  {rec.suggestedRate}% / mo
-                                  <span className={cn(
-                                    "ml-1.5 text-xs",
-                                    rec.interestAdjustment < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                                  )}>
-                                    ({rec.interestAdjustment > 0 ? "+" : ""}{rec.interestAdjustment}%)
-                                  </span>
-                                </span>
-                              </div>
-                            )}
-                            {rec.termSuggestion !== "same" && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Suggested Term</span>
-                                <span className="font-medium">
-                                  {rec.suggestedTerm} months
-                                  <span className="ml-1.5 text-xs text-muted-foreground">
-                                    ({rec.termSuggestion === "longer" ? "+3" : "-3"} mo)
-                                  </span>
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {!alreadyApplied ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="w-full gap-2"
-                              onClick={() => {
-                                if (rec.interestAdjustment !== 0) {
-                                  setInterestRate(String(rec.suggestedRate))
-                                }
-                                if (rec.termSuggestion !== "same") {
-                                  setTermMonths(String(rec.suggestedTerm))
-                                }
-                                toast.success("Suggestion applied to loan terms")
-                              }}
-                            >
-                              <Check className="h-4 w-4" />
-                              Apply Suggestion
-                            </Button>
-                          ) : (
-                            <p className="text-xs text-center text-green-600 dark:text-green-400 font-medium flex items-center justify-center gap-1.5">
-                              <CheckCircle className="h-3.5 w-3.5" weight="fill" />
-                              Suggestion applied
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                )
-              })()}
             </div>
           </div>
         )}

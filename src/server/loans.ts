@@ -506,6 +506,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     city: z.string().optional(),
     facebookProfile: z.string().optional(),
     notes: z.string().optional(),
+    income: z.string().optional(),
     // Loan fields
     principal: z.number().positive("Principal must be positive"),
     interestRate: z.number().min(0).max(15),
@@ -560,6 +561,7 @@ export const createContactAndLoan = createServerFn()
           city: data.city || null,
           facebookProfile: data.facebookProfile || null,
           notes: data.notes || null,
+          income: data.income || null,
           lenderId: session.user.id,
         })
         .returning()

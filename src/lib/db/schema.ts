@@ -152,6 +152,7 @@ export const contacts = pgTable("contacts", {
   createdByAgentId: text("created_by_agent_id").references(() => agents.id),
   tier: text("tier"),
   onTimeRate: decimal("on_time_rate", { precision: 5, scale: 2 }),
+  income: decimal("income", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

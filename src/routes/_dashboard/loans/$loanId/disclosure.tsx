@@ -6,7 +6,7 @@ import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
-import { formatPenaltyForDisclosure, formatDailyInterestForDisclosure } from "@/lib/constants/penalty-defaults"
+import { formatPenaltyForDisclosure } from "@/lib/constants/penalty-defaults"
 import { ArrowLeft, FilePdf, Spinner } from "@phosphor-icons/react"
 import { format } from "date-fns"
 
@@ -367,9 +367,7 @@ function DisclosurePage() {
                     },
                     {
                       label: "14. Default / Acceleration Charges",
-                      value: penaltyConfig
-                        ? formatDailyInterestForDisclosure(penaltyConfig)
-                        : "None",
+                      value: "None",
                     },
                     {
                       label: "15. Prepayment Policy",

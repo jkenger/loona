@@ -52,6 +52,7 @@
     "framer-motion": "^12.31.0",
     "html2pdf.js": "^0.14.0",
     "nitro": "latest",
+    "pdf-parse": "^2.4.5",
     "react": "^19.2.0",
     "react-day-picker": "^9.13.0",
     "react-dom": "^19.2.0",

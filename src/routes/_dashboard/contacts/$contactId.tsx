@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
@@ -41,6 +42,7 @@ import {
   UserCircle,
   ArrowSquareOut,
   Lock,
+  Wallet,
 } from "@phosphor-icons/react"
 
 export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
@@ -82,6 +84,39 @@ function ContactDetailPage() {
   const [notesSaved, setNotesSaved] = useState(false)
   const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Inline income
+  const [editingIncome, setEditingIncome] = useState(false)
+  const [inlineIncome, setInlineIncome] = useState(contact?.income || "")
+  const [savingIncome, setSavingIncome] = useState(false)
+  const [incomeSaved, setIncomeSaved] = useState(false)
+
+  const saveIncome = useCallback(async (value: string) => {
+    if (!contact) return
+    // Skip save if value hasn't changed
+    if (value === (contact.income || "")) {
+      setEditingIncome(false)
+      return
+    }
+    setSavingIncome(true)
+    try {
+      await updateContact({
+        data: {
+          id: contact.id,
+          name: contact.name,
+          income: value || undefined,
+        },
+      })
+      setIncomeSaved(true)
+      setTimeout(() => setIncomeSaved(false), 2000)
+      router.invalidate()
+    } catch {
+      toast.error("Failed to save income")
+    } finally {
+      setSavingIncome(false)
+      setEditingIncome(false)
+    }
+  }, [contact, router])
+
   const saveNotes = useCallback(async (value: string) => {
     if (!contact || value === (contact.notes || "")) return
     setSavingNotes(true)
@@ -119,6 +154,7 @@ function ContactDetailPage() {
   const [editAddress, setEditAddress] = useState(contact?.address || "")
   const [editCity, setEditCity] = useState(contact?.city || "")
   const [editFacebook, setEditFacebook] = useState(contact?.facebookProfile || "")
+  const [editIncome, setEditIncome] = useState(contact?.income || "")
   const [editNotes, setEditNotes] = useState(contact?.notes || "")
 
   if (unauthorized) {
@@ -156,6 +192,7 @@ function ContactDetailPage() {
           address: editAddress || undefined,
           city: editCity || undefined,
           facebookProfile: editFacebook || undefined,
+          income: editIncome || undefined,
           notes: editNotes || undefined,
         },
       })
@@ -298,6 +335,58 @@ function ContactDetailPage() {
                   </a>
                 </div>
               )}
+
+              {/* Inline Income */}
+              <div className="flex items-center gap-3">
+                <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
+                {editingIncome ? (
+                  <CurrencyInput
+                    autoFocus
+                    value={inlineIncome}
+                    onValueChange={setInlineIncome}
+                    placeholder="0"
+                    className="h-8 text-sm"
+                    onBlur={() => saveIncome(inlineIncome)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        saveIncome(inlineIncome)
+                      }
+                      if (e.key === "Escape") {
+                        setInlineIncome(contact.income || "")
+                        setEditingIncome(false)
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center justify-between flex-1 min-w-0">
+                    <span className={contact.income ? "" : "text-muted-foreground"}>
+                      {contact.income
+                        ? `${formatCurrency(contact.income)}/mo`
+                        : "Add income"}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {savingIncome && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Spinner className="h-3 w-3 animate-spin" />
+                        </span>
+                      )}
+                      {incomeSaved && !savingIncome && (
+                        <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                          <Check className="h-3 w-3" weight="bold" />
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setEditingIncome(true)}
+                        className="p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <PencilSimple className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -524,6 +613,15 @@ function ContactDetailPage() {
                 value={editFacebook}
                 onChange={(e) => setEditFacebook(e.target.value)}
                 placeholder="facebook.com/username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="income">Net Monthly Income</Label>
+              <CurrencyInput
+                id="income"
+                value={editIncome}
+                onValueChange={setEditIncome}
+                placeholder="0"
               />
             </div>
             <div className="space-y-2">

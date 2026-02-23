@@ -15,6 +15,7 @@ import {
   Wallet,
   DotsThree,
   BookOpenText,
+  Calculator,
 } from "@phosphor-icons/react"
 import type { Icon } from "@phosphor-icons/react"
 import {
@@ -44,6 +45,7 @@ const portalConfig: Record<
     more: [
       { name: "Contacts", href: "/contacts", icon: Users, exact: false },
       { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
+      { name: "Estimator", href: "/tools/estimator", icon: Calculator, exact: true },
       { name: "Playbook", href: "/playbook", icon: BookOpenText, exact: true },
       { name: "Settings", href: "/settings", icon: Gear, exact: false },
     ],

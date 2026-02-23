@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState, useMemo } from "react"
 import { getContacts } from "@/server/contacts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,6 +26,7 @@ import {
   Warning,
   WarningOctagon,
   X,
+  ArrowRight,
 } from "@phosphor-icons/react"
 import { cn } from "@/lib/utils"
 
@@ -321,6 +322,21 @@ function EstimatorPage() {
                       onValueChange={setIncome}
                       placeholder="0"
                     />
+                    {selectedContact && !selectedContact.income && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                        <Warning className="h-3.5 w-3.5 shrink-0" weight="fill" />
+                        <span>
+                          No income on file — type it above, or{" "}
+                          <Link
+                            to="/contacts/$contactId"
+                            params={{ contactId: selectedContact.id }}
+                            className="underline hover:text-amber-700 dark:hover:text-amber-300"
+                          >
+                            add it on their profile
+                          </Link>
+                        </span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -397,6 +413,23 @@ function EstimatorPage() {
                           <span className="font-medium text-primary">{formatEIR(calc.eir)}</span>
                         </div>
                       </div>
+
+                      <div className="border-t" />
+
+                      <Link
+                        to="/loans/new-wizard"
+                        search={{
+                          ...(contactId ? { contactId } : {}),
+                          principal,
+                          interestRate,
+                          termMonths,
+                          paymentFrequency,
+                        }}
+                        className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        Start this loan
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
                     </div>
                   ) : (
                     <div className="text-center py-8">

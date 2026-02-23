@@ -49,7 +49,13 @@
       "WebFetch(domain:www.better-auth.com)",
       "WebFetch(domain:tanstack.com)",
       "Bash(/dev/null --include=*.d.ts)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(pdftotext /mnt/c/Users/johnk/Desktop/ken.dev/loona/docs/Loona_Knowledge_Base_v1.pdf - 2>/dev/null | head -500)",
+      "Bash(pip install pdfplumber 2>&1 | tail -3)",
+      "Bash(pip3 install pdfplumber 2>&1 | tail -5)",
+      "WebFetch(domain:)",
+      "Bash(python3 -m pip install pdfplumber 2>&1 | tail -5)",
+      "Bash(npx pdf-parse /mnt/c/Users/johnk/Desktop/ken.dev/loona/docs/Loona_Knowledge_Base_v1.pdf 2>/dev/null || node -e \"\nconst fs = require\\('fs'\\);\nconst pdf = require\\('pdf-parse'\\);\nconst buf = fs.readFileSync\\('/mnt/c/Users/johnk/Desktop/ken.dev/loona/docs/Loona_Knowledge_Base_v1.pdf'\\);\npdf\\(buf\\).then\\(d => console.log\\(d.text\\)\\).catch\\(e => console.error\\(e\\)\\);\n\" 2>/dev/null || echo \"no pdf-parse\")"
     ]
   }
 }

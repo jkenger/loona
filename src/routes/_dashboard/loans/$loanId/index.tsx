@@ -4,6 +4,13 @@ import { getLoanSigningStatus } from "@/server/signatures"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
 import { PenaltyItems } from "@/components/penalty-items"
 import { calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import { RecordPaymentDialog } from "@/components/record-payment-dialog"
 import { ReversePaymentDialog } from "@/components/reverse-payment-dialog"
 import { EditPaymentDateDialog } from "@/components/edit-payment-date-dialog"
@@ -56,6 +63,7 @@ import {
   PencilSimple,
   LinkSimple,
   ArrowsClockwise,
+  DotsThreeVertical,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
@@ -281,14 +289,30 @@ function LoanDetailPage() {
                     </Button>
                   </Link>
                 )}
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="gap-2"
-                >
-                  <Trash className="h-4 w-4" weight="bold" />
-                  Delete
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={(props) => (
+                      <Button {...props} variant="ghost" size="icon" className="text-blue-200/60 hover:text-white hover:bg-white/10">
+                        <DotsThreeVertical className="h-5 w-5" weight="bold" />
+                      </Button>
+                    )}
+                  />
+                  <DropdownMenuContent align="end">
+                    {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                      <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
+                        <ArrowsClockwise className="h-4 w-4" />
+                        Regenerate Schedule
+                      </DropdownMenuItem>
+                    )}
+                    {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                      <DropdownMenuSeparator />
+                    )}
+                    <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+                      <Trash className="h-4 w-4" />
+                      Delete Loan
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>
@@ -626,26 +650,11 @@ function LoanDetailPage() {
       {/* Payment Schedule */}
       <Card className="shadow-sm">
         <CardHeader className="p-4 pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Payment Schedule</CardTitle>
-              <CardDescription>
-                {loan.schedule.filter((s) => s.status === "paid").length} of{" "}
-                {loan.schedule.length} payments completed
-              </CardDescription>
-            </div>
-            {loan.status === "active" && loan.isLender && loan.schedule.some((s) => s.status !== "paid") && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setShowRegenerateDialog(true)}
-              >
-                <ArrowsClockwise className="h-4 w-4" weight="bold" />
-                Regenerate
-              </Button>
-            )}
-          </div>
+          <CardTitle>Payment Schedule</CardTitle>
+          <CardDescription>
+            {loan.schedule.filter((s) => s.status === "paid").length} of{" "}
+            {loan.schedule.length} payments completed
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="space-y-2">

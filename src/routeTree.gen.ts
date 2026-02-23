@@ -23,6 +23,7 @@ import { Route as DashboardPlaybookRouteImport } from './routes/_dashboard/playb
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
+import { Route as DashboardToolsIndexRouteImport } from './routes/_dashboard/tools/index'
 import { Route as DashboardSettingsIndexRouteImport } from './routes/_dashboard/settings/index'
 import { Route as DashboardPenaltiesIndexRouteImport } from './routes/_dashboard/penalties/index'
 import { Route as DashboardPaymentsIndexRouteImport } from './routes/_dashboard/payments/index'
@@ -41,6 +42,7 @@ import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as DashboardToolsEstimatorRouteImport } from './routes/_dashboard/tools/estimator'
 import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
 import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard/loans/new-wizard'
 import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans/new'
@@ -137,6 +139,11 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
+const DashboardToolsIndexRoute = DashboardToolsIndexRouteImport.update({
+  id: '/tools/',
+  path: '/tools/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -226,6 +233,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardToolsEstimatorRoute = DashboardToolsEstimatorRouteImport.update({
+  id: '/tools/estimator',
+  path: '/tools/estimator',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSettingsPenaltySettingsRoute =
   DashboardSettingsPenaltySettingsRouteImport.update({
@@ -406,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
+  '/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
@@ -424,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/payments/': typeof DashboardPaymentsIndexRoute
   '/penalties/': typeof DashboardPenaltiesIndexRoute
   '/settings/': typeof DashboardSettingsIndexRoute
+  '/tools/': typeof DashboardToolsIndexRoute
   '/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
   '/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
   '/admin/blog/new': typeof DashboardAdminBlogNewRoute
@@ -465,6 +479,7 @@ export interface FileRoutesByTo {
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
+  '/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
@@ -483,6 +498,7 @@ export interface FileRoutesByTo {
   '/payments': typeof DashboardPaymentsIndexRoute
   '/penalties': typeof DashboardPenaltiesIndexRoute
   '/settings': typeof DashboardSettingsIndexRoute
+  '/tools': typeof DashboardToolsIndexRoute
   '/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
   '/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
   '/admin/blog/new': typeof DashboardAdminBlogNewRoute
@@ -527,6 +543,7 @@ export interface FileRoutesById {
   '/_dashboard/loans/new': typeof DashboardLoansNewRoute
   '/_dashboard/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
+  '/_dashboard/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
@@ -545,6 +562,7 @@ export interface FileRoutesById {
   '/_dashboard/payments/': typeof DashboardPaymentsIndexRoute
   '/_dashboard/penalties/': typeof DashboardPenaltiesIndexRoute
   '/_dashboard/settings/': typeof DashboardSettingsIndexRoute
+  '/_dashboard/tools/': typeof DashboardToolsIndexRoute
   '/_dashboard/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
   '/_dashboard/admin/blog/categories': typeof DashboardAdminBlogCategoriesRoute
   '/_dashboard/admin/blog/new': typeof DashboardAdminBlogNewRoute
@@ -588,6 +606,7 @@ export interface FileRouteTypes {
     | '/loans/new'
     | '/loans/new-wizard'
     | '/settings/penalty-settings'
+    | '/tools/estimator'
     | '/api/auth/$'
     | '/api/auth/error'
     | '/api/cron/digest'
@@ -606,6 +625,7 @@ export interface FileRouteTypes {
     | '/payments/'
     | '/penalties/'
     | '/settings/'
+    | '/tools/'
     | '/admin/blog/$postId'
     | '/admin/blog/categories'
     | '/admin/blog/new'
@@ -647,6 +667,7 @@ export interface FileRouteTypes {
     | '/loans/new'
     | '/loans/new-wizard'
     | '/settings/penalty-settings'
+    | '/tools/estimator'
     | '/api/auth/$'
     | '/api/auth/error'
     | '/api/cron/digest'
@@ -665,6 +686,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/penalties'
     | '/settings'
+    | '/tools'
     | '/admin/blog/$postId'
     | '/admin/blog/categories'
     | '/admin/blog/new'
@@ -708,6 +730,7 @@ export interface FileRouteTypes {
     | '/_dashboard/loans/new'
     | '/_dashboard/loans/new-wizard'
     | '/_dashboard/settings/penalty-settings'
+    | '/_dashboard/tools/estimator'
     | '/api/auth/$'
     | '/api/auth/error'
     | '/api/cron/digest'
@@ -726,6 +749,7 @@ export interface FileRouteTypes {
     | '/_dashboard/payments/'
     | '/_dashboard/penalties/'
     | '/_dashboard/settings/'
+    | '/_dashboard/tools/'
     | '/_dashboard/admin/blog/$postId'
     | '/_dashboard/admin/blog/categories'
     | '/_dashboard/admin/blog/new'
@@ -862,6 +886,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_dashboard/tools/': {
+      id: '/_dashboard/tools/'
+      path: '/tools'
+      fullPath: '/tools/'
+      preLoaderRoute: typeof DashboardToolsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/settings/': {
       id: '/_dashboard/settings/'
       path: '/settings'
@@ -987,6 +1018,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard/tools/estimator': {
+      id: '/_dashboard/tools/estimator'
+      path: '/tools/estimator'
+      fullPath: '/tools/estimator'
+      preLoaderRoute: typeof DashboardToolsEstimatorRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/_dashboard/settings/penalty-settings': {
       id: '/_dashboard/settings/penalty-settings'
@@ -1211,6 +1249,7 @@ interface DashboardRouteChildren {
   DashboardLoansNewRoute: typeof DashboardLoansNewRoute
   DashboardLoansNewWizardRoute: typeof DashboardLoansNewWizardRoute
   DashboardSettingsPenaltySettingsRoute: typeof DashboardSettingsPenaltySettingsRoute
+  DashboardToolsEstimatorRoute: typeof DashboardToolsEstimatorRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
   DashboardAgentIndexRoute: typeof DashboardAgentIndexRoute
   DashboardAgentsIndexRoute: typeof DashboardAgentsIndexRoute
@@ -1220,6 +1259,7 @@ interface DashboardRouteChildren {
   DashboardPaymentsIndexRoute: typeof DashboardPaymentsIndexRoute
   DashboardPenaltiesIndexRoute: typeof DashboardPenaltiesIndexRoute
   DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
+  DashboardToolsIndexRoute: typeof DashboardToolsIndexRoute
   DashboardAdminBlogPostIdRoute: typeof DashboardAdminBlogPostIdRoute
   DashboardAdminBlogCategoriesRoute: typeof DashboardAdminBlogCategoriesRoute
   DashboardAdminBlogNewRoute: typeof DashboardAdminBlogNewRoute
@@ -1252,6 +1292,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLoansNewRoute: DashboardLoansNewRoute,
   DashboardLoansNewWizardRoute: DashboardLoansNewWizardRoute,
   DashboardSettingsPenaltySettingsRoute: DashboardSettingsPenaltySettingsRoute,
+  DashboardToolsEstimatorRoute: DashboardToolsEstimatorRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
   DashboardAgentIndexRoute: DashboardAgentIndexRoute,
   DashboardAgentsIndexRoute: DashboardAgentsIndexRoute,
@@ -1261,6 +1302,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardPaymentsIndexRoute: DashboardPaymentsIndexRoute,
   DashboardPenaltiesIndexRoute: DashboardPenaltiesIndexRoute,
   DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
+  DashboardToolsIndexRoute: DashboardToolsIndexRoute,
   DashboardAdminBlogPostIdRoute: DashboardAdminBlogPostIdRoute,
   DashboardAdminBlogCategoriesRoute: DashboardAdminBlogCategoriesRoute,
   DashboardAdminBlogNewRoute: DashboardAdminBlogNewRoute,

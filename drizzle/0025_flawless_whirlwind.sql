@@ -1,1 +1,1 @@
-ALTER TABLE "penalties" ADD COLUMN "metadata" text;
+ALTER TABLE "penalties" ADD COLUMN IF NOT EXISTS "metadata" text;

@@ -39,6 +39,7 @@ import {
   Newspaper,
   Envelope,
   BookOpenText,
+  Calculator,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -285,6 +286,26 @@ function DashboardLayout() {
                 </Link>
                 )
               })}
+              {/* Tools dropdown — lender portal only */}
+              {portal === "lender" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className={`relative px-3 py-1.5 text-sm font-medium text-blue-200/70 hover:text-white transition-colors flex items-center gap-1 ${location.pathname.startsWith("/tools") ? "text-white after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-primary" : "after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 after:ease-out hover:after:w-full"}`}
+                  >
+                    Tools
+                    <CaretDown className="h-3 w-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem
+                      onClick={() => navigate({ to: "/tools/estimator" })}
+                      className="cursor-pointer"
+                    >
+                      <Calculator className="h-4 w-4 mr-2" />
+                      Estimator
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </nav>
 
             {/* User Menu */}
