@@ -262,8 +262,8 @@ export const recordPayment = createServerFn()
   // Loan balance computations
   const newAmountPaid = parseFloat(loan.amountPaid) + data.amount
   const newRemainingBalance = parseFloat(loan.totalToRepay) - newAmountPaid
-  // Tolerance of ₱1 handles rounding gaps from schedule amounts not summing exactly to totalToRepay
-  const isCompleted = newRemainingBalance <= 1
+  // Tolerance of ₱0.05 handles floating-point rounding gaps across partial payments
+  const isCompleted = newRemainingBalance <= 0.05
   const nextStatus = isCompleted ? "completed" : "active"
 
   // Validate status transition
@@ -333,6 +333,24 @@ export const recordPayment = createServerFn()
       paidAt: itemFullyPaid ? paymentDate : null,
     }).where(eq(paymentSchedule.id, data.scheduleItemId)),
   ]
+
+  // When auto-completing, close any remaining schedule items so the schedule
+  // doesn't show lingering "pending"/"partial" rows on a completed loan
+  if (isCompleted) {
+    writes.push(
+      db.update(paymentSchedule).set({
+        status: "paid",
+        paidAmount: sql`${paymentSchedule.amount}`,
+        paidAt: paymentDate,
+      }).where(
+        and(
+          eq(paymentSchedule.loanId, data.loanId),
+          ne(paymentSchedule.status, "paid"),
+          ne(paymentSchedule.id, data.scheduleItemId), // already handled above
+        )
+      ),
+    )
+  }
 
   if (agentId && agentRecord && commissionAmount !== null && effectiveRate !== null) {
     writes.push(
