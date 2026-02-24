@@ -44,6 +44,7 @@ import {
   Lock,
   Wallet,
 } from "@phosphor-icons/react"
+import { LendingTip } from "@/components/lending-tip"
 
 export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
   loader: async ({ params, context }) => {
@@ -87,13 +88,14 @@ function ContactDetailPage() {
   // Inline income
   const [editingIncome, setEditingIncome] = useState(false)
   const [inlineIncome, setInlineIncome] = useState(contact?.income || "")
+  const [inlineOtherIncome, setInlineOtherIncome] = useState(contact?.otherIncome || "")
   const [savingIncome, setSavingIncome] = useState(false)
   const [incomeSaved, setIncomeSaved] = useState(false)
 
-  const saveIncome = useCallback(async (value: string) => {
+  const saveIncome = useCallback(async () => {
     if (!contact) return
-    // Skip save if value hasn't changed
-    if (value === (contact.income || "")) {
+    // Skip save if neither value changed
+    if (inlineIncome === (contact.income || "") && inlineOtherIncome === (contact.otherIncome || "")) {
       setEditingIncome(false)
       return
     }
@@ -103,7 +105,8 @@ function ContactDetailPage() {
         data: {
           id: contact.id,
           name: contact.name,
-          income: value || undefined,
+          income: inlineIncome || undefined,
+          otherIncome: inlineOtherIncome || undefined,
         },
       })
       setIncomeSaved(true)
@@ -115,7 +118,7 @@ function ContactDetailPage() {
       setSavingIncome(false)
       setEditingIncome(false)
     }
-  }, [contact, router])
+  }, [contact, router, inlineIncome, inlineOtherIncome])
 
   const saveNotes = useCallback(async (value: string) => {
     if (!contact || value === (contact.notes || "")) return
@@ -155,6 +158,7 @@ function ContactDetailPage() {
   const [editCity, setEditCity] = useState(contact?.city || "")
   const [editFacebook, setEditFacebook] = useState(contact?.facebookProfile || "")
   const [editIncome, setEditIncome] = useState(contact?.income || "")
+  const [editOtherIncome, setEditOtherIncome] = useState(contact?.otherIncome || "")
   const [editNotes, setEditNotes] = useState(contact?.notes || "")
 
   if (unauthorized) {
@@ -193,6 +197,7 @@ function ContactDetailPage() {
           city: editCity || undefined,
           facebookProfile: editFacebook || undefined,
           income: editIncome || undefined,
+          otherIncome: editOtherIncome || undefined,
           notes: editNotes || undefined,
         },
       })
@@ -337,33 +342,72 @@ function ContactDetailPage() {
               )}
 
               {/* Inline Income */}
-              <div className="flex items-center gap-3">
-                <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex items-start gap-3">
+                <Wallet className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 {editingIncome ? (
-                  <CurrencyInput
-                    autoFocus
-                    value={inlineIncome}
-                    onValueChange={setInlineIncome}
-                    placeholder="0"
-                    className="h-8 text-sm"
-                    onBlur={() => saveIncome(inlineIncome)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        saveIncome(inlineIncome)
-                      }
-                      if (e.key === "Escape") {
-                        setInlineIncome(contact.income || "")
-                        setEditingIncome(false)
-                      }
-                    }}
-                  />
+                  <div className="flex-1 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <span className="text-xs text-muted-foreground">Basic Pay</span>
+                        <CurrencyInput
+                          autoFocus
+                          value={inlineIncome}
+                          onValueChange={setInlineIncome}
+                          placeholder="0"
+                          className="h-8 text-sm"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              saveIncome()
+                            }
+                            if (e.key === "Escape") {
+                              setInlineIncome(contact.income || "")
+                              setInlineOtherIncome(contact.otherIncome || "")
+                              setEditingIncome(false)
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs text-muted-foreground">Other Income</span>
+                        <CurrencyInput
+                          value={inlineOtherIncome}
+                          onValueChange={setInlineOtherIncome}
+                          placeholder="0"
+                          className="h-8 text-sm"
+                          onBlur={() => saveIncome()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              saveIncome()
+                            }
+                            if (e.key === "Escape") {
+                              setInlineIncome(contact.income || "")
+                              setInlineOtherIncome(contact.otherIncome || "")
+                              setEditingIncome(false)
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {(parseFloat(inlineIncome) > 0 || parseFloat(inlineOtherIncome) > 0) && (
+                      <p className="text-xs text-muted-foreground">
+                        Total: {formatCurrency(String((parseFloat(inlineIncome) || 0) + (parseFloat(inlineOtherIncome) || 0)))}/mo
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex items-center justify-between flex-1 min-w-0">
                     <span className={contact.income ? "" : "text-muted-foreground"}>
-                      {contact.income
-                        ? `${formatCurrency(contact.income)}/mo`
-                        : "Add income"}
+                      {(() => {
+                        const basic = parseFloat(contact.income || "0")
+                        const other = parseFloat(contact.otherIncome || "0")
+                        if (!basic && !other) return "Add monthly income"
+                        if (other > 0) {
+                          return `${formatCurrency(String(basic))} + ${formatCurrency(String(other))} = ${formatCurrency(String(basic + other))}/mo`
+                        }
+                        return `${formatCurrency(contact.income!)}/mo`
+                      })()}
                     </span>
                     <div className="flex items-center gap-1.5">
                       {savingIncome && (
@@ -532,6 +576,9 @@ function ContactDetailPage() {
                     </div>
                   </Link>
                 ))}
+                {contact.loans.filter((l: any) => l.status === "defaulted").length >= 2 && (
+                  <LendingTip tip="Repeated defaults may signal over-lending, not bad character." className="justify-center mt-4" />
+                )}
               </div>
             ) : (
               <div className="text-center py-8">
@@ -616,13 +663,32 @@ function ContactDetailPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="income">Net Monthly Income</Label>
-              <CurrencyInput
-                id="income"
-                value={editIncome}
-                onValueChange={setEditIncome}
-                placeholder="0"
-              />
+              <Label>Monthly Income</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Basic Pay</span>
+                  <CurrencyInput
+                    id="income"
+                    value={editIncome}
+                    onValueChange={setEditIncome}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Other Income</span>
+                  <CurrencyInput
+                    id="otherIncome"
+                    value={editOtherIncome}
+                    onValueChange={setEditOtherIncome}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              {(parseFloat(editIncome) > 0 || parseFloat(editOtherIncome) > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  Total: {formatCurrency(String((parseFloat(editIncome) || 0) + (parseFloat(editOtherIncome) || 0)))}/mo
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>

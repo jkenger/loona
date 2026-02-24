@@ -15,6 +15,7 @@ const createContactSchema = z.object({
   facebookProfile: z.string().optional(),
   notes: z.string().optional(),
   income: z.string().optional(),
+  otherIncome: z.string().optional(),
 })
 
 const updateContactSchema = createContactSchema.partial().extend({
@@ -36,9 +37,24 @@ export const getContacts = createServerFn().handler(async () => {
       facebookProfile: contacts.facebookProfile,
       notes: contacts.notes,
       income: contacts.income,
+      otherIncome: contacts.otherIncome,
       createdAt: contacts.createdAt,
       activeLoans: sql<number>`count(${loans.id}) filter (where ${loans.status} = 'active')::int`,
       totalLoans: sql<number>`count(${loans.id})::int`,
+      monthlyObligation: sql<string>`coalesce((
+        select sum(
+          l2.payment_amount::numeric * case l2.payment_frequency
+            when 'daily' then 30
+            when 'weekly' then 4
+            when 'biweekly' then 2
+            when 'semimonthly' then 2
+            else 1
+          end
+        )
+        from loans l2
+        where l2.contact_id = contacts.id
+          and l2.status = 'active'
+      ), 0)::text`,
     })
     .from(contacts)
     .leftJoin(loans, eq(contacts.id, loans.contactId))

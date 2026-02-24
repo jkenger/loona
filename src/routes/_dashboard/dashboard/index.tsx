@@ -26,6 +26,7 @@ import {
   Bell,
   ArrowRight,
 } from '@phosphor-icons/react'
+import { LendingTip } from '@/components/lending-tip'
 import {
   format,
   addMonths,
@@ -403,6 +404,7 @@ function DashboardPage() {
                 </Button>
               </Link>
             </div>
+            <LendingTip tip="Follow up early. A friendly reminder on day 1 beats a tough call on day 30." className="mt-2 relative" />
           </div>
           </StaggerItem>
         )}

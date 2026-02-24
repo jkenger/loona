@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { z } from "zod"
 import { getContacts } from "@/server/contacts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CurrencyInput } from "@/components/ui/currency-input"
@@ -20,17 +21,26 @@ import { calculatePaymentsCount, type PaymentFrequency } from "@/lib/utils/loan-
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 import {
   Calculator,
+  ChartBar,
   User,
   Info,
-  CheckCircle,
   Warning,
-  WarningOctagon,
   X,
   ArrowRight,
 } from "@phosphor-icons/react"
+import { LendingTip } from "@/components/lending-tip"
 import { cn } from "@/lib/utils"
 
+const searchSchema = z.object({
+  principal: z.string().optional(),
+  interestRate: z.string().optional(),
+  termMonths: z.string().optional(),
+  paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]).optional(),
+  contactId: z.string().optional(),
+})
+
 export const Route = createFileRoute("/_dashboard/tools/estimator")({
+  validateSearch: searchSchema,
   loader: async ({ context }) => {
     const { session } = context as {
       session: { user: { role: string | null } }
@@ -53,18 +63,41 @@ const FREQUENCY_LABELS: Record<PaymentFrequency, string> = {
   daily: "Daily",
 }
 
+const FREQUENCY_TO_MONTHLY: Record<PaymentFrequency, number> = {
+  monthly: 1,
+  semimonthly: 2,
+  biweekly: 2,
+  weekly: 4,
+  daily: 30,
+}
+
 function EstimatorPage() {
   const { contacts, unauthorized } = Route.useLoaderData()
+  const search = Route.useSearch()
 
-  // Inputs — core loan params first
-  const [principal, setPrincipal] = useState("")
-  const [interestRate, setInterestRate] = useState("5")
-  const [termMonths, setTermMonths] = useState("3")
-  const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>("monthly")
+  // Inputs — core loan params first (prefill from search params)
+  const [principal, setPrincipal] = useState(search.principal ?? "")
+  const [interestRate, setInterestRate] = useState(search.interestRate ?? "5")
+  const [termMonths, setTermMonths] = useState(search.termMonths ?? "3")
+  const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>(search.paymentFrequency ?? "monthly")
 
   // Optional affordability inputs
-  const [contactId, setContactId] = useState("")
-  const [income, setIncome] = useState("")
+  const [contactId, setContactId] = useState(search.contactId ?? "")
+  const [basicPay, setBasicPay] = useState("")
+  const [otherIncome, setOtherIncome] = useState("")
+
+  // Auto-populate income when contactId comes from search params
+  const [contactInitialized, setContactInitialized] = useState(false)
+  useEffect(() => {
+    if (contactInitialized || !search.contactId) return
+    const contact = contacts.find((c) => c.id === search.contactId)
+    if (contact) {
+      if (contact.income) setBasicPay(contact.income)
+      if (contact.otherIncome) setOtherIncome(contact.otherIncome)
+      setContactInitialized(true)
+    }
+  }, [search.contactId, contacts, contactInitialized])
+  const income = String((parseFloat(basicPay) || 0) + (parseFloat(otherIncome) || 0))
 
   if (unauthorized) {
     return (
@@ -83,7 +116,10 @@ function EstimatorPage() {
     setContactId(id)
     const contact = contacts.find((c) => c.id === id)
     if (contact?.income) {
-      setIncome(contact.income)
+      setBasicPay(contact.income)
+    }
+    if (contact?.otherIncome) {
+      setOtherIncome(contact.otherIncome)
     }
   }
 
@@ -119,27 +155,33 @@ function EstimatorPage() {
       paymentFrequency,
     })
 
-    // Affordability (only when income > 0)
-    let affordability = null
+    // DTI (only when income > 0)
+    const proposedMonthly = paymentAmount * FREQUENCY_TO_MONTHLY[paymentFrequency]
+    let dti = null
     if (inc > 0) {
-      const paymentPercent = (paymentAmount / inc) * 100
+      const existingObligation = parseFloat(selectedContact?.monthlyObligation ?? "0")
+      const totalMonthlyDebt = existingObligation + proposedMonthly
+      const dtiRatio = (totalMonthlyDebt / inc) * 100
       let rating: "comfortable" | "stretched" | "heavy"
       let color: "green" | "yellow" | "red"
-      if (paymentPercent <= 30) {
+      if (dtiRatio <= 30) {
         rating = "comfortable"
         color = "green"
-      } else if (paymentPercent <= 50) {
+      } else if (dtiRatio <= 50) {
         rating = "stretched"
         color = "yellow"
       } else {
         rating = "heavy"
         color = "red"
       }
-      affordability = {
-        paymentPercent,
+      dti = {
+        dtiRatio,
         rating,
         color,
-        monthlyRemaining: inc - paymentAmount,
+        existingObligation,
+        proposedMonthly,
+        totalMonthlyDebt,
+        monthlyRemaining: inc - totalMonthlyDebt,
       }
     }
 
@@ -150,9 +192,9 @@ function EstimatorPage() {
       paymentAmount,
       maturityDate,
       eir,
-      affordability,
+      dti,
     }
-  }, [principal, interestRate, termMonths, paymentFrequency, income])
+  }, [principal, interestRate, termMonths, paymentFrequency, income, selectedContact])
 
   return (
     <div>
@@ -270,9 +312,9 @@ function EstimatorPage() {
                         <span className="inline-flex items-center gap-2 truncate">
                           <User className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">{selectedContact.name}</span>
-                          {selectedContact.income && (
+                          {(selectedContact.income || selectedContact.otherIncome) && (
                             <span className="text-muted-foreground text-xs shrink-0">
-                              ({formatCurrency(parseFloat(selectedContact.income))}/mo)
+                              ({formatCurrency((parseFloat(selectedContact.income ?? "0")) + (parseFloat(selectedContact.otherIncome ?? "0")))}/mo)
                             </span>
                           )}
                         </span>
@@ -300,9 +342,9 @@ function EstimatorPage() {
                               <span className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-muted-foreground" />
                                 {c.name}
-                                {c.income && (
+                                {(c.income || c.otherIncome) && (
                                   <span className="text-muted-foreground text-xs">
-                                    ({formatCurrency(parseFloat(c.income))}/mo)
+                                    ({formatCurrency((parseFloat(c.income ?? "0")) + (parseFloat(c.otherIncome ?? "0")))}/mo)
                                   </span>
                                 )}
                               </span>
@@ -313,16 +355,36 @@ function EstimatorPage() {
                     )}
                   </div>
 
-                  {/* Net Income */}
+                  {/* Income */}
                   <div className="space-y-2">
-                    <Label htmlFor="income">Net Monthly Income</Label>
+                    <Label>Basic Pay</Label>
                     <CurrencyInput
-                      id="income"
-                      value={income}
-                      onValueChange={setIncome}
+                      id="basicPay"
+                      value={basicPay}
+                      onValueChange={setBasicPay}
                       placeholder="0"
                     />
-                    {selectedContact && !selectedContact.income && (
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 -mt-2">
+                  <div className="space-y-2">
+                    <Label>Other Income</Label>
+                    <CurrencyInput
+                      id="otherIncome"
+                      value={otherIncome}
+                      onValueChange={setOtherIncome}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Total Gross</Label>
+                    <div className="flex h-9 items-center rounded-md border border-input bg-muted/50 px-3 text-sm">
+                      {(parseFloat(basicPay) > 0 || parseFloat(otherIncome) > 0)
+                        ? `${formatCurrency((parseFloat(basicPay) || 0) + (parseFloat(otherIncome) || 0))}/mo`
+                        : <span className="text-muted-foreground">—</span>
+                      }
+                    </div>
+                    {selectedContact && !selectedContact.income && !selectedContact.otherIncome && (
                       <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                         <Warning className="h-3.5 w-3.5 shrink-0" weight="fill" />
                         <span>
@@ -375,11 +437,27 @@ function EstimatorPage() {
                       {/* Detail rows */}
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Total Interest</span>
+                          <span className="text-muted-foreground relative group/ti cursor-help">
+                            Total Interest
+                            <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/ti:opacity-100" />
+                            <span className="absolute bottom-full left-0 mb-2 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/ti:opacity-100 group-hover/ti:pointer-events-auto transition-opacity z-50">
+                              <span className="block text-xs text-muted-foreground leading-relaxed">
+                                Principal × rate × term. Flat interest — charged on the original amount for the full term.
+                              </span>
+                            </span>
+                          </span>
                           <span className="font-medium">{formatCurrency(calc.totalInterest)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="font-semibold">Total to Repay</span>
+                          <span className="font-semibold relative group/tr cursor-help">
+                            Total to Repay
+                            <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/tr:opacity-100" />
+                            <span className="absolute bottom-full left-0 mb-2 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/tr:opacity-100 group-hover/tr:pointer-events-auto transition-opacity z-50">
+                              <span className="block text-xs text-muted-foreground leading-relaxed">
+                                Principal + total interest. The full amount the borrower pays back over the life of the loan.
+                              </span>
+                            </span>
+                          </span>
                           <span className="font-bold">{formatCurrency(calc.totalToRepay)}</span>
                         </div>
                       </div>
@@ -388,7 +466,15 @@ function EstimatorPage() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Payments</span>
+                          <span className="text-muted-foreground relative group/pc cursor-help">
+                            Payments
+                            <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/pc:opacity-100" />
+                            <span className="absolute bottom-full left-0 mb-2 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/pc:opacity-100 group-hover/pc:pointer-events-auto transition-opacity z-50">
+                              <span className="block text-xs text-muted-foreground leading-relaxed">
+                                Number of installments based on term length and payment frequency.
+                              </span>
+                            </span>
+                          </span>
                           <span className="font-medium">{calc.paymentsCount}×</span>
                         </div>
                         <div className="flex justify-between text-sm">
@@ -427,9 +513,11 @@ function EstimatorPage() {
                         }}
                         className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                       >
-                        Start this loan
+                        Use these terms
                         <ArrowRight className="h-4 w-4" />
                       </Link>
+
+                      <LendingTip tip="If you wouldn't borrow on these terms, don't lend on them." className="justify-center mt-3" />
                     </div>
                   ) : (
                     <div className="text-center py-8">
@@ -442,64 +530,112 @@ function EstimatorPage() {
                 </CardContent>
               </Card>
 
-              {/* Affordability Card */}
-              {calc?.affordability && (
+              {/* DTI Card */}
+              {calc?.dti && (
                 <Card className={cn(
                   "shadow-lg border-2",
-                  calc.affordability.color === "green" && "border-green-500/30",
-                  calc.affordability.color === "yellow" && "border-amber-500/30",
-                  calc.affordability.color === "red" && "border-red-500/30",
+                  calc.dti.color === "green" && "border-green-500/30",
+                  calc.dti.color === "yellow" && "border-amber-500/30",
+                  calc.dti.color === "red" && "border-red-500/30",
                 )}>
                   <CardHeader className="p-4 pb-2">
                     <CardTitle className="flex items-center gap-2 text-base">
-                      {calc.affordability.color === "green" && (
-                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" weight="fill" />
-                      )}
-                      {calc.affordability.color === "yellow" && (
-                        <Warning className="h-5 w-5 text-amber-600 dark:text-amber-400" weight="fill" />
-                      )}
-                      {calc.affordability.color === "red" && (
-                        <WarningOctagon className="h-5 w-5 text-red-600 dark:text-red-400" weight="fill" />
-                      )}
-                      Affordability
+                      <ChartBar className={cn(
+                        "h-5 w-5",
+                        calc.dti.color === "green" && "text-green-600 dark:text-green-400",
+                        calc.dti.color === "yellow" && "text-amber-600 dark:text-amber-400",
+                        calc.dti.color === "red" && "text-red-600 dark:text-red-400",
+                      )} />
+                      Debt-to-Income
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 pt-0 space-y-4">
                     {/* Progress bar */}
-                    <AffordabilityBar percent={calc.affordability.paymentPercent} />
+                    <DtiBar percent={calc.dti.dtiRatio} />
 
-                    {/* Rating + stats */}
+                    {/* Rating pill */}
                     <div className="flex items-center justify-between">
                       <div className={cn(
                         "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium",
-                        calc.affordability.color === "green" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-                        calc.affordability.color === "yellow" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-                        calc.affordability.color === "red" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+                        calc.dti.color === "green" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+                        calc.dti.color === "yellow" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+                        calc.dti.color === "red" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
                       )}>
-                        {calc.affordability.paymentPercent.toFixed(1)}% —{" "}
-                        {calc.affordability.rating === "comfortable" && "Comfortable"}
-                        {calc.affordability.rating === "stretched" && "Stretched"}
-                        {calc.affordability.rating === "heavy" && "Heavy"}
+                        {calc.dti.dtiRatio.toFixed(1)}% —{" "}
+                        {calc.dti.rating === "comfortable" && "Comfortable"}
+                        {calc.dti.rating === "stretched" && "Stretched"}
+                        {calc.dti.rating === "heavy" && "Heavy"}
                       </div>
                     </div>
 
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Remaining</span>
-                      <span className={cn(
-                        "font-medium",
-                        calc.affordability.monthlyRemaining < 0 && "text-red-600 dark:text-red-400",
-                      )}>
-                        {formatCurrency(calc.affordability.monthlyRemaining)}/mo
-                      </span>
+                    {/* Breakdown rows */}
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground relative group/eo cursor-help">
+                          Existing obligations
+                          <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/eo:opacity-100" />
+                          <span className="absolute bottom-full left-0 mb-2 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/eo:opacity-100 group-hover/eo:pointer-events-auto transition-opacity z-50">
+                            <span className="block text-xs text-muted-foreground leading-relaxed">
+                              Sum of all active loan payments for this borrower, converted to monthly.
+                            </span>
+                          </span>
+                        </span>
+                        <span className="font-medium">
+                          {calc.dti.existingObligation > 0
+                            ? `${formatCurrency(calc.dti.existingObligation)}/mo`
+                            : "none"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground relative group/tl cursor-help">
+                          This loan
+                          <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/tl:opacity-100" />
+                          <span className="absolute bottom-full left-0 mb-2 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/tl:opacity-100 group-hover/tl:pointer-events-auto transition-opacity z-50">
+                            <span className="block text-xs text-muted-foreground leading-relaxed">
+                              This loan's payment amount converted to a monthly equivalent.
+                            </span>
+                          </span>
+                        </span>
+                        <span className="font-medium">{formatCurrency(calc.dti.proposedMonthly)}/mo</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold relative group/td cursor-help">
+                          Total debt
+                          <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/td:opacity-100" />
+                          <span className="absolute bottom-full left-0 mb-2 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/td:opacity-100 group-hover/td:pointer-events-auto transition-opacity z-50">
+                            <span className="block text-xs text-muted-foreground leading-relaxed">
+                              Existing obligations + this loan. This is compared against gross income for the DTI ratio.
+                            </span>
+                          </span>
+                        </span>
+                        <span className="font-bold">{formatCurrency(calc.dti.totalMonthlyDebt)}/mo</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground relative group/ri cursor-help">
+                          Remaining income
+                          <Info className="inline h-3 w-3 ml-1 opacity-50 group-hover/ri:opacity-100" />
+                          <span className="absolute bottom-full left-0 mb-2 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/ri:opacity-100 group-hover/ri:pointer-events-auto transition-opacity z-50">
+                            <span className="block text-xs text-muted-foreground leading-relaxed">
+                              Gross income minus total debt. What the borrower has left for living expenses each month.
+                            </span>
+                          </span>
+                        </span>
+                        <span className={cn(
+                          "font-medium",
+                          calc.dti.monthlyRemaining < 0 && "text-red-600 dark:text-red-400",
+                        )}>
+                          {formatCurrency(calc.dti.monthlyRemaining)}/mo
+                        </span>
+                      </div>
                     </div>
 
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      {calc.affordability.rating === "comfortable" &&
-                        "Low risk of default from cash flow. Payment is within a comfortable range of the borrower's income."}
-                      {calc.affordability.rating === "stretched" &&
+                      {calc.dti.rating === "comfortable" &&
+                        "Low risk of default from cash flow. Total debt is within a comfortable range of the borrower's income."}
+                      {calc.dti.rating === "stretched" &&
                         "Manageable but tight. The borrower may struggle if unexpected expenses arise."}
-                      {calc.affordability.rating === "heavy" &&
-                        "High risk. The borrower may struggle to meet payments consistently at this level."}
+                      {calc.dti.rating === "heavy" &&
+                        "High risk. The borrower may struggle to meet payments consistently at this debt level."}
                     </p>
                   </CardContent>
                 </Card>
@@ -512,9 +648,9 @@ function EstimatorPage() {
   )
 }
 
-/* ─── Affordability progress bar ─── */
+/* ─── DTI progress bar ─── */
 
-function AffordabilityBar({ percent }: { percent: number }) {
+function DtiBar({ percent }: { percent: number }) {
   // Clamp display to 100% max for the bar
   const clamped = Math.min(percent, 100)
 

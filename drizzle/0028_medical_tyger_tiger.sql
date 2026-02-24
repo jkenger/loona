@@ -1,0 +1,1 @@
+ALTER TABLE "contacts" ADD COLUMN "other_income" numeric(12, 2);

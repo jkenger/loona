@@ -61,6 +61,7 @@ import { cn } from "@/lib/utils"
 import { type PenaltyConfig, DEFAULT_PENALTY_CONFIG } from "@/lib/constants/penalty-defaults"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 import { InterestRateWarning } from "@/components/interest-rate-warning"
+import { LendingTip } from "@/components/lending-tip"
 
 
 const PURPOSE_TEMPLATES = [
@@ -149,6 +150,7 @@ function NewLoanWizard() {
   const [facebookProfile, setFacebookProfile] = useState("")
   const [contactNotes, setContactNotes] = useState("")
   const [contactIncome, setContactIncome] = useState("")
+  const [contactOtherIncome, setContactOtherIncome] = useState("")
   // Existing borrower
   const [contactId, setContactId] = useState(effectivePreselectedContactId || "")
 
@@ -329,6 +331,7 @@ function NewLoanWizard() {
             facebookProfile: facebookProfile || undefined,
             notes: contactNotes || undefined,
             income: contactIncome || undefined,
+            otherIncome: contactOtherIncome || undefined,
             ...loanFields,
           }
         : {
@@ -579,16 +582,35 @@ function NewLoanWizard() {
 
                   {/* Income */}
                   <div className="space-y-2">
-                    <Label htmlFor="contactIncome">
-                      Net Monthly Income{" "}
+                    <Label>
+                      Monthly Income{" "}
                       <span className="text-muted-foreground font-normal">(optional)</span>
                     </Label>
-                    <CurrencyInput
-                      id="contactIncome"
-                      value={contactIncome}
-                      onValueChange={setContactIncome}
-                      placeholder="0"
-                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <span className="text-xs text-muted-foreground">Basic Pay</span>
+                        <CurrencyInput
+                          id="contactIncome"
+                          value={contactIncome}
+                          onValueChange={setContactIncome}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs text-muted-foreground">Other Income</span>
+                        <CurrencyInput
+                          id="contactOtherIncome"
+                          value={contactOtherIncome}
+                          onValueChange={setContactOtherIncome}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    {(parseFloat(contactIncome) > 0 || parseFloat(contactOtherIncome) > 0) && (
+                      <p className="text-xs text-muted-foreground">
+                        Total: {formatCurrency((parseFloat(contactIncome) || 0) + (parseFloat(contactOtherIncome) || 0))}/mo
+                      </p>
+                    )}
                   </div>
 
                   {/* Notes */}
@@ -681,6 +703,11 @@ function NewLoanWizard() {
                 <CardDescription>
                   Configure the loan details for {borrowerDisplayName}
                 </CardDescription>
+                {isRenewal ? (
+                  <LendingTip tip="Reward consistency — good borrowers are your best asset." className="px-4" />
+                ) : selectedContact && selectedContact.totalLoans === 0 ? (
+                  <LendingTip tip="Start small, build trust. First loans are about the relationship, not the amount." className="px-4" />
+                ) : null}
               </CardHeader>
               <CardContent className="p-4 pt-0 space-y-6">
                 {/* Principal & Interest */}
@@ -716,6 +743,62 @@ function NewLoanWizard() {
                     </div>
                   </div>
                 </div>
+
+                {/* DTI Hint — only shown for amber/red */}
+                {(() => {
+                  if (isNewContact || !selectedContact) return null
+                  const grossIncome = (parseFloat(selectedContact.income ?? "0")) + (parseFloat(selectedContact.otherIncome ?? "0"))
+                  if (!grossIncome || !calculations.paymentAmount) return null
+
+                  const existingObligation = parseFloat(selectedContact.monthlyObligation ?? "0")
+                  const proposedMonthly = paymentFrequency === "daily" ? calculations.paymentAmount * 30
+                    : paymentFrequency === "weekly" ? calculations.paymentAmount * 4
+                    : paymentFrequency === "biweekly" || paymentFrequency === "semimonthly" ? calculations.paymentAmount * 2
+                    : calculations.paymentAmount
+                  const totalDebt = existingObligation + proposedMonthly
+                  const dtiRatio = (totalDebt / grossIncome) * 100
+
+                  if (dtiRatio <= 30) return null
+
+                  const severity = dtiRatio > 50 ? "red" : "amber"
+                  const severityLabel = severity === "red" ? "heavy" : "stretched"
+                  const textColor = severity === "red" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"
+
+                  return (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                      <ChartBar className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        DTI: <span className={cn("font-semibold", textColor)}>{dtiRatio.toFixed(0)}% ({severityLabel})</span>
+                        {" "}—{" "}
+                        <span className="relative group/debt cursor-help">
+                          monthly debt {formatCurrency(totalDebt)}
+                          <Info className="inline h-3 w-3 ml-0.5 opacity-50 group-hover/debt:opacity-100" />
+                          <span className="absolute bottom-full left-0 mb-2 w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md opacity-0 pointer-events-none group-hover/debt:opacity-100 group-hover/debt:pointer-events-auto transition-opacity z-50">
+                            <span className="block text-xs text-muted-foreground leading-relaxed">
+                              {existingObligation > 0 && <>Existing loans: {formatCurrency(existingObligation)}/mo<br /></>}
+                              This loan: {formatCurrency(proposedMonthly)}/mo<br />
+                              <span className="font-medium text-foreground">Total: {formatCurrency(totalDebt)}/mo</span>
+                            </span>
+                          </span>
+                        </span>
+                        {" "}vs {formatCurrency(grossIncome)} income.{" "}
+                        <Link
+                          to="/tools/estimator"
+                          search={{
+                            principal,
+                            interestRate,
+                            termMonths,
+                            paymentFrequency,
+                            contactId: selectedContact?.id,
+                          }}
+                          className="underline hover:text-foreground"
+                        >
+                          Review in estimator →
+                        </Link>
+                      </span>
+                    </p>
+                  )
+                })()}
 
                 {/* Interest Rate Warning */}
                 <InterestRateWarning rate={interestRate} />
@@ -916,6 +999,9 @@ function NewLoanWizard() {
                       <Info className="h-3.5 w-3.5 shrink-0" />
                       Pre-filled from your penalty settings
                     </p>
+                  )}
+                  {penaltyConfig.enabled && (
+                    <LendingTip tip="Penalties should motivate timely payment, not punish. Keep them fair and transparent." />
                   )}
                   {penaltyConfig.enabled && (
                     <div className="space-y-4 pl-6 border-l-2 border-border">

@@ -153,6 +153,7 @@ export const contacts = pgTable("contacts", {
   tier: text("tier"),
   onTimeRate: decimal("on_time_rate", { precision: 5, scale: 2 }),
   income: decimal("income", { precision: 12, scale: 2 }),
+  otherIncome: decimal("other_income", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
