@@ -748,7 +748,22 @@ function NewLoanWizard() {
                 {(() => {
                   if (isNewContact || !selectedContact) return null
                   const grossIncome = (parseFloat(selectedContact.income ?? "0")) + (parseFloat(selectedContact.otherIncome ?? "0"))
-                  if (!grossIncome || !calculations.paymentAmount) return null
+                  if (!grossIncome) return (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                      <Warning className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      <span>
+                        No income on file — can't assess affordability.{" "}
+                        <Link
+                          to="/contacts/$contactId"
+                          params={{ contactId: selectedContact.id }}
+                          className="underline hover:text-foreground"
+                        >
+                          Add income →
+                        </Link>
+                      </span>
+                    </p>
+                  )
+                  if (!calculations.paymentAmount) return null
 
                   const existingObligation = parseFloat(selectedContact.monthlyObligation ?? "0")
                   const proposedMonthly = paymentFrequency === "daily" ? calculations.paymentAmount * 30
