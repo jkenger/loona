@@ -85,6 +85,28 @@ export const DEFAULT_PENALTY_CONFIG: PenaltyConfig = {
 }
 
 // ============================================================================
+// Frequency Scaling
+// ============================================================================
+
+export type PaymentFrequency = "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
+
+/**
+ * Divisor to scale penalty amounts by payment frequency.
+ * Lenders set penalties as a "monthly equivalent" — the system divides by the
+ * divisor so total penalty exposure is roughly the same regardless of frequency.
+ */
+export function frequencyDivisor(frequency?: PaymentFrequency | string | null): number {
+  switch (frequency) {
+    case "daily": return 30
+    case "weekly": return 4
+    case "biweekly": return 2
+    case "semimonthly": return 2
+    case "monthly":
+    default: return 1
+  }
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 
@@ -134,29 +156,37 @@ export function parsePenaltyConfig(json: string | null): PenaltyConfig {
 
 /**
  * Calculate the one-time late fee for an overdue payment.
+ * When paymentFrequency is provided, the result is scaled down so that
+ * weekly/daily borrowers aren't penalised disproportionately.
  */
 export function calculateLateFee(
   config: PenaltyConfig,
   overdueAmount: number,
   daysOverdue: number,
+  paymentFrequency?: PaymentFrequency | string | null,
 ): number {
   if (!config.enabled || !config.lateFee.enabled) return 0
   if (daysOverdue <= config.gracePeriodDays) return 0
 
+  const divisor = frequencyDivisor(paymentFrequency)
+
   if (config.lateFee.type === "fixed") {
-    return config.lateFee.amount
+    return config.lateFee.amount / divisor
   }
   // percentage
-  return overdueAmount * (config.lateFee.amount / 100)
+  return (overdueAmount * (config.lateFee.amount / 100)) / divisor
 }
 
 /**
  * Calculate accumulated daily penalty interest for an overdue payment.
+ * When paymentFrequency is provided, the per-day amount is scaled down so that
+ * weekly/daily borrowers aren't penalised disproportionately.
  */
 export function calculateDailyPenaltyInterest(
   config: PenaltyConfig,
   overdueAmount: number,
   daysOverdue: number,
+  paymentFrequency?: PaymentFrequency | string | null,
 ): number {
   if (!config.enabled || !config.dailyPenaltyInterest.enabled) return 0
   if (daysOverdue <= config.gracePeriodDays) return 0
@@ -166,7 +196,8 @@ export function calculateDailyPenaltyInterest(
     config.dailyPenaltyInterest.maxDays,
   )
 
-  return overdueAmount * (config.dailyPenaltyInterest.ratePerDay / 100) * applicableDays
+  const divisor = frequencyDivisor(paymentFrequency)
+  return (overdueAmount * (config.dailyPenaltyInterest.ratePerDay / 100) * applicableDays) / divisor
 }
 
 /**
@@ -205,9 +236,10 @@ export function calculateSuggestedPenalty(
   principal: number,
   totalApplied: number,
   existingPending: number,
+  paymentFrequency?: PaymentFrequency | string | null,
 ): SuggestedPenalty {
-  const lateFee = calculateLateFee(config, overdueAmount, daysOverdue)
-  const dailyInterest = calculateDailyPenaltyInterest(config, overdueAmount, daysOverdue)
+  const lateFee = calculateLateFee(config, overdueAmount, daysOverdue, paymentFrequency)
+  const dailyInterest = calculateDailyPenaltyInterest(config, overdueAmount, daysOverdue, paymentFrequency)
   const total = lateFee + dailyInterest
   const budgetRemaining = getRemainingPenaltyBudget(config, principal, totalApplied)
   const effectiveBudget = Math.max(0, budgetRemaining - existingPending)
@@ -239,6 +271,9 @@ export interface PenaltyMetadata {
   ratePerDay?: number
   applicableDays?: number
   maxDays?: number
+  // Frequency scaling (divisor > 1 means amount was scaled down)
+  frequencyDivisor?: number
+  paymentFrequency?: string
 }
 
 /**
@@ -249,18 +284,22 @@ export function formatPenaltyCalculation(
   penaltyType: string,
 ): string {
   const amt = `₱${metadata.overdueAmount.toLocaleString()}`
+  const divisor = metadata.frequencyDivisor ?? 1
+  const freqLabel = divisor > 1 && metadata.paymentFrequency
+    ? ` ÷ ${divisor} (${metadata.paymentFrequency})`
+    : ""
 
   if (penaltyType === "late_fee") {
     if (metadata.feeType === "fixed") {
-      return `${amt} overdue × fixed ₱${(metadata.feeConfigAmount ?? 0).toLocaleString()}`
+      return `${amt} overdue × fixed ₱${(metadata.feeConfigAmount ?? 0).toLocaleString()}${freqLabel}`
     }
-    return `${amt} overdue × ${metadata.feeConfigAmount ?? 0}%`
+    return `${amt} overdue × ${metadata.feeConfigAmount ?? 0}%${freqLabel}`
   }
 
   // daily_interest
   const days = metadata.applicableDays ?? 0
   const rate = metadata.ratePerDay ?? 0
-  return `${amt} overdue × ${rate}%/day × ${days}d`
+  return `${amt} overdue × ${rate}%/day × ${days}d${freqLabel}`
 }
 
 /**
@@ -282,10 +321,77 @@ export function parsePenaltyMetadata(json: string | null): PenaltyMetadata | nul
   }
 }
 
+// ============================================================================
+// Frequency Scaling Descriptions
+// ============================================================================
+
+export interface FrequencyScaledPreview {
+  /** e.g. "₱50" or "1.25%" */
+  scaledValue: string
+  /** e.g. "₱200 ÷ 4 for weekly" */
+  explanation: string
+  /** The numeric divisor used */
+  divisor: number
+}
+
+/**
+ * Describe how the late fee scales for a given frequency.
+ * Returns null when no scaling applies (monthly or disabled).
+ */
+export function getLateFeePreview(
+  config: PenaltyConfig,
+  frequency?: PaymentFrequency | string | null,
+): FrequencyScaledPreview | null {
+  const divisor = frequencyDivisor(frequency)
+  if (divisor <= 1 || !config.lateFee.enabled || config.lateFee.amount <= 0) return null
+
+  const freqName = frequency ?? "monthly"
+
+  if (config.lateFee.type === "fixed") {
+    const scaled = config.lateFee.amount / divisor
+    return {
+      scaledValue: `₱${scaled.toLocaleString()}`,
+      explanation: `₱${config.lateFee.amount.toLocaleString()} ÷ ${divisor} for ${freqName}`,
+      divisor,
+    }
+  }
+
+  const scaled = config.lateFee.amount / divisor
+  return {
+    scaledValue: `${scaled.toFixed(2)}%`,
+    explanation: `${config.lateFee.amount}% ÷ ${divisor} for ${freqName}`,
+    divisor,
+  }
+}
+
+/**
+ * Describe how daily penalty interest scales for a given frequency.
+ * Returns null when no scaling applies (monthly or disabled).
+ */
+export function getDailyInterestPreview(
+  config: PenaltyConfig,
+  frequency?: PaymentFrequency | string | null,
+): FrequencyScaledPreview | null {
+  const divisor = frequencyDivisor(frequency)
+  if (divisor <= 1 || !config.dailyPenaltyInterest.enabled || config.dailyPenaltyInterest.ratePerDay <= 0) return null
+
+  const freqName = frequency ?? "monthly"
+  const scaled = config.dailyPenaltyInterest.ratePerDay / divisor
+
+  return {
+    scaledValue: `${scaled.toFixed(3)}%/day`,
+    explanation: `${config.dailyPenaltyInterest.ratePerDay}%/day ÷ ${divisor} for ${freqName}`,
+    divisor,
+  }
+}
+
 /**
  * Human-readable string for disclosure.
  */
-export function formatPenaltyForDisclosure(config: PenaltyConfig): string {
+export function formatPenaltyForDisclosure(
+  config: PenaltyConfig,
+  paymentFrequency?: PaymentFrequency | string | null,
+): string {
   if (!config.enabled) return "None"
 
   const parts: string[] = []
@@ -295,15 +401,21 @@ export function formatPenaltyForDisclosure(config: PenaltyConfig): string {
       config.lateFee.type === "fixed"
         ? `₱${config.lateFee.amount.toLocaleString()}`
         : `${config.lateFee.amount}% of overdue amount`
-    parts.push(
-      `Late fee of ${feeStr} after ${config.gracePeriodDays} day${config.gracePeriodDays !== 1 ? "s" : ""} grace period`,
-    )
+    let line = `Late fee of ${feeStr} after ${config.gracePeriodDays} day${config.gracePeriodDays !== 1 ? "s" : ""} grace period`
+    const preview = getLateFeePreview(config, paymentFrequency)
+    if (preview) {
+      line += ` (${preview.scaledValue} per installment)`
+    }
+    parts.push(line)
   }
 
   if (config.dailyPenaltyInterest.enabled) {
-    parts.push(
-      `${config.dailyPenaltyInterest.ratePerDay}% per day penalty interest starting ${config.gracePeriodDays} day${config.gracePeriodDays !== 1 ? "s" : ""} after due date (max ${config.dailyPenaltyInterest.maxDays} days)`,
-    )
+    let line = `${config.dailyPenaltyInterest.ratePerDay}% per day penalty interest starting ${config.gracePeriodDays} day${config.gracePeriodDays !== 1 ? "s" : ""} after due date (max ${config.dailyPenaltyInterest.maxDays} days)`
+    const preview = getDailyInterestPreview(config, paymentFrequency)
+    if (preview) {
+      line += ` (${preview.scaledValue} per installment)`
+    }
+    parts.push(line)
   }
 
   if (parts.length === 0) return "None"

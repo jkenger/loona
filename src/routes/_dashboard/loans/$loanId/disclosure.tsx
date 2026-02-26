@@ -362,7 +362,7 @@ function DisclosurePage() {
                     {
                       label: "13. Late Payment Penalty",
                       value: penaltyConfig
-                        ? formatPenaltyForDisclosure(penaltyConfig)
+                        ? formatPenaltyForDisclosure(penaltyConfig, loan.paymentFrequency)
                         : "None",
                     },
                     {

@@ -8,6 +8,7 @@ import {
   calculateLateFee,
   calculateDailyPenaltyInterest,
   calendarDaysOverdue,
+  frequencyDivisor,
   type PenaltyConfig,
   type PenaltyMetadata,
 } from '@/lib/constants/penalty-defaults'
@@ -21,6 +22,7 @@ export async function ensurePendingPenalties(
   loan: {
     id: string
     principal: string
+    paymentFrequency?: string | null
     schedule: {
       id: string
       status: string
@@ -67,14 +69,20 @@ export async function ensurePendingPenalties(
           config,
           overdueAmount,
           daysOverdue,
+          loan.paymentFrequency,
         )
         if (lateFeeAmount > 0) {
+          const divisor = frequencyDivisor(loan.paymentFrequency)
           const meta: PenaltyMetadata = {
             overdueAmount,
             daysOverdue,
             gracePeriodDays: config.gracePeriodDays,
             feeType: config.lateFee.type,
             feeConfigAmount: config.lateFee.amount,
+            ...(divisor > 1 && {
+              frequencyDivisor: divisor,
+              paymentFrequency: loan.paymentFrequency!,
+            }),
           }
           await db.insert(penalties).values({
             loanId: loan.id,
@@ -106,12 +114,14 @@ export async function ensurePendingPenalties(
         config,
         overdueAmount,
         daysOverdue,
+        loan.paymentFrequency,
       )
       if (dailyAmount > 0) {
         const applicableDays = Math.min(
           daysOverdue - config.gracePeriodDays,
           config.dailyPenaltyInterest.maxDays,
         )
+        const divisor = frequencyDivisor(loan.paymentFrequency)
         const meta: PenaltyMetadata = {
           overdueAmount,
           daysOverdue,
@@ -119,6 +129,10 @@ export async function ensurePendingPenalties(
           ratePerDay: config.dailyPenaltyInterest.ratePerDay,
           applicableDays,
           maxDays: config.dailyPenaltyInterest.maxDays,
+          ...(divisor > 1 && {
+            frequencyDivisor: divisor,
+            paymentFrequency: loan.paymentFrequency!,
+          }),
         }
         const metadataJson = JSON.stringify(meta)
 

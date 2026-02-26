@@ -137,6 +137,7 @@ export const getLoanPenalties = createServerFn()
           parseFloat(loan.principal),
           totalApplied,
           totalPending,
+          loan.paymentFrequency,
         )
 
         suggestions.push({

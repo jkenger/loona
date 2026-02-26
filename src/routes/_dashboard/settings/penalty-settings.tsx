@@ -410,6 +410,9 @@ function PenaltySettingsPage() {
                         </span>
                       </div>
                     </div>
+                    <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+                      These amounts are <span className="font-medium">monthly equivalents</span>. For non-monthly loans (weekly, bi-weekly, daily), penalty amounts are automatically scaled down per installment so total exposure stays fair.
+                    </div>
                   </div>
                 </div>
               </CardContent>

@@ -80,6 +80,9 @@ function PenaltyPolicyContent({ config }: { config: PenaltyConfig }) {
           <span className="font-medium text-right">{row.value}</span>
         </div>
       ))}
+      <p className="text-xs text-muted-foreground">
+        Amounts shown are monthly equivalents. For weekly, bi-weekly, or daily loans, penalties are scaled down proportionally per installment.
+      </p>
     </div>
   )
 }

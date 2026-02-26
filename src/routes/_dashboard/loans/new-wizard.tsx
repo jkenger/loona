@@ -58,7 +58,7 @@ import {
 } from "@phosphor-icons/react"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-import { type PenaltyConfig, DEFAULT_PENALTY_CONFIG } from "@/lib/constants/penalty-defaults"
+import { type PenaltyConfig, DEFAULT_PENALTY_CONFIG, getLateFeePreview, getDailyInterestPreview } from "@/lib/constants/penalty-defaults"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 import { InterestRateWarning } from "@/components/interest-rate-warning"
 import { LendingTip } from "@/components/lending-tip"
@@ -1047,34 +1047,44 @@ function NewLoanWizard() {
                           />
                         </div>
                         {penaltyConfig.lateFee.enabled && (
-                          <div className="grid grid-cols-2 gap-3">
-                            <Select
-                              value={penaltyConfig.lateFee.type}
-                              onValueChange={(type) => {
-                                if (type) updatePenalty({ lateFee: { ...penaltyConfig.lateFee, type: type as "fixed" | "percentage" } })
-                              }}
-                            >
-                              <SelectTrigger>
-                                {penaltyConfig.lateFee.type === "fixed" ? "Fixed" : "% of Overdue"}
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="fixed">Fixed Amount</SelectItem>
-                                <SelectItem value="percentage">% of Overdue</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              type="number"
-                              min="0"
-                              step={penaltyConfig.lateFee.type === "fixed" ? "1" : "0.1"}
-                              value={penaltyConfig.lateFee.amount}
-                              onChange={(e) =>
-                                updatePenalty({
-                                  lateFee: { ...penaltyConfig.lateFee, amount: parseFloat(e.target.value) || 0 },
-                                })
-                              }
-                              placeholder={penaltyConfig.lateFee.type === "fixed" ? "₱ amount" : "%"}
-                            />
-                          </div>
+                          <>
+                            <div className="grid grid-cols-2 gap-3">
+                              <Select
+                                value={penaltyConfig.lateFee.type}
+                                onValueChange={(type) => {
+                                  if (type) updatePenalty({ lateFee: { ...penaltyConfig.lateFee, type: type as "fixed" | "percentage" } })
+                                }}
+                              >
+                                <SelectTrigger>
+                                  {penaltyConfig.lateFee.type === "fixed" ? "Fixed" : "% of Overdue"}
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="fixed">Fixed Amount</SelectItem>
+                                  <SelectItem value="percentage">% of Overdue</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="number"
+                                min="0"
+                                step={penaltyConfig.lateFee.type === "fixed" ? "1" : "0.1"}
+                                value={penaltyConfig.lateFee.amount}
+                                onChange={(e) =>
+                                  updatePenalty({
+                                    lateFee: { ...penaltyConfig.lateFee, amount: parseFloat(e.target.value) || 0 },
+                                  })
+                                }
+                                placeholder={penaltyConfig.lateFee.type === "fixed" ? "₱ amount" : "%"}
+                              />
+                            </div>
+                            {(() => {
+                              const preview = getLateFeePreview(penaltyConfig, paymentFrequency)
+                              return preview ? (
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                  Per installment: <span className="font-medium">{preview.scaledValue}</span> ({preview.explanation})
+                                </p>
+                              ) : null
+                            })()}
+                          </>
                         )}
                       </div>
 
@@ -1092,43 +1102,53 @@ function NewLoanWizard() {
                           />
                         </div>
                         {penaltyConfig.dailyPenaltyInterest.enabled && (
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <span className="text-xs text-muted-foreground">Rate/day (%)</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="10"
-                                step="0.01"
-                                value={penaltyConfig.dailyPenaltyInterest.ratePerDay}
-                                onChange={(e) =>
-                                  updatePenalty({
-                                    dailyPenaltyInterest: {
-                                      ...penaltyConfig.dailyPenaltyInterest,
-                                      ratePerDay: parseFloat(e.target.value) || 0,
-                                    },
-                                  })
-                                }
-                              />
+                          <>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Rate/day (%)</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="10"
+                                  step="0.01"
+                                  value={penaltyConfig.dailyPenaltyInterest.ratePerDay}
+                                  onChange={(e) =>
+                                    updatePenalty({
+                                      dailyPenaltyInterest: {
+                                        ...penaltyConfig.dailyPenaltyInterest,
+                                        ratePerDay: parseFloat(e.target.value) || 0,
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Max days</span>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="365"
+                                  value={penaltyConfig.dailyPenaltyInterest.maxDays}
+                                  onChange={(e) =>
+                                    updatePenalty({
+                                      dailyPenaltyInterest: {
+                                        ...penaltyConfig.dailyPenaltyInterest,
+                                        maxDays: parseInt(e.target.value) || 1,
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
                             </div>
-                            <div className="space-y-1">
-                              <span className="text-xs text-muted-foreground">Max days</span>
-                              <Input
-                                type="number"
-                                min="1"
-                                max="365"
-                                value={penaltyConfig.dailyPenaltyInterest.maxDays}
-                                onChange={(e) =>
-                                  updatePenalty({
-                                    dailyPenaltyInterest: {
-                                      ...penaltyConfig.dailyPenaltyInterest,
-                                      maxDays: parseInt(e.target.value) || 1,
-                                    },
-                                  })
-                                }
-                              />
-                            </div>
-                          </div>
+                            {(() => {
+                              const preview = getDailyInterestPreview(penaltyConfig, paymentFrequency)
+                              return preview ? (
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                  Per installment: <span className="font-medium">{preview.scaledValue}</span> ({preview.explanation})
+                                </p>
+                              ) : null
+                            })()}
+                          </>
                         )}
                       </div>
 
@@ -1608,6 +1628,14 @@ function NewLoanWizard() {
                           : "Off"}
                       </span>
                     </div>
+                    {(() => {
+                      const preview = getLateFeePreview(penaltyConfig, paymentFrequency)
+                      return preview ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 pl-2">
+                          → {preview.scaledValue} per installment ({preview.explanation})
+                        </p>
+                      ) : null
+                    })()}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Daily Interest</span>
                       <span className="font-medium">
@@ -1616,6 +1644,14 @@ function NewLoanWizard() {
                           : "Off"}
                       </span>
                     </div>
+                    {(() => {
+                      const preview = getDailyInterestPreview(penaltyConfig, paymentFrequency)
+                      return preview ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 pl-2">
+                          → {preview.scaledValue} per installment ({preview.explanation})
+                        </p>
+                      ) : null
+                    })()}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Penalty Cap</span>
                       <span className="font-medium">
