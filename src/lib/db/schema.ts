@@ -69,6 +69,8 @@ export const blogPostStatusEnum = pgEnum("blog_post_status", ["draft", "publishe
 export const documentTypeEnum = pgEnum("document_type", ["disclosure", "promissory_note"])
 export const signerRoleEnum = pgEnum("signer_role", ["lender", "borrower", "co_maker"])
 
+export const advisorMessageRoleEnum = pgEnum("advisor_message_role", ["user", "assistant"])
+
 // ============================================================================
 // Auth Tables (Better Auth)
 // ============================================================================
@@ -479,6 +481,43 @@ export const blogPostTags = pgTable(
   ]
 )
 
+// AI Advisors
+export const advisors = pgTable("advisors", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull().default("Advisor"),
+  systemPrompt: text("system_prompt"),
+  model: text("model").notNull().default("claude-sonnet-4-20250514"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+export const advisorConversations = pgTable("advisor_conversations", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  advisorId: text("advisor_id")
+    .notNull()
+    .references(() => advisors.id, { onDelete: "cascade" }),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  title: text("title"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+export const advisorMessages = pgTable("advisor_messages", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  conversationId: text("conversation_id")
+    .notNull()
+    .references(() => advisorConversations.id, { onDelete: "cascade" }),
+  role: advisorMessageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
 // ============================================================================
 // Relations
 // ============================================================================
@@ -503,6 +542,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   lenderSettings: one(lenderSettings),
   blogPosts: many(blogPosts),
   playbookSections: many(playbookSections),
+  advisors: many(advisors),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -692,6 +732,21 @@ export const blogPostTagsRelations = relations(blogPostTags, ({ one }) => ({
   }),
 }))
 
+export const advisorsRelations = relations(advisors, ({ one, many }) => ({
+  lender: one(user, { fields: [advisors.lenderId], references: [user.id] }),
+  conversations: many(advisorConversations),
+}))
+
+export const advisorConversationsRelations = relations(advisorConversations, ({ one, many }) => ({
+  advisor: one(advisors, { fields: [advisorConversations.advisorId], references: [advisors.id] }),
+  lender: one(user, { fields: [advisorConversations.lenderId], references: [user.id] }),
+  messages: many(advisorMessages),
+}))
+
+export const advisorMessagesRelations = relations(advisorMessages, ({ one }) => ({
+  conversation: one(advisorConversations, { fields: [advisorMessages.conversationId], references: [advisorConversations.id] }),
+}))
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -735,3 +790,7 @@ export type BlogPostTag = typeof blogPostTags.$inferSelect
 
 export type DocumentSignature = typeof documentSignatures.$inferSelect
 export type NewDocumentSignature = typeof documentSignatures.$inferInsert
+
+export type Advisor = typeof advisors.$inferSelect
+export type AdvisorConversation = typeof advisorConversations.$inferSelect
+export type AdvisorMessage = typeof advisorMessages.$inferSelect

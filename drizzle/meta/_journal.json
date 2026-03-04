@@ -204,6 +204,13 @@
       "when": 1771895816025,
       "tag": "0028_medical_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1772550080475,
+      "tag": "0029_omniscient_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }

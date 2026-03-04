@@ -54,6 +54,8 @@ import {
   PopoverContent,
 } from "@/components/ui/popover"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
+import { AdvisorBubble } from "@/components/advisor-bubble"
+import { AdvisorChat } from "@/components/advisor-chat"
 
 export const Route = createFileRoute("/_dashboard")({
   beforeLoad: async ({ location }) => {
@@ -147,6 +149,7 @@ function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { resolvedTheme, setTheme } = useTheme()
+  const [advisorOpen, setAdvisorOpen] = useState(false)
 
   // Determine user roles
   const isAgent = hasRole(session.user.role, ROLES.AGENT)
@@ -646,6 +649,14 @@ function DashboardLayout() {
 
       {/* Mobile bottom nav */}
       <MobileBottomNav portal={portal} />
+
+      {/* AI Advisor — lender portal only */}
+      {isLender && !isOnAgentPortal && !isOnAdminPortal && (
+        <>
+          {!advisorOpen && <AdvisorBubble onClick={() => setAdvisorOpen(true)} />}
+          <AdvisorChat open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
+        </>
+      )}
     </div>
   )
 }
