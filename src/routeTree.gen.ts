@@ -43,6 +43,7 @@ import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAdvisorChatRouteImport } from './routes/api/advisor/chat'
+import { Route as ApiAdvisorBriefingRouteImport } from './routes/api/advisor/briefing'
 import { Route as DashboardToolsEstimatorRouteImport } from './routes/_dashboard/tools/estimator'
 import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
 import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard/loans/new-wizard'
@@ -240,6 +241,11 @@ const ApiAdvisorChatRoute = ApiAdvisorChatRouteImport.update({
   path: '/api/advisor/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdvisorBriefingRoute = ApiAdvisorBriefingRouteImport.update({
+  id: '/api/advisor/briefing',
+  path: '/api/advisor/briefing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardToolsEstimatorRoute = DashboardToolsEstimatorRouteImport.update({
   id: '/tools/estimator',
   path: '/tools/estimator',
@@ -425,6 +431,7 @@ export interface FileRoutesByFullPath {
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
+  '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
@@ -487,6 +494,7 @@ export interface FileRoutesByTo {
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
+  '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
@@ -552,6 +560,7 @@ export interface FileRoutesById {
   '/_dashboard/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/_dashboard/tools/estimator': typeof DashboardToolsEstimatorRoute
+  '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
@@ -616,6 +625,7 @@ export interface FileRouteTypes {
     | '/loans/new-wizard'
     | '/settings/penalty-settings'
     | '/tools/estimator'
+    | '/api/advisor/briefing'
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
@@ -678,6 +688,7 @@ export interface FileRouteTypes {
     | '/loans/new-wizard'
     | '/settings/penalty-settings'
     | '/tools/estimator'
+    | '/api/advisor/briefing'
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
@@ -742,6 +753,7 @@ export interface FileRouteTypes {
     | '/_dashboard/loans/new-wizard'
     | '/_dashboard/settings/penalty-settings'
     | '/_dashboard/tools/estimator'
+    | '/api/advisor/briefing'
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
@@ -787,6 +799,7 @@ export interface RootRouteChildren {
   ApiSitemapRoute: typeof ApiSitemapRoute
   BlogSlugRoute: typeof BlogSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  ApiAdvisorBriefingRoute: typeof ApiAdvisorBriefingRoute
   ApiAdvisorChatRoute: typeof ApiAdvisorChatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthErrorRoute: typeof ApiAuthErrorRoute
@@ -1037,6 +1050,13 @@ declare module '@tanstack/react-router' {
       path: '/api/advisor/chat'
       fullPath: '/api/advisor/chat'
       preLoaderRoute: typeof ApiAdvisorChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/advisor/briefing': {
+      id: '/api/advisor/briefing'
+      path: '/api/advisor/briefing'
+      fullPath: '/api/advisor/briefing'
+      preLoaderRoute: typeof ApiAdvisorBriefingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_dashboard/tools/estimator': {
@@ -1353,6 +1373,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSitemapRoute: ApiSitemapRoute,
   BlogSlugRoute: BlogSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
+  ApiAdvisorBriefingRoute: ApiAdvisorBriefingRoute,
   ApiAdvisorChatRoute: ApiAdvisorChatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthErrorRoute: ApiAuthErrorRoute,

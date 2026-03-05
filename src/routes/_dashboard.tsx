@@ -56,6 +56,7 @@ import {
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { AdvisorBubble } from "@/components/advisor-bubble"
 import { AdvisorChat } from "@/components/advisor-chat"
+import { triggerAlertEvaluation, getUnreadAlertCount } from "@/server/advisor-alerts"
 
 export const Route = createFileRoute("/_dashboard")({
   beforeLoad: async ({ location }) => {
@@ -150,6 +151,7 @@ function DashboardLayout() {
   const location = useLocation()
   const { resolvedTheme, setTheme } = useTheme()
   const [advisorOpen, setAdvisorOpen] = useState(false)
+  const [alertCount, setAlertCount] = useState(0)
 
   // Determine user roles
   const isAgent = hasRole(session.user.role, ROLES.AGENT)
@@ -159,6 +161,14 @@ function DashboardLayout() {
   // Detect if we're in the admin portal or agent portal
   const isOnAdminPortal = location.pathname.startsWith("/admin")
   const isOnAgentPortal = location.pathname === "/agent" || location.pathname.startsWith("/agent/")
+
+  // Evaluate alerts on mount (lender portal only)
+  useEffect(() => {
+    if (!isLender || isOnAgentPortal || isOnAdminPortal) return
+    triggerAlertEvaluation().then(() => {
+      getUnreadAlertCount().then(setAlertCount)
+    })
+  }, [isLender, isOnAgentPortal, isOnAdminPortal])
 
   // Check for agent permission restrictions
   const hasAgentRestrictions = agentPermissions && (
@@ -653,8 +663,12 @@ function DashboardLayout() {
       {/* AI Advisor — lender portal only */}
       {isLender && !isOnAgentPortal && !isOnAdminPortal && (
         <>
-          {!advisorOpen && <AdvisorBubble onClick={() => setAdvisorOpen(true)} />}
-          <AdvisorChat open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
+          {!advisorOpen && <AdvisorBubble onClick={() => setAdvisorOpen(true)} alertCount={alertCount} />}
+          <AdvisorChat
+            open={advisorOpen}
+            onClose={() => { setAdvisorOpen(false); getUnreadAlertCount().then(setAlertCount) }}
+            onNavigate={(href) => { setAdvisorOpen(false); navigate({ to: href }) }}
+          />
         </>
       )}
     </div>

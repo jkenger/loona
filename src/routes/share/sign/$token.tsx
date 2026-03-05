@@ -93,7 +93,7 @@ function SigningPage() {
     )
   }
 
-  const { loan, documentType, signerName, signatures } = result
+  const { loan, documentType, signerName, signatures, docStyle } = result
   const lenderSignature = signatures.find((s) => s.signerRole === "lender")
   const docTitle = documentType === "disclosure" ? "Disclosure Statement" : "Promissory Note"
   const hasCoMaker = !!loan.coMakerName
@@ -204,7 +204,7 @@ function SigningPage() {
                 {documentType === "disclosure" ? (
                   <DisclosureDocumentBody loan={loan} c={c} />
                 ) : (
-                  <PromissoryDocumentBody loan={loan} lenderSignature={lenderSignature} c={c} />
+                  <PromissoryDocumentBody loan={loan} lenderSignature={lenderSignature} c={c} docStyle={docStyle ?? "full"} />
                 )}
               </div>
             </div>
@@ -502,14 +502,18 @@ function PromissoryDocumentBody({
   loan,
   lenderSignature,
   c,
+  docStyle = "full",
 }: {
   loan: LoanData
   lenderSignature?: SignatureInfo
   c: DocColors
+  docStyle?: "full" | "simple"
 }) {
   const principal = parseFloat(loan.principal)
   const interestPerAnnum = parseFloat(loan.interestRate) * 12
   const parsedClauses = parseCustomClauses(loan.customClauses ?? null)
+  const SIMPLE_CLAUSE_KEYS: ClauseKey[] = ["default"]
+  const activeClauses = docStyle === "simple" ? SIMPLE_CLAUSE_KEYS : CLAUSE_KEYS
 
   const freqLabel =
     {
@@ -616,7 +620,7 @@ function PromissoryDocumentBody({
               and every {freqLabel} period thereafter until fully paid,
               with the final payment due on <span style={{ fontWeight: 600 }}>{maturityDate}</span>.
             </li>
-            {CLAUSE_KEYS.map((key) => (
+            {activeClauses.map((key) => (
               <li key={key} style={{ marginBottom: "12px", textAlign: "justify" }}>
                 <span style={{ fontWeight: 600 }}>{CLAUSE_DOC_LABELS[key]}</span>{" "}
                 {resolveClause(key, parsedClauses).en}
@@ -627,7 +631,7 @@ function PromissoryDocumentBody({
       </div>
 
       {/* Collateral */}
-      {loan.collateralDescription && (
+      {docStyle === "full" && loan.collateralDescription && (
         <div style={{ marginBottom: "24px" }}>
           <h2 className="font-semibold mb-3" style={{ fontSize: "16px", color: c.textStrong }}>
             Collateral / Security
@@ -639,7 +643,7 @@ function PromissoryDocumentBody({
       )}
 
       {/* Co-maker Undertaking */}
-      {loan.coMakerName && (
+      {docStyle === "full" && loan.coMakerName && (
         <div style={{ marginBottom: "24px" }}>
           <h2 className="font-semibold mb-3" style={{ fontSize: "16px", color: c.textStrong }}>
             Co-maker's Undertaking
@@ -658,7 +662,7 @@ function PromissoryDocumentBody({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: loan.coMakerName ? "1fr 1fr" : "1fr",
+            gridTemplateColumns: loan.coMakerName && docStyle === "full" ? "1fr 1fr" : "1fr",
             gap: "32px",
             marginBottom: "40px",
           }}
@@ -669,7 +673,7 @@ function PromissoryDocumentBody({
             borderColor={c.borderStrong}
             mutedColor={c.muted}
           />
-          {loan.coMakerName && (
+          {docStyle === "full" && loan.coMakerName && (
             <SignatureBlock
               name={loan.coMakerName}
               label="Co-maker / Guarantor"

@@ -101,6 +101,7 @@ const generateSigningLinkSchema = z.object({
   loanId: z.string().min(1),
   documentType: z.enum(["disclosure", "promissory_note"]),
   signerRole: z.enum(["borrower", "co_maker"]),
+  docStyle: z.enum(["full", "simple"]).optional(),
 })
 
 export const generateSigningLink = createServerFn()
@@ -131,7 +132,12 @@ export const generateSigningLink = createServerFn()
     })
 
     if (existing && existing.signingToken && !existing.tokenUsedAt) {
-      // Reuse existing token
+      // Update docStyle if changed, then reuse existing token
+      if (data.docStyle && existing.docStyle !== data.docStyle) {
+        await db.update(documentSignatures)
+          .set({ docStyle: data.docStyle })
+          .where(eq(documentSignatures.id, existing.id))
+      }
       return { token: existing.signingToken }
     }
 
@@ -148,6 +154,7 @@ export const generateSigningLink = createServerFn()
       signerRole: data.signerRole,
       signerName,
       signingToken: token,
+      docStyle: data.docStyle ?? null,
     })
 
     return { token }
@@ -261,6 +268,7 @@ export const getSigningDocument = createServerFn()
       documentType: sig.documentType,
       signerRole: sig.signerRole,
       signerName: sig.signerName,
+      docStyle: (sig.docStyle as "full" | "simple" | null) ?? "full",
       loan: {
         id: loan.id,
         principal: loan.principal,

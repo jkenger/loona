@@ -7,6 +7,7 @@ import {
   deleteConversation as deleteConversationFn,
   updateConversationTitle,
 } from "@/server/advisor"
+import { getUnreadAlerts, markAlertsRead } from "@/server/advisor-alerts"
 
 type Message = {
   id: string
@@ -32,9 +33,35 @@ export function useAdvisorChat() {
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingText, setStreamingText] = useState("")
+  const [thinkingSteps, setThinkingSteps] = useState<string[]>([])
   const [activeToolCall, setActiveToolCall] = useState<string | null>(null)
   const [initialized, setInitialized] = useState(false)
+  const [briefingContent, setBriefingContent] = useState<string | null>(null)
+  const [briefingLoading, setBriefingLoading] = useState(false)
+  const [alerts, setAlerts] = useState<{ id: string; title: string; message: string; type: string; createdAt: string }[]>([])
   const abortRef = useRef<AbortController | null>(null)
+
+  const fetchBriefing = useCallback(async () => {
+    const todayKey = `luna-briefing-${new Date().toISOString().slice(0, 10)}`
+    const cached = localStorage.getItem(todayKey)
+    if (cached) {
+      setBriefingContent(cached)
+      return
+    }
+    setBriefingLoading(true)
+    try {
+      const res = await fetch("/api/advisor/briefing")
+      if (res.ok) {
+        const data = await res.json()
+        setBriefingContent(data.content)
+        localStorage.setItem(todayKey, data.content)
+      }
+    } catch (error) {
+      console.error("Failed to fetch briefing:", error)
+    } finally {
+      setBriefingLoading(false)
+    }
+  }, [])
 
   const initialize = useCallback(async () => {
     if (initialized) return
@@ -45,12 +72,23 @@ export function useAdvisorChat() {
       const convos = await getConversations()
       setConversations(convos)
       setInitialized(true)
+      fetchBriefing()
+      // Fetch unread alerts
+      getUnreadAlerts().then((a) => {
+        setAlerts(a.map((alert) => ({
+          id: alert.id,
+          title: alert.title,
+          message: alert.message,
+          type: alert.type,
+          createdAt: new Date(alert.createdAt).toISOString(),
+        })))
+      })
     } catch (error) {
       console.error("Failed to initialize advisor:", error)
     } finally {
       setIsLoading(false)
     }
-  }, [initialized])
+  }, [initialized, fetchBriefing])
 
   const loadConversations = useCallback(async () => {
     try {
@@ -74,16 +112,18 @@ export function useAdvisorChat() {
     }
   }, [])
 
-  const startNewConversation = useCallback(async () => {
-    if (!advisorId) return
+  const startNewConversation = useCallback(async (): Promise<string | null> => {
+    if (!advisorId) return null
     setIsLoading(true)
     try {
       const convo = await createConversation({ data: { advisorId } })
       setActiveConversationId(convo.id)
       setMessages([])
       await loadConversations()
+      return convo.id
     } catch (error) {
       console.error("Failed to create conversation:", error)
+      return null
     } finally {
       setIsLoading(false)
     }
@@ -111,8 +151,9 @@ export function useAdvisorChat() {
     }
   }, [loadConversations])
 
-  const sendMessage = useCallback(async (text: string) => {
-    if (!activeConversationId || isStreaming) return
+  const sendMessage = useCallback(async (text: string, overrideConversationId?: string) => {
+    const convoId = overrideConversationId ?? activeConversationId
+    if (!convoId || isStreaming) return
 
     // Optimistically add user message
     const userMessage: Message = {
@@ -124,6 +165,7 @@ export function useAdvisorChat() {
     setMessages((prev) => [...prev, userMessage])
     setIsStreaming(true)
     setStreamingText("")
+    setThinkingSteps([])
     setActiveToolCall(null)
 
     const abort = new AbortController()
@@ -134,7 +176,7 @@ export function useAdvisorChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          conversationId: activeConversationId,
+          conversationId: convoId,
           message: text,
         }),
         signal: abort.signal,
@@ -169,6 +211,8 @@ export function useAdvisorChat() {
             if (event.type === "text") {
               fullText += event.content
               setStreamingText(fullText)
+            } else if (event.type === "thinking") {
+              setThinkingSteps((prev) => [...prev, event.content])
             } else if (event.type === "tool_call") {
               setActiveToolCall(event.name)
             } else if (event.type === "done") {
@@ -222,6 +266,12 @@ export function useAdvisorChat() {
     abortRef.current?.abort()
   }, [])
 
+  const dismissAlerts = useCallback(async () => {
+    if (alerts.length === 0) return
+    await markAlertsRead()
+    setAlerts([])
+  }, [alerts.length])
+
   return {
     conversations,
     activeConversationId,
@@ -229,8 +279,12 @@ export function useAdvisorChat() {
     isLoading,
     isStreaming,
     streamingText,
+    thinkingSteps,
     activeToolCall,
     initialized,
+    briefingContent,
+    briefingLoading,
+    alerts,
     initialize,
     loadConversations,
     selectConversation,
@@ -239,5 +293,6 @@ export function useAdvisorChat() {
     renameConversation,
     sendMessage,
     stopStreaming,
+    dismissAlerts,
   }
 }

@@ -70,6 +70,12 @@ export const documentTypeEnum = pgEnum("document_type", ["disclosure", "promisso
 export const signerRoleEnum = pgEnum("signer_role", ["lender", "borrower", "co_maker"])
 
 export const advisorMessageRoleEnum = pgEnum("advisor_message_role", ["user", "assistant"])
+export const advisorAlertTypeEnum = pgEnum("advisor_alert_type", [
+  "payment_due_risk",
+  "overdue_escalation",
+  "loan_milestone",
+  "collection_rate_drop",
+])
 
 // ============================================================================
 // Auth Tables (Better Auth)
@@ -410,6 +416,7 @@ export const documentSignatures = pgTable("document_signatures", {
   ipAddress: text("ip_address"),
   signingToken: text("signing_token").unique(), // for public signing links
   tokenUsedAt: timestamp("token_used_at"), // set when borrower submits via token
+  docStyle: text("doc_style"), // "full" | "simple" — only for promissory_note
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
@@ -515,6 +522,19 @@ export const advisorMessages = pgTable("advisor_messages", {
   role: advisorMessageRoleEnum("role").notNull(),
   content: text("content").notNull(),
   metadata: text("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+export const advisorAlerts = pgTable("advisor_alerts", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  type: advisorAlertTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata"),
+  readAt: timestamp("read_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
@@ -747,6 +767,10 @@ export const advisorMessagesRelations = relations(advisorMessages, ({ one }) => 
   conversation: one(advisorConversations, { fields: [advisorMessages.conversationId], references: [advisorConversations.id] }),
 }))
 
+export const advisorAlertsRelations = relations(advisorAlerts, ({ one }) => ({
+  lender: one(user, { fields: [advisorAlerts.lenderId], references: [user.id] }),
+}))
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -794,3 +818,4 @@ export type NewDocumentSignature = typeof documentSignatures.$inferInsert
 export type Advisor = typeof advisors.$inferSelect
 export type AdvisorConversation = typeof advisorConversations.$inferSelect
 export type AdvisorMessage = typeof advisorMessages.$inferSelect
+export type AdvisorAlert = typeof advisorAlerts.$inferSelect

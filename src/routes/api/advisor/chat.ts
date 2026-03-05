@@ -116,6 +116,7 @@ export const Route = createFileRoute("/api/advisor/chat")({
                 })
 
                 let hasToolUse = false
+                let roundText = ""
                 const toolUseBlocks: { id: string; name: string; input: string }[] = []
                 let currentToolId = ""
                 let currentToolName = ""
@@ -134,8 +135,8 @@ export const Route = createFileRoute("/api/advisor/chat")({
                     }
                   } else if (event.type === "content_block_delta") {
                     if (event.delta.type === "text_delta") {
-                      fullResponse += event.delta.text
-                      send({ type: "text", content: event.delta.text })
+                      roundText += event.delta.text
+                      // Don't send yet — we'll decide after the round if it's thinking or final
                     } else if (event.delta.type === "input_json_delta") {
                       currentToolInput += event.delta.partial_json
                     }
@@ -151,14 +152,24 @@ export const Route = createFileRoute("/api/advisor/chat")({
                   }
                 }
 
-                if (!hasToolUse) break
+                if (!hasToolUse) {
+                  // Final round — this is the actual response
+                  fullResponse = roundText
+                  send({ type: "text", content: roundText })
+                  break
+                }
+
+                // Non-final round — text before tool use is "thinking"
+                if (roundText.trim()) {
+                  send({ type: "thinking", content: roundText.trim() })
+                }
 
                 // Execute tools and continue conversation
                 const assistantContent: Anthropic.ContentBlockParam[] = []
 
                 // Add any text that came before tool use
-                if (fullResponse) {
-                  assistantContent.push({ type: "text", text: fullResponse })
+                if (roundText) {
+                  assistantContent.push({ type: "text", text: roundText })
                 }
 
                 const toolResults: Anthropic.ToolResultBlockParam[] = []
@@ -186,8 +197,7 @@ export const Route = createFileRoute("/api/advisor/chat")({
                   })
                 }
 
-                // Reset fullResponse for next round
-                fullResponse = ""
+                // roundText is already handled — reset for next round
 
                 currentMessages = [
                   ...currentMessages,

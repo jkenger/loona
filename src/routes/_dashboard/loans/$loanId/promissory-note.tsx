@@ -311,6 +311,7 @@ function PromissoryNotePage() {
           loanId: loan.id,
           documentType: "promissory_note",
           signerRole: "borrower",
+          docStyle,
         },
       })
       const url = `${window.location.origin}/share/sign/${result.token}`
