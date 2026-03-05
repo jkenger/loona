@@ -1,13 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useRef, useState, useEffect } from "react"
 import { getLoan } from "@/server/loans"
+import {
+  getDocumentSignatures,
+  generateSigningLink,
+} from "@/server/signatures"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
+import { SignatureBlock } from "@/components/documents/signature-block"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 import { formatPenaltyForDisclosure } from "@/lib/constants/penalty-defaults"
-import { ArrowLeft, FilePdf, Spinner } from "@phosphor-icons/react"
+import {
+  ArrowLeft,
+  FilePdf,
+  Spinner,
+  LinkSimple,
+  Check,
+} from "@phosphor-icons/react"
+import { toast } from "sonner"
 import { format } from "date-fns"
 
 export const Route = createFileRoute("/_dashboard/loans/$loanId/disclosure")({
@@ -16,18 +29,27 @@ export const Route = createFileRoute("/_dashboard/loans/$loanId/disclosure")({
       session: { user: { role: string | null; name: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { loan: null, unauthorized: true, lenderName: null, penaltyConfig: null }
+      return { loan: null, unauthorized: true, lenderName: null, penaltyConfig: null, signatures: [] }
     }
 
     try {
       const loan = await getLoan({ data: params.loanId })
       if (!loan.isLender) {
-        return { loan: null, unauthorized: true, lenderName: null, penaltyConfig: null }
+        return { loan: null, unauthorized: true, lenderName: null, penaltyConfig: null, signatures: [] }
       }
 
-      return { loan, unauthorized: false, lenderName: session.user.name, penaltyConfig: loan.effectivePenaltyConfig ?? null }
+      let signatures: Awaited<ReturnType<typeof getDocumentSignatures>> = []
+      try {
+        signatures = await getDocumentSignatures({
+          data: { loanId: params.loanId, documentType: "disclosure" },
+        })
+      } catch {
+        // Signatures not available yet
+      }
+
+      return { loan, unauthorized: false, lenderName: session.user.name, penaltyConfig: loan.effectivePenaltyConfig ?? null, signatures }
     } catch {
-      return { loan: null, unauthorized: false, lenderName: null, penaltyConfig: null }
+      return { loan: null, unauthorized: false, lenderName: null, penaltyConfig: null, signatures: [] }
     }
   },
   pendingComponent: SkeletonDetailPage,
@@ -68,12 +90,17 @@ function useDocColors(pdfMode: boolean) {
 }
 
 function DisclosurePage() {
-  const { loan, unauthorized, lenderName, penaltyConfig } = Route.useLoaderData()
+  const { loan, unauthorized, lenderName, penaltyConfig, signatures } = Route.useLoaderData()
   const documentRef = useRef<HTMLDivElement>(null)
   const [generating, setGenerating] = useState(false)
   const [pdfMode, setPdfMode] = useState(false)
   const [lang, setLang] = useState<"en" | "fil">("en")
+  const [signingLoading, setSigningLoading] = useState(false)
   const c = useDocColors(pdfMode)
+
+  const sigs = signatures ?? []
+  const borrowerSig = sigs.find((s) => s.signerRole === "borrower")
+  const coMakerSig = sigs.find((s) => s.signerRole === "co_maker")
 
   if (unauthorized) {
     return (
@@ -153,6 +180,26 @@ function DisclosurePage() {
     } finally {
       setPdfMode(false)
       setGenerating(false)
+    }
+  }
+
+  const handleGenerateLink = async () => {
+    setSigningLoading(true)
+    try {
+      const result = await generateSigningLink({
+        data: {
+          loanId: loan.id,
+          documentType: "disclosure",
+          signerRole: "borrower",
+        },
+      })
+      const url = `${window.location.origin}/share/sign/${result.token}`
+      await navigator.clipboard.writeText(url)
+      toast.success("Signing link copied to clipboard")
+    } catch {
+      toast.error("Failed to generate signing link")
+    } finally {
+      setSigningLoading(false)
     }
   }
 
@@ -769,70 +816,36 @@ function DisclosurePage() {
                   gridTemplateColumns: loan.coMakerName ? "1fr 1fr" : "1fr",
                   gap: "32px",
                   marginTop: "48px",
+                  marginBottom: "40px",
                 }}
               >
-                <div>
-                  <div
-                    style={{
-                      borderBottom: `1px solid ${c.borderSignature}`,
-                      height: "40px",
-                      marginBottom: "8px",
-                    }}
-                  ></div>
-                  <p style={{ fontSize: "13px", fontWeight: 500 }}>
-                    {loan.contact.name}
-                  </p>
-                  <p style={{ fontSize: "11px", color: c.muted }}>
-                    {lang === "en"
-                      ? "Borrower's Signature over Printed Name"
-                      : "Lagda ng Borrower sa ibabaw ng Nakalimbag na Pangalan"}
-                  </p>
-                  <div style={{ marginTop: "16px" }}>
-                    <div
-                      style={{
-                        borderBottom: `1px solid ${c.borderSignature}`,
-                        width: "150px",
-                        marginBottom: "8px",
-                      }}
-                    ></div>
-                    <p style={{ fontSize: "11px", color: c.muted }}>
-                      {lang === "en" ? "Date" : "Petsa"}
-                    </p>
-                  </div>
-                </div>
+                <SignatureBlock
+                  name={loan.contact.name}
+                  label={lang === "en"
+                    ? "Borrower's Signature over Printed Name"
+                    : "Lagda ng Borrower sa ibabaw ng Nakalimbag na Pangalan"}
+                  signatureData={borrowerSig?.signatureData}
+                  signedAt={borrowerSig?.signedAt}
+                  borderColor={c.borderSignature}
+                  mutedColor={c.muted}
+                  lang={lang}
+                />
 
                 {loan.coMakerName && (
-                  <div>
-                    <div
-                      style={{
-                        borderBottom: `1px solid ${c.borderSignature}`,
-                        height: "40px",
-                        marginBottom: "8px",
-                      }}
-                    ></div>
-                    <p style={{ fontSize: "13px", fontWeight: 500 }}>
-                      {loan.coMakerName}
-                    </p>
-                    <p style={{ fontSize: "11px", color: c.muted }}>
-                      {lang === "en"
-                        ? "Co-maker's Signature over Printed Name"
-                        : "Lagda ng Co-maker sa ibabaw ng Nakalimbag na Pangalan"}
-                    </p>
-                    <div style={{ marginTop: "16px" }}>
-                      <div
-                        style={{
-                          borderBottom: `1px solid ${c.borderSignature}`,
-                          width: "150px",
-                          marginBottom: "8px",
-                        }}
-                      ></div>
-                      <p style={{ fontSize: "11px", color: c.muted }}>
-                        {lang === "en" ? "Date" : "Petsa"}
-                      </p>
-                    </div>
-                  </div>
+                  <SignatureBlock
+                    name={loan.coMakerName}
+                    label={lang === "en"
+                      ? "Co-maker's Signature over Printed Name"
+                      : "Lagda ng Co-maker sa ibabaw ng Nakalimbag na Pangalan"}
+                    signatureData={coMakerSig?.signatureData}
+                    signedAt={coMakerSig?.signedAt}
+                    borderColor={c.borderSignature}
+                    mutedColor={c.muted}
+                    lang={lang}
+                  />
                 )}
               </div>
+
             </div>
 
             {/* Footer */}
@@ -921,6 +934,52 @@ function DisclosurePage() {
                       Download PDF
                     </>
                   )}
+                </Button>
+              </div>
+
+              {/* E-Signing Section */}
+              <div className="px-4 pt-3 pb-4 border-t space-y-3">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+                    E-Signatures
+                  </label>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {loan.coMakerName ? "Borrower & Co-maker" : "Borrower"}
+                      </span>
+                      {borrowerSig?.signatureData ? (
+                        <Badge variant="outline" className="text-[10px] h-5 text-green-600 border-green-200">
+                          <Check className="h-3 w-3 mr-0.5" />
+                          Signed
+                        </Badge>
+                      ) : borrowerSig?.signingToken && !borrowerSig?.tokenUsedAt ? (
+                        <Badge variant="outline" className="text-[10px] h-5 text-amber-600 border-amber-200">
+                          Pending
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">
+                          Unsigned
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleGenerateLink}
+                  disabled={signingLoading}
+                  variant="outline"
+                  className="gap-2 w-full justify-center"
+                  size="sm"
+                >
+                  {signingLoading ? (
+                    <Spinner className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <LinkSimple className="h-3.5 w-3.5" />
+                  )}
+                  Send to Borrower for Signing
                 </Button>
               </div>
 
