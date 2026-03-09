@@ -1,0 +1,1 @@
+ALTER TABLE "document_signatures" ADD COLUMN "doc_style" text;

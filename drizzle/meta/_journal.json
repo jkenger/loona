@@ -218,6 +218,13 @@
       "when": 1772714357908,
       "tag": "0030_empty_titania",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1773032183523,
+      "tag": "0031_purple_cobalt_man",
+      "breakpoints": true
     }
   ]
 }
