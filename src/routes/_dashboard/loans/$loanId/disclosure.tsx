@@ -194,9 +194,14 @@ function DisclosurePage() {
         },
       })
       const url = `${window.location.origin}/share/sign/${result.token}`
-      await navigator.clipboard.writeText(url)
-      toast.success("Signing link copied to clipboard")
-    } catch {
+      try {
+        await navigator.clipboard.writeText(url)
+        toast.success("Signing link copied to clipboard")
+      } catch {
+        prompt("Copy this signing link:", url)
+      }
+    } catch (err) {
+      console.error("generateSigningLink error:", err)
       toast.error("Failed to generate signing link")
     } finally {
       setSigningLoading(false)

@@ -107,6 +107,7 @@ const generateSigningLinkSchema = z.object({
 export const generateSigningLink = createServerFn()
   .inputValidator(generateSigningLinkSchema)
   .handler(async ({ data }) => {
+    console.log("[generateSigningLink] called with:", JSON.stringify(data))
     const session = await requireAuth()
 
     const loan = await db.query.loans.findFirst({
@@ -114,6 +115,7 @@ export const generateSigningLink = createServerFn()
       with: { contact: true },
     })
     if (!loan || loan.lenderId !== session.user.id) {
+      console.error("[generateSigningLink] loan not found or not owned by user", { loanId: data.loanId, userId: session.user.id })
       throw new Error("Loan not found")
     }
 
