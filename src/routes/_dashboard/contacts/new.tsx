@@ -68,23 +68,17 @@ function NewContactPage() {
   }
 
   return (
-    <div>
-      {/* Compact Header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white py-4 pb-12">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Link to="/contacts" className="text-sm text-blue-200/70 hover:text-white transition-colors">
-              Contacts
-            </Link>
-            <span className="text-blue-300/40">/</span>
-            <h1 className="text-lg font-semibold">New Contact</h1>
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link to="/contacts" className="hover:text-foreground transition-colors">
+          Contacts
+        </Link>
+        <span>/</span>
+        <span className="text-foreground font-medium">New Contact</span>
       </div>
 
-      {/* Form - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-6 pb-8">
-      <Card className="shadow-lg">
+      <Card className="shadow-sm rounded-xl">
         <CardHeader className="p-4 pb-2">
           <CardTitle>Contact Information</CardTitle>
           <CardDescription>Enter the borrower's details</CardDescription>
@@ -211,7 +205,6 @@ function NewContactPage() {
           </form>
         </CardContent>
       </Card>
-      </div>
     </div>
   )
 }

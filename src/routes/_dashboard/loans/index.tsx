@@ -18,7 +18,6 @@ import {
   Funnel,
 } from "@phosphor-icons/react"
 import { useState, useMemo } from "react"
-import { format } from "date-fns"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
 
 export const Route = createFileRoute("/_dashboard/loans/")({
@@ -36,38 +35,26 @@ export const Route = createFileRoute("/_dashboard/loans/")({
 
 function LoansPageSkeleton() {
   return (
-    <div>
-      {/* Header skeleton */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          <Skeleton className="h-5 w-64 bg-white/10" />
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4 space-y-2">
-              <Skeleton className="h-10 w-32 bg-white/10" />
-              <Skeleton className="h-4 w-48 bg-white/10" />
-            </div>
-            <Skeleton className="h-10 w-28 bg-white/10" />
-          </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-4 w-48" />
         </div>
+        <Skeleton className="h-10 w-28" />
       </div>
-
-      {/* Content skeleton */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        <Card className="shadow-lg">
-          <CardContent className="p-4 space-y-4">
-            <Skeleton className="h-10 w-full max-w-sm" />
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-8 w-20" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        <div className="space-y-3">
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full max-w-sm" />
+        <div className="flex gap-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <SkeletonCard key={i} />
+            <Skeleton key={i} className="h-8 w-20" />
           ))}
         </div>
+      </div>
+      <div className="space-y-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <SkeletonCard key={i} />
+        ))}
       </div>
     </div>
   )
@@ -181,57 +168,38 @@ function LoansPage() {
   }
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Meta Bar */}
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
-              Lender Portal
-            </span>
-            <span className="text-blue-300/40">·</span>
-            <span>Loans</span>
-            <span className="text-blue-300/40">·</span>
-            <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
+    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Page Header */}
+      <StaggerItem>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
+            <p className="text-muted-foreground">Manage your lending portfolio</p>
           </div>
-
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4">
-              <h1 className="text-4xl font-bold tracking-tight">Loans</h1>
-              <p className="text-blue-200/70">Manage your lending portfolio</p>
-            </div>
-            <Link to="/loans/new-wizard">
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" weight="bold" />
-                New Loan
-              </Button>
-            </Link>
-          </div>
+          <Link to="/loans/new-wizard">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" weight="bold" />
+              New Loan
+            </Button>
+          </Link>
         </div>
-      </div>
+      </StaggerItem>
 
-      {/* Content - overlaps header */}
-      <Stagger className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        {/* Filters Card */}
-        <StaggerItem>
-        <Card className="shadow-lg">
-          <CardContent className="p-4 space-y-4">
-            {/* Search */}
-            <div className="relative max-w-sm">
-              <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by borrower..."
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+      {/* Search & Filters */}
+      <StaggerItem>
+        <div className="space-y-4">
+          <div className="relative max-w-sm">
+            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by borrower..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-9"
+            />
+          </div>
 
-            {/* Status Filters */}
-            <div className="flex items-center gap-1 flex-wrap">
-              <Funnel className="h-4 w-4 text-muted-foreground mr-1" />
+          <div className="flex items-center gap-1 flex-wrap">
+            <Funnel className="h-4 w-4 text-muted-foreground mr-1" />
               {/* Show pending_approval first if there are any */}
               {statusCounts.pending_approval > 0 && (
                 <Button
@@ -267,10 +235,9 @@ function LoansPage() {
                   <span className="text-muted-foreground">({statusCounts.rejected})</span>
                 </Button>
               )}
-            </div>
-          </CardContent>
-        </Card>
-        </StaggerItem>
+          </div>
+        </div>
+      </StaggerItem>
 
         {/* Results summary */}
         <StaggerItem>
@@ -301,7 +268,7 @@ function LoansPage() {
 
                 return (
                   <Link key={loan.id} to="/loans/$loanId" params={{ loanId: loan.id }} className="block">
-                    <Card className={`hover:border-primary/50 transition-colors cursor-pointer shadow-sm ${
+                    <Card className={`hover:border-primary/50 transition-colors cursor-pointer shadow-sm rounded-xl ${
                       isDefaulted ? "border-destructive/50" :
                       isPendingApproval ? "border-amber-300 bg-amber-50/50" :
                       isRejected ? "border-gray-300 opacity-60" :
@@ -428,7 +395,7 @@ function LoansPage() {
             )}
           </>
         ) : (
-          <Card className="shadow-sm">
+          <Card className="shadow-sm rounded-xl">
             <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
               <CurrencyCircleDollar className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-semibold mb-1">No loans found</h3>
@@ -461,7 +428,6 @@ function LoansPage() {
         )}
         </StaggerItem>
       </Stagger>
-    </div>
   )
 }
 

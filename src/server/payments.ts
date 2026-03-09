@@ -10,7 +10,7 @@ import {
   commissionSettings,
   penalties,
 } from "@/lib/db"
-import { eq, desc, and, sql, lte, ne } from "drizzle-orm"
+import { eq, desc, and, sql, lte, gte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { assertTransition } from "./loans"
 import { createAuditLogger } from "./audit"
@@ -149,6 +149,43 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
       penaltyIn,
     }
   })
+})
+
+export const getMonthlyPaymentStats = createServerFn().handler(async () => {
+  const session = await requireAuth()
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+
+  const result = await db
+    .select({
+      expectedAmount: sql<string>`COALESCE(SUM(${paymentSchedule.amount}), '0')`,
+      expectedCount: sql<number>`COUNT(*)::int`,
+      collectedAmount: sql<string>`COALESCE(SUM(CASE WHEN ${paymentSchedule.status} = 'paid' THEN ${paymentSchedule.amount} ELSE ${paymentSchedule.paidAmount} END), '0')`,
+      collectedCount: sql<number>`COUNT(*) FILTER (WHERE ${paymentSchedule.status} = 'paid')::int`,
+    })
+    .from(paymentSchedule)
+    .innerJoin(loans, eq(paymentSchedule.loanId, loans.id))
+    .where(
+      and(
+        eq(loans.lenderId, session.user.id),
+        gte(paymentSchedule.dueDate, monthStart),
+        lte(paymentSchedule.dueDate, monthEnd)
+      )
+    )
+
+  const row = result[0]
+  const expected = parseFloat(row?.expectedAmount ?? "0")
+  const collected = parseFloat(row?.collectedAmount ?? "0")
+  const collectionRate = expected > 0 ? Math.round((collected / expected) * 100) : 0
+
+  return {
+    expectedAmount: expected,
+    expectedCount: row?.expectedCount ?? 0,
+    collectedAmount: collected,
+    collectedCount: row?.collectedCount ?? 0,
+    collectionRate,
+  }
 })
 
 export const recordPayment = createServerFn()

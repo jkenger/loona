@@ -16,13 +16,16 @@ import {
   CalendarBlank,
   CaretDown,
   GearSix,
+  ChartBar,
+  CheckCircle,
+  DotsThreeVertical,
+  Prohibit,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { CommissionProgramConfig } from '@/lib/constants/commission-defaults'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,12 +46,19 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-import { commissionTypeLabel } from '@/lib/constants/commission-defaults'
+
 import { Switch } from '@/components/ui/switch'
-import { SkeletonTablePage } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Skeleton } from '@/components/ui/skeleton'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
-import { PageHeader, PageContent } from '@/components/ui/page-header'
+import { Stagger, StaggerItem } from '@/components/ui/stagger'
+import { cn } from '@/lib/utils'
 
 import {
   getAgents,
@@ -77,9 +87,46 @@ export const Route = createFileRoute('/_dashboard/agents/')({
     ])
     return { agents, commissionConfig, unauthorized: false }
   },
-  pendingComponent: SkeletonTablePage,
+  pendingComponent: AgentsPageSkeleton,
   component: AgentsPage,
 })
+
+function AgentsPageSkeleton() {
+  return (
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <Skeleton className="h-9 w-32" />
+        <Skeleton className="h-4 w-52 mt-2" />
+      </div>
+      <div className="grid gap-5 lg:grid-cols-5">
+        <div className="lg:col-span-3 space-y-5">
+          <div className="rounded-xl border shadow-sm p-5 space-y-4">
+            <Skeleton className="h-5 w-36" />
+            <div className="grid grid-cols-3 gap-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </div>
+          <div className="rounded-xl border shadow-sm p-5 space-y-3">
+            <Skeleton className="h-5 w-32" />
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </div>
+        <div className="lg:col-span-2 space-y-5">
+          <div className="rounded-xl border shadow-sm p-5 space-y-3">
+            <Skeleton className="h-5 w-36" />
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 type CreatedAgent = {
   agentEmail: string
@@ -298,57 +345,76 @@ function AgentsPage() {
     ? (agents.find((a) => a.id === selectedAgent.id) ?? null)
     : null
 
-  const selectedTierConfig =
-    currentSelected && currentSelected.tier !== null && commissionConfig
-      ? commissionConfig.tiers.find((t) => t.tier === currentSelected.tier)
-      : null
+  // Computed stats
+  const activeAgents = agents.filter((a) => a.status === 'active')
+  const totalCollected = agents.reduce((sum, a) => sum + parseFloat(a.totalCollected), 0)
+  const totalPendingPayouts = agents.reduce((sum, a) => sum + parseFloat(a.pendingCommission), 0)
+  const agentsWithPayouts = agents.filter((a) => parseFloat(a.pendingCommission) > 0)
 
   return (
-    <div>
-      <PageHeader
-        badge="Lender Portal"
-        section="Agents"
-        title="Agents"
-        subtitle="Manage your collection agents"
-        actions={
-          <div className="flex items-center gap-2">
-            <Link to="/agents/commission-settings" search={{ tab: undefined }}>
-              <Button variant="outline" size="icon" title="Commission Settings">
-                <GearSix className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
-              <Plus className="h-4 w-4" weight="bold" />
-              Add Agent
+    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Agents</h1>
+          <p className="text-muted-foreground">Manage your collection agents</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link to="/agents/commission-settings" search={{ tab: undefined }}>
+            <Button variant="outline" size="icon" title="Commission Settings">
+              <GearSix className="h-4 w-4" />
             </Button>
+          </Link>
+          <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4" weight="bold" />
+            Add Agent
+          </Button>
+        </div>
+      </div>
+
+      {/* Bento Grid */}
+      <StaggerItem className="grid gap-5 lg:grid-cols-5">
+        {/* Left Column */}
+        <div className="lg:col-span-3 space-y-5">
+          {/* Team Overview */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <ChartBar className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Team Overview</h3>
+              </div>
+            </div>
+            <div className="p-5 pt-0">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Active Agents</p>
+                  <p className="text-lg font-bold">{activeAgents.length}</p>
+                  <p className="text-xs text-muted-foreground">of {agents.length} total</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Collected</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(totalCollected)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pending Payouts</p>
+                  <p className={cn("text-lg font-bold", totalPendingPayouts > 0 && "text-amber-600")}>
+                    {formatCurrency(totalPendingPayouts)}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        }
-      />
-      <PageContent>
-        {agents.length > 0 ? (
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="w-8 p-3" />
-                    <th className="text-left p-3 font-medium">Name</th>
-                    <th className="text-left p-3 font-medium">Status</th>
-                    <th className="text-left p-3 font-medium hidden md:table-cell">
-                      Tier
-                    </th>
-                    <th className="text-left p-3 font-medium hidden md:table-cell">
-                      Loans
-                    </th>
-                    <th className="text-left p-3 font-medium hidden lg:table-cell">
-                      Collected
-                    </th>
-                    <th className="text-left p-3 font-medium hidden lg:table-cell">
-                      Pending
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+
+          {/* Agent Roster */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <UsersThree className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Agent Roster</h3>
+              </div>
+            </div>
+            <div className="p-5 pt-0">
+              {agents.length > 0 ? (
+                <div className="space-y-0">
                   {agents.map((agent) => {
                     const isSelected = currentSelected?.id === agent.id
                     const tierConfig = commissionConfig?.tiers.find(
@@ -356,559 +422,507 @@ function AgentsPage() {
                     )
                     return (
                       <Fragment key={agent.id}>
-                        <tr
-                          className={`border-b cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'bg-primary/5'
-                              : 'hover:bg-muted/30'
-                          }`}
-                          onClick={() =>
-                            setSelectedAgent(isSelected ? null : agent)
-                          }
+                        <div
+                          className={cn(
+                            "flex items-center gap-3 py-3 border-b last:border-0 -mx-5 px-5 cursor-pointer transition-colors",
+                            isSelected ? "bg-primary/5" : "hover:bg-muted/50"
+                          )}
+                          onClick={() => setSelectedAgent(isSelected ? null : agent)}
                         >
-                          <td className="p-3 w-8">
-                            <CaretDown
-                              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                                isSelected ? '' : '-rotate-90'
-                              }`}
-                            />
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                <User className="h-4 w-4 text-primary" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium truncate">
-                                  {agent.agentName}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {agent.agentEmail}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <Badge
-                              variant={
-                                agent.status === 'active'
-                                  ? 'secondary'
-                                  : agent.status === 'terminated'
-                                    ? 'destructive'
-                                    : 'outline'
-                              }
-                              className={
-                                agent.status === 'suspended'
-                                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-600'
-                                  : ''
-                              }
-                            >
-                              {agent.status}
-                            </Badge>
-                          </td>
-                          <td className="p-3 hidden md:table-cell">
-                            {agent.tier === null ? (
-                              <div>
-                                <p className="text-muted-foreground">Basic</p>
-                                <p className="text-xs text-muted-foreground/70">
-                                  {agent.commissionRate}%
-                                </p>
-                              </div>
-                            ) : tierConfig ? (
-                              <div>
-                                <p className="text-muted-foreground">
-                                  Tier {tierConfig.tier} — {tierConfig.name}
-                                </p>
-                                <p className="text-xs text-muted-foreground/70">
-                                  {tierConfig.commissionType === 'fixed' &&
-                                    `PHP ${tierConfig.flatAmount}`}
-                                  {tierConfig.commissionType ===
-                                    'percentage' &&
-                                    `${tierConfig.percentageRate}%`}
-                                  {tierConfig.commissionType ===
-                                    'higher_of' &&
-                                    `${tierConfig.percentageRate}% or PHP ${tierConfig.flatAmount}`}
-                                </p>
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="text-muted-foreground">
-                                  Tier {agent.tier}
-                                </p>
-                                <p className="text-xs text-muted-foreground/70">
-                                  {agent.commissionRate}%
-                                </p>
-                              </div>
+                          <CaretDown
+                            className={cn(
+                              "h-4 w-4 text-muted-foreground transition-transform duration-200 shrink-0",
+                              !isSelected && "-rotate-90"
                             )}
-                          </td>
-                          <td className="p-3 hidden md:table-cell">
-                            {agent.assignedLoansCount}
-                          </td>
-                          <td className="p-3 hidden lg:table-cell">
-                            {formatCurrency(agent.totalCollected)}
-                          </td>
-                          <td className="p-3 hidden lg:table-cell">
-                            <span
-                              className={
-                                parseFloat(agent.pendingCommission) > 0
-                                  ? 'text-primary font-medium'
-                                  : ''
-                              }
-                            >
-                              {formatCurrency(agent.pendingCommission)}
-                            </span>
-                          </td>
-                        </tr>
+                          />
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{agent.agentName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{agent.agentEmail}</p>
+                          </div>
+                          <div className="hidden md:flex items-center gap-3 shrink-0">
+                            {agent.tier === null ? (
+                              <span className="text-xs text-muted-foreground">{agent.commissionRate}%</span>
+                            ) : tierConfig ? (
+                              <span className="text-xs text-muted-foreground">Tier {tierConfig.tier}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Tier {agent.tier}</span>
+                            )}
+                            <span className="text-xs text-muted-foreground">{agent.assignedLoansCount} loans</span>
+                          </div>
+                          <div className="hidden lg:block shrink-0 text-right min-w-[80px]">
+                            <p className="text-sm font-semibold">{formatCurrency(agent.totalCollected)}</p>
+                            {parseFloat(agent.pendingCommission) > 0 && (
+                              <p className="text-xs text-primary">{formatCurrency(agent.pendingCommission)} pending</p>
+                            )}
+                          </div>
+                          <Badge
+                            variant={
+                              agent.status === 'active'
+                                ? 'secondary'
+                                : agent.status === 'terminated'
+                                  ? 'destructive'
+                                  : 'outline'
+                            }
+                            className={cn(
+                              "shrink-0 text-[10px]",
+                              agent.status === 'suspended' && 'border-amber-500/30 bg-amber-500/10 text-amber-600'
+                            )}
+                          >
+                            {agent.status}
+                          </Badge>
+                        </div>
+
+                        {/* Expandable Detail Panel */}
                         <AnimatePresence>
                           {isSelected && currentSelected && (
-                            <motion.tr
+                            <motion.div
                               key={`detail-${agent.id}`}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.15 }}
-                              className="border-b last:border-0"
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden -mx-5"
                             >
-                              <td colSpan={7} className="p-0">
-                                <motion.div
-                                  initial={{ height: 0 }}
-                                  animate={{ height: 'auto' }}
-                                  exit={{ height: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                  className="overflow-hidden"
-                                >
-                                  <div
-                                    className="p-5 bg-muted/30"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {currentSelected.status === 'active' ? (
-                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {/* Commission */}
-                                        <div className="space-y-3">
-                                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                            Commission
-                                          </p>
-                                          <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                              Commission Rate
-                                            </span>
-                                            <span className="font-medium">
-                                              {currentSelected.commissionRate}%
-                                            </span>
+                              <div
+                                className="p-5 bg-muted/30 border-b"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {currentSelected.status === 'active' ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Permissions & Tier */}
+                                    <div className="space-y-3">
+                                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                                        Permissions
+                                      </p>
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <CurrencyCircleDollar className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-sm">Record Payments</span>
                                           </div>
-                                          {commissionConfig &&
-                                            commissionConfig.tiers.length > 0 && (
-                                              <>
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-sm">
-                                                    Use Tiered Commission
-                                                  </span>
-                                                  <Switch
-                                                    checked={currentSelected.tier !== null}
-                                                    onCheckedChange={(checked) =>
-                                                      handleChangeTier(
-                                                        currentSelected.id,
-                                                        checked ? 1 : null,
-                                                      )
-                                                    }
-                                                  />
-                                                </div>
-                                                {currentSelected.tier !== null && (
-                                                  <>
-                                                    <Select
-                                                      value={String(currentSelected.tier)}
-                                                      onValueChange={(val) =>
-                                                        val &&
-                                                        handleChangeTier(
-                                                          currentSelected.id,
-                                                          parseInt(val),
+                                          <Switch
+                                            checked={currentSelected.canRecordPayments}
+                                            onCheckedChange={(checked) =>
+                                              handleToggleRecordPayments(
+                                                currentSelected.id,
+                                                checked,
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <NotePencil className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-sm">Create Loans</span>
+                                          </div>
+                                          <Switch
+                                            checked={currentSelected.canCreateLoans}
+                                            onCheckedChange={(checked) =>
+                                              handleToggleLoanCreation(
+                                                currentSelected.id,
+                                                checked,
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {commissionConfig &&
+                                        commissionConfig.tiers.length > 0 && (
+                                          <div className="pt-3 border-t space-y-3">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-sm">
+                                                Tiered Commission
+                                              </span>
+                                              <Switch
+                                                checked={currentSelected.tier !== null}
+                                                onCheckedChange={(checked) =>
+                                                  handleChangeTier(
+                                                    currentSelected.id,
+                                                    checked ? 1 : null,
+                                                  )
+                                                }
+                                              />
+                                            </div>
+                                            {currentSelected.tier !== null && (
+                                              <Select
+                                                value={String(currentSelected.tier)}
+                                                onValueChange={(val) =>
+                                                  val &&
+                                                  handleChangeTier(
+                                                    currentSelected.id,
+                                                    parseInt(val),
+                                                  )
+                                                }
+                                              >
+                                                <SelectTrigger className="w-full">
+                                                  <SelectValue>
+                                                    {(value) => {
+                                                      const t =
+                                                        commissionConfig.tiers.find(
+                                                          (t) => String(t.tier) === value,
                                                         )
-                                                      }
+                                                      return t
+                                                        ? `Tier ${t.tier} — ${t.name}`
+                                                        : value
+                                                    }}
+                                                  </SelectValue>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {commissionConfig.tiers.map((t) => (
+                                                    <SelectItem
+                                                      key={t.tier}
+                                                      value={String(t.tier)}
                                                     >
-                                                      <SelectTrigger className="w-full">
-                                                        <SelectValue>
-                                                          {(value) => {
-                                                            const t =
-                                                              commissionConfig.tiers.find(
-                                                                (t) => String(t.tier) === value,
-                                                              )
-                                                            return t
-                                                              ? `Tier ${t.tier} — ${t.name}`
-                                                              : value
-                                                          }}
-                                                        </SelectValue>
-                                                      </SelectTrigger>
-                                                      <SelectContent>
-                                                        {commissionConfig.tiers.map((t) => (
-                                                          <SelectItem
-                                                            key={t.tier}
-                                                            value={String(t.tier)}
-                                                          >
-                                                            Tier {t.tier} — {t.name}
-                                                          </SelectItem>
-                                                        ))}
-                                                        <div className="border-t mt-1 pt-1 px-2 pb-1">
-                                                          <Link
-                                                            to="/agents/commission-settings"
-                                                            search={{ tab: 'tiers' }}
-                                                            className="flex items-center gap-1.5 text-xs text-primary hover:underline py-1.5"
-                                                          >
-                                                            <Plus className="h-3 w-3" />
-                                                            Add more tiers
-                                                          </Link>
-                                                        </div>
-                                                      </SelectContent>
-                                                    </Select>
-                                                    {selectedTierConfig && (
-                                                      <div className="text-sm space-y-1">
-                                                        <div className="flex justify-between">
-                                                          <span className="text-muted-foreground">
-                                                            Commission Type
-                                                          </span>
-                                                          <span className="font-medium">
-                                                            {commissionTypeLabel(
-                                                              selectedTierConfig.commissionType,
-                                                            )}
-                                                          </span>
-                                                        </div>
-                                                        {selectedTierConfig.flatAmount > 0 && (
-                                                          <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">
-                                                              Flat Amount
-                                                            </span>
-                                                            <span className="font-medium">
-                                                              {formatCurrency(
-                                                                selectedTierConfig.flatAmount,
-                                                              )}
-                                                            </span>
-                                                          </div>
-                                                        )}
-                                                        {selectedTierConfig.percentageRate >
-                                                          0 && (
-                                                          <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">
-                                                              Percentage Rate
-                                                            </span>
-                                                            <span className="font-medium">
-                                                              {
-                                                                selectedTierConfig.percentageRate
-                                                              }
-                                                              %
-                                                            </span>
-                                                          </div>
-                                                        )}
-                                                        <div className="flex justify-between">
-                                                          <span className="text-muted-foreground">
-                                                            Portfolio Cap
-                                                          </span>
-                                                          <span className="font-medium">
-                                                            {selectedTierConfig.portfolioCap}{' '}
-                                                            loans
-                                                          </span>
-                                                        </div>
-                                                      </div>
-                                                    )}
-                                                  </>
-                                                )}
-                                              </>
+                                                      Tier {t.tier} — {t.name}
+                                                    </SelectItem>
+                                                  ))}
+                                                  <div className="border-t mt-1 pt-1 px-2 pb-1">
+                                                    <Link
+                                                      to="/agents/commission-settings"
+                                                      search={{ tab: 'tiers' }}
+                                                      className="flex items-center gap-1.5 text-xs text-primary hover:underline py-1.5"
+                                                    >
+                                                      <Plus className="h-3 w-3" />
+                                                      Add more tiers
+                                                    </Link>
+                                                  </div>
+                                                </SelectContent>
+                                              </Select>
                                             )}
-                                          <Link
-                                            to="/agents/commission-settings"
-                                            search={{ tab: undefined }}
-                                            className="text-xs text-primary hover:underline"
-                                          >
-                                            Commission settings &rarr;
-                                          </Link>
-                                        </div>
-
-                                        {/* Performance */}
-                                        <div className="space-y-3">
-                                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                            Performance
-                                          </p>
-                                          <div className="text-sm space-y-2">
-                                            <div className="flex justify-between">
-                                              <span className="text-muted-foreground">
-                                                Total Collected
-                                              </span>
-                                              <span className="font-medium">
-                                                {formatCurrency(currentSelected.totalCollected)}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                              <span className="text-muted-foreground">
-                                                Commission Earned
-                                              </span>
-                                              <span className="font-medium">
-                                                {formatCurrency(
-                                                  currentSelected.totalCommissionEarned,
-                                                )}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                              <span className="text-muted-foreground">
-                                                Commission Paid
-                                              </span>
-                                              <span className="font-medium">
-                                                {formatCurrency(
-                                                  currentSelected.totalCommissionPaid,
-                                                )}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                              <span className="text-muted-foreground">
-                                                Pending Payout
-                                              </span>
-                                              <span
-                                                className={`font-medium ${parseFloat(currentSelected.pendingCommission) > 0 ? 'text-primary' : ''}`}
-                                              >
-                                                {formatCurrency(
-                                                  currentSelected.pendingCommission,
-                                                )}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                              <span className="text-muted-foreground">
-                                                Assigned Loans
-                                              </span>
-                                              <span className="font-medium">
-                                                {currentSelected.assignedLoansCount}
-                                              </span>
-                                            </div>
                                           </div>
-                                        </div>
+                                        )}
+                                    </div>
 
-                                        {/* Permissions + Actions */}
-                                        <div className="space-y-3">
-                                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                            Permissions
-                                          </p>
-                                          <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex items-center gap-2">
-                                                <CurrencyCircleDollar className="h-4 w-4 text-muted-foreground" />
-                                                <span className="text-sm">Record Payments</span>
-                                              </div>
-                                              <Switch
-                                                checked={currentSelected.canRecordPayments}
-                                                onCheckedChange={(checked) =>
-                                                  handleToggleRecordPayments(
-                                                    currentSelected.id,
-                                                    checked,
-                                                  )
-                                                }
-                                              />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex items-center gap-2">
-                                                <NotePencil className="h-4 w-4 text-muted-foreground" />
-                                                <span className="text-sm">Create Loans</span>
-                                              </div>
-                                              <Switch
-                                                checked={currentSelected.canCreateLoans}
-                                                onCheckedChange={(checked) =>
-                                                  handleToggleLoanCreation(
-                                                    currentSelected.id,
-                                                    checked,
-                                                  )
-                                                }
-                                              />
-                                            </div>
-                                          </div>
-
-                                          <div className="pt-3 border-t space-y-2">
-                                            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                              Actions
-                                            </p>
-                                            {parseFloat(currentSelected.pendingCommission) >
-                                              0 && (
-                                              <Button
-                                                className="w-full gap-2"
-                                                size="sm"
-                                                onClick={() =>
-                                                  setAgentToPayCommission(currentSelected)
-                                                }
-                                              >
-                                                <CurrencyCircleDollar className="h-4 w-4" />
-                                                Pay Commission
-                                              </Button>
-                                            )}
-                                            <Button
-                                              variant="outline"
-                                              className="w-full gap-2"
-                                              size="sm"
+                                    {/* Payout & Actions */}
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                                          Payout
+                                        </p>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                              <DotsThreeVertical className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
                                               onClick={() =>
                                                 setResetPasswordAgent(currentSelected)
                                               }
                                             >
-                                              <Key className="h-4 w-4" />
+                                              <Key className="h-4 w-4 mr-2" />
                                               Reset Password
-                                            </Button>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                handleToggleStatus(currentSelected)
+                                              }
+                                              className="text-destructive focus:text-destructive"
+                                            >
+                                              <Prohibit className="h-4 w-4 mr-2" />
+                                              Suspend Agent
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+
+                                      <div className="flex items-baseline justify-between">
+                                        <span className="text-sm text-muted-foreground">
+                                          Pending
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            "text-lg font-semibold",
+                                            parseFloat(currentSelected.pendingCommission) > 0 && 'text-primary'
+                                          )}
+                                        >
+                                          {formatCurrency(currentSelected.pendingCommission)}
+                                        </span>
+                                      </div>
+
+                                      {parseFloat(currentSelected.pendingCommission) > 0 && (
+                                        <Button
+                                          className="w-full gap-2"
+                                          size="sm"
+                                          onClick={() =>
+                                            setAgentToPayCommission(currentSelected)
+                                          }
+                                        >
+                                          <CurrencyCircleDollar className="h-4 w-4" />
+                                          Pay Commission
+                                        </Button>
+                                      )}
+
+                                      <div className="pt-3 border-t flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <CalendarBlank className="h-3.5 w-3.5" />
+                                          Joined{' '}
+                                          {format(
+                                            new Date(currentSelected.createdAt),
+                                            'MMMM d, yyyy',
+                                          )}
+                                        </div>
+                                        <Link
+                                          to="/agents/commission-settings"
+                                          search={{ tab: undefined }}
+                                          className="text-xs text-primary hover:underline"
+                                        >
+                                          Commission settings &rarr;
+                                        </Link>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-5">
+                                    {/* Suspended / Terminated banner */}
+                                    <div
+                                      className={cn(
+                                        "rounded-lg p-3 flex gap-2.5 border",
+                                        currentSelected.status === 'suspended'
+                                          ? 'bg-amber-500/10 border-amber-500/20'
+                                          : 'bg-destructive/10 border-destructive/20'
+                                      )}
+                                    >
+                                      <Warning
+                                        className={cn(
+                                          "h-4 w-4 shrink-0 mt-0.5",
+                                          currentSelected.status === 'suspended'
+                                            ? 'text-amber-600'
+                                            : 'text-destructive'
+                                        )}
+                                      />
+                                      <div className="text-sm">
+                                        <p
+                                          className={cn(
+                                            "font-medium",
+                                            currentSelected.status === 'suspended'
+                                              ? 'text-amber-600'
+                                              : 'text-destructive'
+                                          )}
+                                        >
+                                          {currentSelected.status === 'suspended'
+                                            ? 'Agent Suspended'
+                                            : 'Agent Terminated'}
+                                        </p>
+                                        <p className="text-muted-foreground text-xs mt-0.5">
+                                          {currentSelected.status === 'suspended'
+                                            ? 'This agent cannot collect payments or create loans while suspended.'
+                                            : 'This agent has been terminated and no longer has access.'}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      {/* Performance (read-only) */}
+                                      <div className="space-y-3">
+                                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                                          Performance
+                                        </p>
+                                        <div className="text-sm space-y-2">
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">
+                                              Total Collected
+                                            </span>
+                                            <span className="font-medium">
+                                              {formatCurrency(currentSelected.totalCollected)}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">
+                                              Pending Payout
+                                            </span>
+                                            <span
+                                              className={`font-medium ${parseFloat(currentSelected.pendingCommission) > 0 ? 'text-primary' : ''}`}
+                                            >
+                                              {formatCurrency(
+                                                currentSelected.pendingCommission,
+                                              )}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Actions */}
+                                      <div className="space-y-3">
+                                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                                          Actions
+                                        </p>
+                                        <div className="space-y-2">
+                                          {parseFloat(currentSelected.pendingCommission) >
+                                            0 && (
                                             <Button
-                                              variant="outline"
+                                              className="w-full gap-2"
+                                              size="sm"
+                                              onClick={() =>
+                                                setAgentToPayCommission(currentSelected)
+                                              }
+                                            >
+                                              <CurrencyCircleDollar className="h-4 w-4" />
+                                              Pay Commission
+                                            </Button>
+                                          )}
+                                          {currentSelected.status === 'suspended' && (
+                                            <Button
                                               className="w-full"
                                               size="sm"
                                               onClick={() =>
                                                 handleToggleStatus(currentSelected)
                                               }
                                             >
-                                              Suspend Agent
+                                              Activate Agent
                                             </Button>
-                                          </div>
+                                          )}
+                                          <Button
+                                            variant="outline"
+                                            className="w-full gap-2"
+                                            size="sm"
+                                            onClick={() =>
+                                              setResetPasswordAgent(currentSelected)
+                                            }
+                                          >
+                                            <Key className="h-4 w-4" />
+                                            Reset Password
+                                          </Button>
+                                        </div>
 
-                                          <div className="pt-3 border-t">
-                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                              <CalendarBlank className="h-3.5 w-3.5" />
-                                              Joined{' '}
-                                              {format(
-                                                new Date(currentSelected.createdAt),
-                                                'MMMM d, yyyy',
-                                              )}
-                                            </div>
+                                        <div className="pt-3 border-t">
+                                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <CalendarBlank className="h-3.5 w-3.5" />
+                                            Joined{' '}
+                                            {format(
+                                              new Date(currentSelected.createdAt),
+                                              'MMMM d, yyyy',
+                                            )}
                                           </div>
                                         </div>
                                       </div>
-                                    ) : (
-                                      <div className="space-y-5">
-                                        {/* Suspended / Terminated banner */}
-                                        <div
-                                          className={`rounded-lg p-3 flex gap-2.5 border ${currentSelected.status === 'suspended' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-destructive/10 border-destructive/20'}`}
-                                        >
-                                          <Warning
-                                            className={`h-4 w-4 shrink-0 mt-0.5 ${currentSelected.status === 'suspended' ? 'text-amber-600' : 'text-destructive'}`}
-                                          />
-                                          <div className="text-sm">
-                                            <p
-                                              className={`font-medium ${currentSelected.status === 'suspended' ? 'text-amber-600' : 'text-destructive'}`}
-                                            >
-                                              {currentSelected.status === 'suspended'
-                                                ? 'Agent Suspended'
-                                                : 'Agent Terminated'}
-                                            </p>
-                                            <p className="text-muted-foreground text-xs mt-0.5">
-                                              {currentSelected.status === 'suspended'
-                                                ? 'This agent cannot collect payments or create loans while suspended.'
-                                                : 'This agent has been terminated and no longer has access.'}
-                                            </p>
-                                          </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                          {/* Performance (read-only) */}
-                                          <div className="space-y-3">
-                                            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                              Performance
-                                            </p>
-                                            <div className="text-sm space-y-2">
-                                              <div className="flex justify-between">
-                                                <span className="text-muted-foreground">
-                                                  Total Collected
-                                                </span>
-                                                <span className="font-medium">
-                                                  {formatCurrency(currentSelected.totalCollected)}
-                                                </span>
-                                              </div>
-                                              <div className="flex justify-between">
-                                                <span className="text-muted-foreground">
-                                                  Pending Payout
-                                                </span>
-                                                <span
-                                                  className={`font-medium ${parseFloat(currentSelected.pendingCommission) > 0 ? 'text-primary' : ''}`}
-                                                >
-                                                  {formatCurrency(
-                                                    currentSelected.pendingCommission,
-                                                  )}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* Actions */}
-                                          <div className="space-y-3">
-                                            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                              Actions
-                                            </p>
-                                            <div className="space-y-2">
-                                              {parseFloat(currentSelected.pendingCommission) >
-                                                0 && (
-                                                <Button
-                                                  className="w-full gap-2"
-                                                  size="sm"
-                                                  onClick={() =>
-                                                    setAgentToPayCommission(currentSelected)
-                                                  }
-                                                >
-                                                  <CurrencyCircleDollar className="h-4 w-4" />
-                                                  Pay Commission
-                                                </Button>
-                                              )}
-                                              {currentSelected.status === 'suspended' && (
-                                                <Button
-                                                  className="w-full"
-                                                  size="sm"
-                                                  onClick={() =>
-                                                    handleToggleStatus(currentSelected)
-                                                  }
-                                                >
-                                                  Activate Agent
-                                                </Button>
-                                              )}
-                                              <Button
-                                                variant="outline"
-                                                className="w-full gap-2"
-                                                size="sm"
-                                                onClick={() =>
-                                                  setResetPasswordAgent(currentSelected)
-                                                }
-                                              >
-                                                <Key className="h-4 w-4" />
-                                                Reset Password
-                                              </Button>
-                                            </div>
-
-                                            <div className="pt-3 border-t">
-                                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                                <CalendarBlank className="h-3.5 w-3.5" />
-                                                Joined{' '}
-                                                {format(
-                                                  new Date(currentSelected.createdAt),
-                                                  'MMMM d, yyyy',
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
+                                    </div>
                                   </div>
-                                </motion.div>
-                              </td>
-                            </motion.tr>
+                                )}
+                              </div>
+                            </motion.div>
                           )}
                         </AnimatePresence>
                       </Fragment>
                     )
                   })}
-                </tbody>
-              </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <UsersThree className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">No agents yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Add agents to help you manage loan collections
+                  </p>
+                  <Button onClick={() => setShowAddDialog(true)} className="mt-4 gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Your First Agent
+                  </Button>
+                </div>
+              )}
             </div>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
-              <UsersThree className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold mb-1">No agents yet</h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                Add agents to help you manage loan collections
-              </p>
-              <Button onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Agent
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </PageContent>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Pending Payouts */}
+          <div className={cn("rounded-xl border shadow-sm", agentsWithPayouts.length > 0 && "border-amber-300/50")}>
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <CurrencyCircleDollar className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Pending Payouts</h3>
+              </div>
+            </div>
+            <div className="p-5 pt-0">
+              {agentsWithPayouts.length > 0 ? (
+                <div className="space-y-0">
+                  {agentsWithPayouts.map((agent) => (
+                    <div
+                      key={agent.id}
+                      className="flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors"
+                    >
+                      <span className="h-2 w-2 rounded-full shrink-0 bg-amber-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{agent.agentName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(agent.totalCollected)} collected
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <p className="text-sm font-semibold text-amber-600">
+                          {formatCurrency(agent.pendingCommission)}
+                        </p>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setAgentToPayCommission(agent)}
+                        >
+                          Pay
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
+                  <p className="text-sm">All commissions paid!</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Performers */}
+          {agents.length > 0 && (
+            <div className="rounded-xl border shadow-sm">
+              <div className="p-5 pb-3">
+                <div className="flex items-center gap-2">
+                  <ChartBar className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-base font-semibold">Performance</h3>
+                </div>
+              </div>
+              <div className="p-5 pt-0">
+                <div className="space-y-0">
+                  {[...agents]
+                    .sort((a, b) => parseFloat(b.totalCollected) - parseFloat(a.totalCollected))
+                    .slice(0, 5)
+                    .map((agent, i) => {
+                      const collected = parseFloat(agent.totalCollected)
+                      const maxCollected = Math.max(...agents.map((a) => parseFloat(a.totalCollected)), 1)
+                      const barWidth = (collected / maxCollected) * 100
+                      return (
+                        <div
+                          key={agent.id}
+                          className="py-3 border-b last:border-0 -mx-5 px-5"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-xs text-muted-foreground w-4 shrink-0">{i + 1}.</span>
+                              <p className="text-sm font-medium truncate">{agent.agentName}</p>
+                            </div>
+                            <p className="text-sm font-semibold shrink-0 ml-2">{formatCurrency(collected)}</p>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden ml-6">
+                            <div
+                              className="h-full bg-primary/60 rounded-full transition-all duration-500"
+                              style={{ width: `${barWidth}%` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </StaggerItem>
 
       {/* Add Agent Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -1247,7 +1261,7 @@ function AgentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Stagger>
   )
 }
 

@@ -10,16 +10,18 @@ const PopoverTrigger = PopoverPrimitive.Trigger
 function PopoverContent({
   className,
   align = "center",
+  side = "bottom",
   sideOffset = 4,
   children,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Popup> & {
   align?: "start" | "center" | "end"
+  side?: "top" | "bottom" | "left" | "right"
   sideOffset?: number
 }) {
   return (
     <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Positioner side="bottom" sideOffset={sideOffset} align={align}>
+      <PopoverPrimitive.Positioner side={side} sideOffset={sideOffset} align={align}>
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(

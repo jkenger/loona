@@ -349,28 +349,20 @@ function AgentNewLoanWizard() {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white py-4 pb-12">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
-              Agent Portal
-            </span>
-            <span className="text-blue-300/40">/</span>
-            <Link
-              to="/agent/loans"
-              className="text-sm text-blue-200/70 hover:text-white transition-colors"
-            >
-              Loans
-            </Link>
-            <span className="text-blue-300/40">/</span>
-            <h1 className="text-lg font-semibold">New Loan</h1>
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <Link
+          to="/agent/loans"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Loans
+        </Link>
+        <h1 className="text-3xl font-bold tracking-tight mt-2">New Loan</h1>
+        <p className="text-muted-foreground">Create a new loan for approval</p>
       </div>
 
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-6 pb-8">
+      <div>
         {/* Pending Approval Notice */}
         <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
           <Clock className="h-5 w-5 text-amber-500 shrink-0" />
@@ -392,7 +384,7 @@ function AgentNewLoanWizard() {
 
         {/* Lender Selection (if agent works for multiple lenders) */}
         {permissions.length > 1 && (
-          <Card className="mb-6 shadow-lg">
+          <Card className="mb-6 shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-base">Select Lender</CardTitle>
             </CardHeader>
@@ -420,7 +412,7 @@ function AgentNewLoanWizard() {
         )}
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-0 mb-6 bg-card rounded-lg border shadow-lg p-4">
+        <div className="flex items-center justify-center gap-0 mb-6 bg-card rounded-lg border shadow-sm rounded-xl p-4">
           {STEP_LABELS.map((label, i) => {
             const stepNum = i + 1
             const isActive = step === stepNum
@@ -472,7 +464,7 @@ function AgentNewLoanWizard() {
 
         {/* Step 1 — Borrower */}
         {step === 1 && (
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle>Borrower</CardTitle>
               <CardDescription>
@@ -678,7 +670,7 @@ function AgentNewLoanWizard() {
         {/* Step 2 — Loan Terms */}
         {step === 2 && (
           <div className="grid gap-6 lg:grid-cols-5">
-            <Card className="lg:col-span-3 shadow-lg">
+            <Card className="lg:col-span-3 shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle>Loan Terms</CardTitle>
                 <CardDescription>
@@ -932,7 +924,7 @@ function AgentNewLoanWizard() {
             </Card>
 
             {/* Summary Card */}
-            <Card className="lg:col-span-2 h-fit shadow-lg">
+            <Card className="lg:col-span-2 h-fit shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <Calculator className="h-5 w-5 text-primary" />
@@ -1023,7 +1015,7 @@ function AgentNewLoanWizard() {
         {step === 3 && (
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Borrower Summary */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5 text-primary" />
@@ -1094,7 +1086,7 @@ function AgentNewLoanWizard() {
             </Card>
 
             {/* Loan Terms Summary */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <CurrencyCircleDollar className="h-5 w-5 text-primary" />

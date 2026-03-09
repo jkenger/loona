@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { toast } from "sonner"
-import { format } from "date-fns"
 import { getPenaltySettings, savePenaltySettings } from "@/server/penalty-settings"
 import { Button } from "@/components/ui/button"
 import {
@@ -85,40 +84,24 @@ function PenaltySettingsPage() {
     setConfig((prev) => ({ ...prev, ...partial }))
 
   return (
-    <div>
-      {/* Header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          <Link
-            to="/settings"
-            className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Settings
-          </Link>
-
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span>Settings</span>
-            <span className="text-blue-300/40">·</span>
-            <span>Penalty Rules</span>
-            <span className="text-blue-300/40">·</span>
-            <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
-          </div>
-
-          <div className="border-l-4 border-primary pl-4">
-            <h1 className="text-4xl font-bold tracking-tight">Penalty Settings</h1>
-            <p className="text-blue-200/70">
-              Configure late fees and penalty interest for overdue payments
-            </p>
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <Link
+          to="/settings"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Settings
+        </Link>
+        <h1 className="text-3xl font-bold tracking-tight">Penalty Settings</h1>
+        <p className="text-muted-foreground">
+          Configure late fees and penalty interest for overdue payments
+        </p>
       </div>
 
-      {/* Content */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
         <div className="max-w-2xl space-y-6">
           {/* Master Toggle */}
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="flex items-center gap-2">
                 <Warning className="h-5 w-5 text-destructive" />
@@ -167,7 +150,7 @@ function PenaltySettingsPage() {
           {config.enabled && (
             <>
               {/* Late Fee */}
-              <Card className="shadow-lg">
+              <Card className="shadow-sm rounded-xl">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="flex items-center gap-2">
                     <Gavel className="h-5 w-5 text-primary" />
@@ -235,7 +218,7 @@ function PenaltySettingsPage() {
               </Card>
 
               {/* Daily Penalty Interest */}
-              <Card className="shadow-lg">
+              <Card className="shadow-sm rounded-xl">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="h-5 w-5 text-primary" />
@@ -305,7 +288,7 @@ function PenaltySettingsPage() {
               </Card>
 
               {/* Penalty Cap */}
-              <Card className="shadow-lg">
+              <Card className="shadow-sm rounded-xl">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5 text-primary" />
@@ -361,7 +344,7 @@ function PenaltySettingsPage() {
               </Card>
 
               {/* Commission on Penalties */}
-              <Card className="shadow-lg">
+              <Card className="shadow-sm rounded-xl">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -384,7 +367,7 @@ function PenaltySettingsPage() {
 
           {/* Where penalties appear */}
           {config.enabled && (
-            <Card className="shadow-lg border-blue-200 dark:border-blue-900">
+            <Card className="shadow-sm rounded-xl border-blue-200 dark:border-blue-900">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
@@ -433,7 +416,6 @@ function PenaltySettingsPage() {
             </Button>
           </div>
         </div>
-      </div>
     </div>
   )
 }

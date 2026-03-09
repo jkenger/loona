@@ -102,47 +102,35 @@ function AgentLoanDetailPage() {
   }
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Back Link */}
-          <Link
-            to="/agent/loans"
-            className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <Link
+          to="/agent/loans"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Loans
+        </Link>
+
+        <div className="flex items-center gap-3 mt-2">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {formatCurrency(loan.principal)}
+          </h1>
+          <Badge
+            variant={statusConfig[loan.status].variant}
+            className={statusConfig[loan.status].className || ''}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Loans
-          </Link>
-
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {formatCurrency(loan.principal)}
-                </h1>
-                <Badge
-                  variant={statusConfig[loan.status].variant}
-                  className={loan.status === 'active' ? 'bg-primary/20 text-primary-foreground border-0' : statusConfig[loan.status].className || ''}
-                >
-                  {statusConfig[loan.status].label}
-                </Badge>
-              </div>
-              <p className="text-blue-200/70">
-                {loan.contact.name} · {loan.interestRate}% for {loan.termMonths} months
-              </p>
-            </div>
-          </div>
+            {statusConfig[loan.status].label}
+          </Badge>
         </div>
+        <p className="text-muted-foreground">
+          {loan.contact.name} · {loan.interestRate}% for {loan.termMonths} months
+        </p>
       </div>
-
-      {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
         {/* Pending Approval Notice */}
         {loan.status === 'pending_approval' && (
-          <Card className="border-amber-300 bg-amber-50 shadow-lg">
+          <Card className="border-amber-300 bg-amber-50 shadow-sm rounded-xl">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
@@ -161,7 +149,7 @@ function AgentLoanDetailPage() {
 
         {/* Rejected Notice */}
         {loan.status === 'rejected' && (
-          <Card className="border-gray-300 bg-gray-50 shadow-lg">
+          <Card className="border-gray-300 bg-gray-50 shadow-sm rounded-xl">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
@@ -182,7 +170,7 @@ function AgentLoanDetailPage() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Loan Summary */}
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle>Loan Summary</CardTitle>
             </CardHeader>
@@ -247,7 +235,7 @@ function AgentLoanDetailPage() {
           </Card>
 
           {/* Borrower */}
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" />
@@ -272,7 +260,7 @@ function AgentLoanDetailPage() {
           </Card>
 
           {/* Timeline */}
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="flex items-center gap-2">
                 <CalendarCheck className="h-5 w-5 text-primary" />
@@ -499,7 +487,6 @@ function AgentLoanDetailPage() {
             </CardContent>
           </Card>
         )}
-      </div>
 
       {/* Record Payment Dialog */}
       <RecordPaymentDialog

@@ -31,7 +31,7 @@
     --chart-3: hsl(207 83% 35%);
     --chart-4: hsl(207 83% 28%);
     --chart-5: hsl(207 83% 21%);
-    --radius: 0.5rem;
+    --radius: 0.75rem;
     --sidebar: hsl(210 20% 98%);
     --sidebar-foreground: hsl(210 15% 12%);
     --sidebar-primary: hsl(207 83% 49%);
@@ -76,6 +76,15 @@
     --chart-3: hsl(207 83% 41%);
     --chart-4: hsl(207 83% 34%);
     --chart-5: hsl(207 83% 27%);
+
+    --sidebar: hsl(220 20% 11%);
+    --sidebar-foreground: hsl(210 12% 90%);
+    --sidebar-primary: hsl(207 83% 55%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(220 15% 18%);
+    --sidebar-accent-foreground: hsl(210 12% 90%);
+    --sidebar-border: hsl(220 15% 20%);
+    --sidebar-ring: hsl(207 83% 55%);
 }
 
 @theme inline {

@@ -83,36 +83,37 @@ function AgentHomePage() {
   const isEmpty = overdue.length === 0 && thisWeek.length === 0 && upcomingItems.length === 0
 
   return (
-    <div>
-      {/* Compact header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-5 pb-14">
-        <div className="mx-auto max-w-2xl px-4 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              {isEmpty ? (
-                <h1 className="text-lg font-semibold">You're all caught up</h1>
-              ) : (
-                <h1 className="text-lg font-semibold">
-                  {allItems.length} payment{allItems.length !== 1 ? "s" : ""} to collect
-                  <span className="text-blue-200/70 font-normal"> — {formatCurrency(totalAmount)}</span>
-                </h1>
-              )}
-            </div>
-            {canCreateLoans && (
-              <Link to="/agent/loans/new">
-                <Button size="sm" variant="outline" className="gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 shrink-0">
-                  <Plus className="h-3.5 w-3.5" weight="bold" />
-                  <span className="hidden sm:inline">Create Loan</span>
-                  <span className="sm:hidden">New</span>
-                </Button>
-              </Link>
-            )}
-          </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Page title */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          {isEmpty ? (
+            <>
+              <h1 className="text-3xl font-bold tracking-tight">You're all caught up</h1>
+              <p className="text-muted-foreground">No payments to collect right now.</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold tracking-tight">Agent Portal</h1>
+              <p className="text-muted-foreground">
+                {allItems.length} payment{allItems.length !== 1 ? "s" : ""} to collect — {formatCurrency(totalAmount)}
+              </p>
+            </>
+          )}
         </div>
+        {canCreateLoans && (
+          <Link to="/agent/loans/new">
+            <Button size="sm" className="gap-1.5 shrink-0">
+              <Plus className="h-3.5 w-3.5" weight="bold" />
+              <span className="hidden sm:inline">Create Loan</span>
+              <span className="sm:hidden">New</span>
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Task list — single column, mobile-first */}
-      <div className="mx-auto max-w-2xl px-4 -mt-7 pb-8 space-y-4">
+      <div className="mx-auto max-w-2xl space-y-4">
 
         {/* Empty state */}
         {isEmpty && (

@@ -9,7 +9,6 @@ import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Plus, MagnifyingGlass, User, Phone, Envelope } from "@phosphor-icons/react"
 import { useState } from "react"
-import { format } from "date-fns"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
 
 export const Route = createFileRoute("/_dashboard/contacts/")({
@@ -27,47 +26,33 @@ export const Route = createFileRoute("/_dashboard/contacts/")({
 
 function ContactsPageSkeleton() {
   return (
-    <div>
-      {/* Header skeleton */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          <Skeleton className="h-5 w-64 bg-white/10" />
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4 space-y-2">
-              <Skeleton className="h-10 w-40 bg-white/10" />
-              <Skeleton className="h-4 w-48 bg-white/10" />
-            </div>
-            <Skeleton className="h-10 w-32 bg-white/10" />
-          </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-40" />
+          <Skeleton className="h-4 w-48" />
         </div>
+        <Skeleton className="h-10 w-32" />
       </div>
-
-      {/* Content skeleton */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        <Card className="shadow-lg">
-          <CardContent className="p-4">
-            <Skeleton className="h-10 w-full max-w-sm" />
-          </CardContent>
-        </Card>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="space-y-1">
-                    <Skeleton className="h-5 w-28" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
+      <Skeleton className="h-10 w-full max-w-sm" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Card key={i} className="shadow-sm rounded-xl">
+            <CardHeader className="p-4 pb-2">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="space-y-1">
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-40" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-40" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   )
@@ -94,55 +79,35 @@ function ContactsPage() {
   )
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Meta Bar */}
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
-              Lender Portal
-            </span>
-            <span className="text-blue-300/40">·</span>
-            <span>Contacts</span>
-            <span className="text-blue-300/40">·</span>
-            <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
+    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Page Header */}
+      <StaggerItem>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
+            <p className="text-muted-foreground">Manage your borrowers</p>
           </div>
-
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4">
-              <h1 className="text-4xl font-bold tracking-tight">Contacts</h1>
-              <p className="text-blue-200/70">Manage your borrowers</p>
-            </div>
-            <Link to="/contacts/new">
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" weight="bold" />
-                Add Contact
-              </Button>
-            </Link>
-          </div>
+          <Link to="/contacts/new">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" weight="bold" />
+              Add Contact
+            </Button>
+          </Link>
         </div>
-      </div>
+      </StaggerItem>
 
-      {/* Content - overlaps header */}
-      <Stagger className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        {/* Search */}
-        <StaggerItem>
-        <Card className="shadow-lg">
-          <CardContent className="p-4">
-            <div className="relative max-w-sm">
-              <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search contacts..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </CardContent>
-        </Card>
-        </StaggerItem>
+      {/* Search */}
+      <StaggerItem>
+        <div className="relative max-w-sm">
+          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search contacts..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </StaggerItem>
 
         {/* Contacts Grid */}
         <StaggerItem>
@@ -150,7 +115,7 @@ function ContactsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredContacts.map((contact) => (
               <Link key={contact.id} to="/contacts/$contactId" params={{ contactId: contact.id }}>
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full shadow-sm">
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full shadow-sm rounded-xl">
                   <CardHeader className="p-4 pb-2">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -191,7 +156,7 @@ function ContactsPage() {
             ))}
           </div>
         ) : (
-          <Card className="shadow-sm">
+          <Card className="shadow-sm rounded-xl">
             <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
               <User className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-semibold mb-1">No contacts found</h3>
@@ -211,6 +176,5 @@ function ContactsPage() {
         )}
         </StaggerItem>
       </Stagger>
-    </div>
   )
 }

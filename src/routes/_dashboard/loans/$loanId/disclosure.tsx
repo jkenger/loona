@@ -204,23 +204,21 @@ function DisclosurePage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header — back link only */}
-      <div className="bg-[hsl(215_45%_14%)] text-white py-4 sticky top-0 z-10">
-        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-          <Link
-            to="/loans/$loanId"
-            params={{ loanId: loan.id }}
-            className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Loan Details
-          </Link>
-        </div>
+    <div className="min-h-screen">
+      {/* Back link */}
+      <div className="px-4 sm:px-6 lg:px-8 pt-6 pb-2">
+        <Link
+          to="/loans/$loanId"
+          params={{ loanId: loan.id }}
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Loan Details
+        </Link>
       </div>
 
       {/* Content Area — sidebar + document */}
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
           {/* Document Preview — second on mobile, first on desktop */}
           <div className="min-w-0 order-2 lg:order-1">
@@ -875,7 +873,7 @@ function DisclosurePage() {
           </div>
 
           {/* Sidebar Panel — first on mobile, sticky on desktop */}
-          <div className="order-1 lg:order-2 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-104px)] rounded-lg border bg-background shadow-lg overflow-hidden flex flex-col">
+          <div className="order-1 lg:order-2 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-104px)] rounded-xl border bg-background shadow-sm overflow-hidden flex flex-col">
             <div className="flex flex-col h-full bg-background border-l">
               {/* Sidebar Header */}
               <div className="p-4 border-b">

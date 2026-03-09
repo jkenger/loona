@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SkeletonTablePage } from '@/components/ui/skeleton'
-import { format } from 'date-fns'
 import { getAgentLoans } from '@/server/agents'
 import { getAgentLoanCreationPermission } from '@/server/loans'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -63,45 +62,25 @@ function AgentLoansPage() {
   }
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Meta Bar */}
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
-              Agent Portal
-            </span>
-            <span className="text-blue-300/40">·</span>
-            <span>Loans</span>
-            <span className="text-blue-300/40">·</span>
-            <span>{format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
-          </div>
-
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4">
-              <h1 className="text-4xl font-bold tracking-tight">Loans</h1>
-              <p className="text-blue-200/70">Loans assigned to you for collection</p>
-            </div>
-            {canCreateLoans && (
-              <Link to="/agent/loans/new">
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" weight="bold" />
-                  Create Loan
-                </Button>
-              </Link>
-            )}
-          </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
+          <p className="text-muted-foreground">Loans assigned to you for collection</p>
         </div>
+        {canCreateLoans && (
+          <Link to="/agent/loans/new">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" weight="bold" />
+              Create Loan
+            </Button>
+          </Link>
+        )}
       </div>
-
-      {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
       {/* Loans Grid */}
       {loans.length > 0 ? (
-        <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3 [&>a>div]:shadow-lg">
+        <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3 [&>a>div]:shadow-sm">
           {loans.map((loan) => {
             const amountPaid = parseFloat(loan.amountPaid)
             const remaining = parseFloat(loan.remainingBalance)
@@ -197,7 +176,6 @@ function AgentLoansPage() {
           </CardContent>
         </Card>
       )}
-    </div>
     </div>
   )
 }

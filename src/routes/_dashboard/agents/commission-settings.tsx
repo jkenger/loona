@@ -1,7 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { toast } from "sonner"
-import { format } from "date-fns"
 import {
   getCommissionSettings,
   saveCommissionSettings,
@@ -73,29 +72,22 @@ export const Route = createFileRoute(
 
 function SettingsSkeleton() {
   return (
-    <div>
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          <Skeleton className="h-5 w-64 bg-white/10" />
-          <div className="border-l-4 border-primary pl-4 space-y-2">
-            <Skeleton className="h-10 w-72 bg-white/10" />
-            <Skeleton className="h-4 w-48 bg-white/10" />
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="h-4 w-48" />
       </div>
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="shadow-sm">
-            <CardHeader className="p-4 pb-2">
-              <Skeleton className="h-6 w-40" />
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {[1, 2, 3].map((i) => (
+        <Card key={i} className="shadow-sm">
+          <CardHeader className="p-4 pb-2">
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent className="p-4 pt-0 space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }
@@ -255,47 +247,29 @@ function CommissionSettingsPage() {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Meta Bar */}
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
-              Lender Portal
-            </span>
-            <span className="text-blue-300/40">&middot;</span>
-            <span>Agents</span>
-            <span className="text-blue-300/40">&middot;</span>
-            <span>Commission Settings</span>
-            <span className="text-blue-300/40">&middot;</span>
-            <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
-          </div>
-
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4">
-              <h1 className="text-4xl font-bold tracking-tight">
-                Commission Settings
-              </h1>
-              <p className="text-blue-200/70">
-                Configure your agent commission program
-              </p>
-            </div>
-            <Link
-              to="/agents"
-              className={buttonVariants({ variant: "outline" }) + " gap-2 bg-white/10 border-white/20 hover:bg-white/20 text-white"}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Agents
-            </Link>
-          </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Commission Settings
+          </h1>
+          <p className="text-muted-foreground">
+            Configure your agent commission program
+          </p>
         </div>
+        <Link
+          to="/agents"
+          className={buttonVariants({ variant: "outline" }) + " gap-2"}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Agents
+        </Link>
       </div>
 
       {/* Mobile tabs */}
-      <div className="lg:hidden border-b bg-card">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+      <div className="lg:hidden border-b bg-card -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+        <div>
           <div className="flex items-center gap-1 overflow-x-auto py-2 -mb-px">
             {basicSections.map((section) => {
               const Icon = section.icon
@@ -341,7 +315,7 @@ function CommissionSettingsPage() {
       </div>
 
       {/* Content */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 lg:-mt-8 pb-8 pt-6 lg:pt-0 relative">
+      <div>
         <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
           {/* Desktop sidebar */}
           <nav className="hidden lg:block sticky top-[72px] self-start">

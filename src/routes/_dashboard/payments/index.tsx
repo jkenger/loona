@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { getUpcomingPayments, getPayments } from "@/server/payments"
+import { getUpcomingPayments, getPayments, getMonthlyPaymentStats } from "@/server/payments"
 import { PenaltyBadge } from "@/components/penalty-badge"
 import { RecordPaymentDialog } from "@/components/record-payment-dialog"
 import { ReversePaymentDialog } from "@/components/reverse-payment-dialog"
@@ -7,7 +7,6 @@ import { EditPaymentDateDialog } from "@/components/edit-payment-date-dialog"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   Receipt,
@@ -17,11 +16,12 @@ import {
   CurrencyCircleDollar,
   Funnel,
   DownloadSimple,
-  TrendUp,
-  CalendarCheck,
   ArrowCounterClockwise,
   PencilSimple,
   LinkSimple,
+  ArrowRight,
+  ChartBar,
+  CheckCircle,
 } from "@phosphor-icons/react"
 import { subDays, startOfMonth, isAfter, format } from "date-fns"
 import { formatRelativeDate } from "@/lib/utils/date"
@@ -29,18 +29,20 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
+import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/_dashboard/payments/")({
   loader: async ({ context }) => {
     const { session } = context as { session: { user: { role: string | null } } }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { upcoming: [], history: [], unauthorized: true }
+      return { upcoming: [], history: [], monthlyStats: null, unauthorized: true }
     }
-    const [upcoming, history] = await Promise.all([
+    const [upcoming, history, monthlyStats] = await Promise.all([
       getUpcomingPayments(),
       getPayments(),
+      getMonthlyPaymentStats(),
     ])
-    return { upcoming, history, unauthorized: false }
+    return { upcoming, history, monthlyStats, unauthorized: false }
   },
   pendingComponent: PaymentsPageSkeleton,
   component: PaymentsPage,
@@ -48,58 +50,43 @@ export const Route = createFileRoute("/_dashboard/payments/")({
 
 function PaymentsPageSkeleton() {
   return (
-    <div>
-      {/* Header skeleton */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          <Skeleton className="h-5 w-64 bg-white/10" />
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4 space-y-2">
-              <Skeleton className="h-10 w-40 bg-white/10" />
-              <Skeleton className="h-4 w-52 bg-white/10" />
-            </div>
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-4 w-52 mt-2" />
       </div>
 
-      {/* Content skeleton */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        {/* Stats skeleton */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="shadow-sm">
-              <CardContent className="p-4">
-                <Skeleton className="h-4 w-20 mb-2" />
-                <Skeleton className="h-8 w-24" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Two column skeleton */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <Card className="shadow-lg">
-              <CardHeader className="p-4 pb-2">
-                <Skeleton className="h-6 w-32" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </CardContent>
-            </Card>
+      <div className="grid gap-5 lg:grid-cols-5">
+        <div className="lg:col-span-3 space-y-5">
+          <div className="rounded-xl border shadow-sm p-5 space-y-4">
+            <Skeleton className="h-5 w-40" />
+            <div className="grid grid-cols-3 gap-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+            <Skeleton className="h-2 w-full rounded-full" />
           </div>
-          <Card className="shadow-sm">
-            <CardHeader className="p-4 pb-2">
-              <Skeleton className="h-6 w-36" />
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-14 w-full" />
-              ))}
-            </CardContent>
-          </Card>
+          <div className="rounded-xl border shadow-sm p-5 space-y-3">
+            <Skeleton className="h-5 w-44" />
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+        </div>
+        <div className="lg:col-span-2 space-y-5">
+          <div className="rounded-xl border shadow-sm p-5 space-y-3">
+            <Skeleton className="h-5 w-24" />
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+          <div className="rounded-xl border shadow-sm p-5 space-y-3">
+            <Skeleton className="h-5 w-24" />
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -107,7 +94,7 @@ function PaymentsPageSkeleton() {
 }
 
 function PaymentsPage() {
-  const { upcoming, history, unauthorized } = Route.useLoaderData()
+  const { upcoming, history, monthlyStats, unauthorized } = Route.useLoaderData()
 
   if (unauthorized) {
     return (
@@ -144,12 +131,16 @@ function PaymentsPage() {
   const overdueItems = upcoming.filter((item) => item.status === "overdue")
   const upcomingItems = upcoming.filter((item) => item.status !== "overdue")
 
-  // Calculate stats
   const now = new Date()
-  const thisMonthPayments = history.filter((p) => isAfter(new Date(p.paidAt), startOfMonth(now)))
-  const collectedThisMonth = thisMonthPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0)
   const overdueAmount = overdueItems.reduce((sum, item) => sum + parseFloat(item.amount) - parseFloat(item.paidAmount), 0)
-  const upcomingAmount = upcomingItems.reduce((sum, item) => sum + parseFloat(item.amount) - parseFloat(item.paidAmount), 0)
+
+  // Monthly stats
+  const expectedAmount = monthlyStats?.expectedAmount ?? 0
+  const collectedAmount = monthlyStats?.collectedAmount ?? 0
+  const collectionRate = monthlyStats?.collectionRate ?? 0
+  const expectedCount = monthlyStats?.expectedCount ?? 0
+  const collectedCount = monthlyStats?.collectedCount ?? 0
+  const collectionProgress = expectedAmount > 0 ? Math.min((collectedAmount / expectedAmount) * 100, 100) : 0
 
   // Filter history by date range
   const filteredHistory = history.filter((payment) => {
@@ -201,290 +192,248 @@ function PaymentsPage() {
   }
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Meta Bar */}
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
-              Lender Portal
-            </span>
-            <span className="text-blue-300/40">·</span>
-            <span>Payments</span>
-            <span className="text-blue-300/40">·</span>
-            <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
-          </div>
-
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4">
-              <h1 className="text-4xl font-bold tracking-tight">Payments</h1>
-              <p className="text-blue-200/70">Track and record loan payments</p>
-            </div>
-          </div>
-
-          {/* Section Tabs */}
-          <div className="flex items-center gap-1 border-t border-white/10 pt-3">
-            <span className="px-3 py-1.5 text-sm font-medium text-white border-b-2 border-primary">
-              Collections
-            </span>
-            <Link
-              to="/penalties"
-              search={{ loan: undefined }}
-              className="px-3 py-1.5 text-sm font-medium text-blue-200/50 hover:text-white transition-colors border-b-2 border-transparent"
-            >
-              Penalties
-            </Link>
-          </div>
+    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Payments</h1>
+        <p className="text-muted-foreground">Track and record loan payments</p>
+        <div className="flex items-center gap-1 mt-4">
+          <span className="px-3 py-1.5 text-sm font-medium text-foreground border-b-2 border-primary">
+            Collections
+          </span>
+          <Link
+            to="/penalties"
+            search={{ loan: undefined }}
+            className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border-b-2 border-transparent"
+          >
+            Penalties
+          </Link>
         </div>
       </div>
 
-      {/* Content - overlaps header */}
-      <Stagger className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-
-        {/* Stats Row */}
-        <StaggerItem className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card className="shadow-sm">
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs md:text-sm text-muted-foreground">Collected</p>
-                <TrendUp className="h-4 w-4 text-primary" />
+      {/* Bento Grid */}
+      <StaggerItem className="grid gap-5 lg:grid-cols-5">
+        {/* Left Column */}
+        <div className="lg:col-span-3 space-y-5">
+          {/* Collection Progress */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <ChartBar className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Collection Progress</h3>
               </div>
-              <p className="text-lg md:text-2xl font-bold mt-1">{formatCurrency(collectedThisMonth)}</p>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-destructive/50">
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs md:text-sm text-muted-foreground">Overdue</p>
-                <Warning className="h-4 w-4 text-destructive" />
+            </div>
+            <div className="p-5 pt-0">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Expected</p>
+                  <p className="text-lg font-bold">{formatCurrency(expectedAmount)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Collected</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(collectedAmount)}</p>
+                  <p className="text-xs text-muted-foreground">{collectionRate}%</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Overdue</p>
+                  <p className={cn("text-lg font-bold", overdueItems.length > 0 && "text-destructive")}>
+                    {overdueItems.length > 0 ? formatCurrency(overdueAmount) : formatCurrency(0)}
+                  </p>
+                </div>
               </div>
-              <p className="text-lg md:text-2xl font-bold mt-1 text-destructive">{formatCurrency(overdueAmount)}</p>
-              <p className="text-xs text-muted-foreground">{overdueItems.length} payment{overdueItems.length !== 1 ? "s" : ""}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs md:text-sm text-muted-foreground">Upcoming</p>
-                <CalendarCheck className="h-4 w-4 text-primary" />
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${collectionProgress}%` }}
+                />
               </div>
-              <p className="text-lg md:text-2xl font-bold mt-1">{formatCurrency(upcomingAmount)}</p>
-              <p className="text-xs text-muted-foreground">Next 30 days</p>
-            </CardContent>
-          </Card>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {collectedCount} of {expectedCount} payments collected
+              </p>
+            </div>
+          </div>
 
-          <Card className="shadow-sm">
-            <CardContent className="p-3 md:p-4">
+          {/* Upcoming Collections */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs md:text-sm text-muted-foreground">Recorded</p>
-                <Receipt className="h-4 w-4 text-primary" />
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-base font-semibold">Upcoming Collections</h3>
+                </div>
+                <Link
+                  to="/loans"
+                  className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                >
+                  View all <ArrowRight className="h-3 w-3" />
+                </Link>
               </div>
-              <p className="text-lg md:text-2xl font-bold mt-1">{thisMonthPayments.length}</p>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-        </StaggerItem>
-
-        {/* Two Column Layout */}
-        <StaggerItem className="grid lg:grid-cols-2 gap-6">
-          {/* Left Column: Track - Overdue & Upcoming */}
-          <div className="space-y-6">
-            {/* Overdue Section */}
-            <Card className={`shadow-lg ${overdueItems.length > 0 ? "border-destructive/50" : ""}`}>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <Warning className="h-5 w-5" weight="bold" />
-                  Overdue
-                </CardTitle>
-                <CardDescription>
-                  {overdueItems.length > 0
-                    ? `${overdueItems.length} payment${overdueItems.length !== 1 ? "s" : ""} need attention`
-                    : "No overdue payments"
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                {overdueItems.length > 0 ? (
-                  <div className="space-y-2">
-                    {overdueItems.map((item) => {
-                      const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-                      return (
-                        <div key={item.id} className="space-y-1">
-                          <div className="flex items-center justify-between p-3 rounded border border-destructive/30 bg-destructive/5">
-                            <div className="min-w-0 flex-1">
+            </div>
+            <div className="p-5 pt-0">
+              {upcomingItems.length > 0 ? (
+                <>
+                  <div className="space-y-0">
+                    {upcomingItems
+                      .slice((upcomingPage - 1) * UPCOMING_PAGE_SIZE, upcomingPage * UPCOMING_PAGE_SIZE)
+                      .map((item) => {
+                        const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
+                        const isPartial = item.status === "partial"
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors"
+                          >
+                            <span className="h-2 w-2 rounded-full shrink-0 bg-primary" />
+                            <div className="flex-1 min-w-0">
                               <Link
-                                to="/contacts/$contactId"
-                                params={{ contactId: item.contactId }}
-                                className="font-medium text-sm hover:text-primary truncate block"
+                                to="/loans/$loanId"
+                                params={{ loanId: item.loanId }}
+                                className="text-sm font-medium truncate block hover:text-primary"
                               >
                                 {item.contactName}
                               </Link>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>Due {formatRelativeDate(item.dueDate)}</span>
-                                <PenaltyBadge
-                                  penalties={item.penalties}
-                                  formatCurrency={formatCurrency}
-                                  loanId={item.loanId}
-                                />
-                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {formatRelativeDate(item.dueDate)}
+                                {isPartial && <Badge variant="secondary" className="ml-2 text-[10px]">Partial</Badge>}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2 ml-2">
-                              <div className="text-right">
-                                <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
-                              </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <p className="text-sm font-semibold">{formatCurrency(remaining)}</p>
                               <Button
                                 size="sm"
-                                variant="destructive"
+                                variant="outline"
                                 onClick={() => setSelectedScheduleItem(item)}
-                                className="h-8"
+                                className="h-7 text-xs"
                               >
                                 Record
                               </Button>
                             </div>
                           </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
                   </div>
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground">
-                    <Check className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <p className="text-sm">All caught up!</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Upcoming Section */}
-            <Card className="shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-primary" />
-                      Upcoming
-                    </CardTitle>
-                    <CardDescription>Next 30 days · {upcomingItems.length} total</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                {upcomingItems.length > 0 ? (
-                  <>
-                    <div className="space-y-2">
-                      {upcomingItems
-                        .slice((upcomingPage - 1) * UPCOMING_PAGE_SIZE, upcomingPage * UPCOMING_PAGE_SIZE)
-                        .map((item) => {
-                          const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
-                          const isPartial = item.status === "partial"
-                          return (
-                            <div
-                              key={item.id}
-                              className="flex items-center justify-between p-3 rounded border"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <Link
-                                  to="/contacts/$contactId"
-                                  params={{ contactId: item.contactId }}
-                                  className="font-medium text-sm hover:text-primary truncate block"
-                                >
-                                  {item.contactName}
-                                </Link>
-                                <p className="text-xs text-muted-foreground">
-                                  Due {formatRelativeDate(item.dueDate)}
-                                  {isPartial && <Badge variant="secondary" className="ml-2 text-[10px]">Partial</Badge>}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2 ml-2">
-                                <div className="text-right">
-                                  <p className="font-semibold text-sm">{formatCurrency(remaining)}</p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setSelectedScheduleItem(item)}
-                                  className="h-8"
-                                >
-                                  Record
-                                </Button>
-                              </div>
-                            </div>
-                          )
-                        })}
+                  {upcomingItems.length > UPCOMING_PAGE_SIZE && (
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                      <p className="text-xs text-muted-foreground">
+                        {(upcomingPage - 1) * UPCOMING_PAGE_SIZE + 1}-{Math.min(upcomingPage * UPCOMING_PAGE_SIZE, upcomingItems.length)} of {upcomingItems.length}
+                      </p>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setUpcomingPage((p) => Math.max(1, p - 1))}
+                          disabled={upcomingPage === 1}
+                        >
+                          Prev
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setUpcomingPage((p) => Math.min(Math.ceil(upcomingItems.length / UPCOMING_PAGE_SIZE), p + 1))}
+                          disabled={upcomingPage >= Math.ceil(upcomingItems.length / UPCOMING_PAGE_SIZE)}
+                        >
+                          Next
+                        </Button>
+                      </div>
                     </div>
-                    {/* Pagination */}
-                    {upcomingItems.length > UPCOMING_PAGE_SIZE && (
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                        <p className="text-xs text-muted-foreground">
-                          {(upcomingPage - 1) * UPCOMING_PAGE_SIZE + 1}-{Math.min(upcomingPage * UPCOMING_PAGE_SIZE, upcomingItems.length)} of {upcomingItems.length}
-                        </p>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => setUpcomingPage((p) => Math.max(1, p - 1))}
-                            disabled={upcomingPage === 1}
+                  )}
+                </>
+              ) : (
+                <div className="py-8 text-center">
+                  <CheckCircle className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No upcoming payments</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Overdue */}
+          <div className={cn("rounded-xl border shadow-sm", overdueItems.length > 0 && "border-destructive/50")}>
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <Warning className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Overdue</h3>
+              </div>
+            </div>
+            <div className="p-5 pt-0">
+              {overdueItems.length > 0 ? (
+                <div className="space-y-0">
+                  {overdueItems.map((item) => {
+                    const remaining = parseFloat(item.amount) - parseFloat(item.paidAmount)
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors"
+                      >
+                        <span className="h-2 w-2 rounded-full shrink-0 bg-destructive" />
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            to="/loans/$loanId"
+                            params={{ loanId: item.loanId }}
+                            className="text-sm font-medium truncate block hover:text-primary text-destructive"
                           >
-                            Prev
-                          </Button>
+                            {item.contactName}
+                          </Link>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{item.daysOverdue}d overdue</span>
+                            <PenaltyBadge
+                              penalties={item.penalties}
+                              formatCurrency={formatCurrency}
+                              loanId={item.loanId}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <p className="text-sm font-semibold text-destructive">{formatCurrency(remaining)}</p>
                           <Button
-                            variant="outline"
                             size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => setUpcomingPage((p) => Math.min(Math.ceil(upcomingItems.length / UPCOMING_PAGE_SIZE), p + 1))}
-                            disabled={upcomingPage >= Math.ceil(upcomingItems.length / UPCOMING_PAGE_SIZE)}
+                            variant="destructive"
+                            onClick={() => setSelectedScheduleItem(item)}
+                            className="h-7 text-xs"
                           >
-                            Next
+                            Record
                           </Button>
                         </div>
                       </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-muted-foreground text-center py-6 text-sm">
-                    No upcoming payments
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
+                  <p className="text-sm">All caught up!</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Right Column: History */}
-          <div className="space-y-6">
-            {/* History */}
-            <Card className="shadow-sm h-fit">
-            <CardHeader className="p-4 pb-2">
+          {/* Payment History */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Receipt className="h-5 w-5 text-primary" />
-                      History
-                    </CardTitle>
-                    <CardDescription>
-                      {filteredHistory.length} recorded
-                    </CardDescription>
+                  <div className="flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-base font-semibold">History</h3>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={exportToCSV}
-                    className="gap-1.5"
+                    className="gap-1.5 h-7 text-xs"
                   >
-                    <DownloadSimple className="h-4 w-4" />
+                    <DownloadSimple className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Export</span>
                   </Button>
                 </div>
                 <div className="flex items-center gap-1">
                   <Funnel className="h-4 w-4 text-muted-foreground mr-1" />
                   {[
-                    { key: "month", label: "Month" },
+                    { key: "month", label: "Mo" },
                     { key: "30days", label: "30d" },
                     { key: "90days", label: "90d" },
                     { key: "all", label: "All" },
@@ -501,14 +450,13 @@ function PaymentsPage() {
                   ))}
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
+            </div>
+            <div className="p-5 pt-0">
               {filteredHistory.length > 0 ? (
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                <div className="space-y-0 max-h-[500px] overflow-y-auto">
                   {filteredHistory.map((payment) => {
                     const isDebit = payment.type === "debit"
                     const isReversed = payment.type === "credit" && !!payment.reversedAt
-                    // Check if this credit is the most recent non-reversed credit for its schedule item
                     const canReverse = payment.type === "credit" && !payment.reversedAt && payment.scheduleItemId && !history.some(
                       (other) =>
                         other.id !== payment.id &&
@@ -522,40 +470,31 @@ function PaymentsPage() {
                       return (
                         <div
                           key={payment.id}
-                          className="flex items-center justify-between p-3 rounded border border-destructive/20 bg-destructive/5 opacity-80"
+                          className="flex items-center gap-3 py-3 border-b last:border-0 -mx-5 px-5 opacity-80"
                         >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-destructive/10">
-                              <ArrowCounterClockwise className="h-4 w-4 text-destructive" weight="bold" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <Link
-                                  to="/loans/$loanId"
-                                  params={{ loanId: payment.loanId }}
-                                  className="font-medium text-sm hover:text-primary truncate block text-destructive"
-                                >
-                                  {payment.contactName}
-                                </Link>
-                                <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30 shrink-0">
-                                  Reversal
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(payment.paidAt), "MMM d, h:mm a")}
-                              </p>
-                              {payment.notes && (
-                                <p className="text-xs text-destructive/70 mt-0.5 truncate">
-                                  {payment.notes}
-                                </p>
-                              )}
-                            </div>
+                          <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-destructive/10">
+                            <ArrowCounterClockwise className="h-4 w-4 text-destructive" weight="bold" />
                           </div>
-                          <div className="shrink-0 ml-2">
-                            <p className="font-semibold text-sm text-destructive">
-                              -{formatCurrency(payment.amount)}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                to="/loans/$loanId"
+                                params={{ loanId: payment.loanId }}
+                                className="font-medium text-sm hover:text-primary truncate block text-destructive"
+                              >
+                                {payment.contactName}
+                              </Link>
+                              <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30 shrink-0">
+                                Reversal
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(payment.paidAt), "MMM d, h:mm a")}
                             </p>
                           </div>
+                          <p className="font-semibold text-sm text-destructive shrink-0">
+                            -{formatCurrency(payment.amount)}
+                          </p>
                         </div>
                       )
                     }
@@ -563,43 +502,44 @@ function PaymentsPage() {
                     return (
                       <div
                         key={payment.id}
-                        className={`flex items-center justify-between p-3 rounded border group ${isReversed ? "opacity-60" : ""}`}
+                        className={cn(
+                          "flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors group",
+                          isReversed && "opacity-60"
+                        )}
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isReversed ? "bg-destructive/10" : "bg-primary/10"}`}>
-                            {isReversed ? (
-                              <ArrowCounterClockwise className="h-4 w-4 text-destructive" weight="bold" />
-                            ) : (
-                              <Check className="h-4 w-4 text-primary" weight="bold" />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                to="/loans/$loanId"
-                                params={{ loanId: payment.loanId }}
-                                className={`font-medium text-sm hover:text-primary truncate block ${isReversed ? "line-through" : ""}`}
-                              >
-                                {payment.contactName}
-                              </Link>
-                              {isReversed && (
-                                <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30 shrink-0">
-                                  Reversed
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(payment.paidAt), "MMM d, h:mm a")} · {payment.method.toUpperCase()}
-                            </p>
-                            {isReversed && payment.reversalReason && (
-                              <p className="text-xs text-destructive/70 mt-0.5 truncate">
-                                Reason: {payment.reversalReason}
-                              </p>
-                            )}
-                          </div>
+                        <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0", isReversed ? "bg-destructive/10" : "bg-primary/10")}>
+                          {isReversed ? (
+                            <ArrowCounterClockwise className="h-4 w-4 text-destructive" weight="bold" />
+                          ) : (
+                            <Check className="h-4 w-4 text-primary" weight="bold" />
+                          )}
                         </div>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <p className={`font-semibold text-sm ${isReversed ? "text-muted-foreground line-through" : "text-primary"}`}>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Link
+                              to="/loans/$loanId"
+                              params={{ loanId: payment.loanId }}
+                              className={cn("font-medium text-sm hover:text-primary truncate block", isReversed && "line-through")}
+                            >
+                              {payment.contactName}
+                            </Link>
+                            {isReversed && (
+                              <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30 shrink-0">
+                                Reversed
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(payment.paidAt), "MMM d, h:mm a")} · {payment.method.toUpperCase()}
+                          </p>
+                          {isReversed && payment.reversalReason && (
+                            <p className="text-xs text-destructive/70 mt-0.5 truncate">
+                              Reason: {payment.reversalReason}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <p className={cn("font-semibold text-sm", isReversed ? "text-muted-foreground line-through" : "text-primary")}>
                             +{formatCurrency(payment.amount)}
                           </p>
                           {payment.type === "credit" && !payment.reversedAt && (
@@ -675,11 +615,10 @@ function PaymentsPage() {
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
           </div>
-        </StaggerItem>
-      </Stagger>
+        </div>
+      </StaggerItem>
 
       {/* Record Payment Dialog */}
       <RecordPaymentDialog
@@ -710,7 +649,7 @@ function PaymentsPage() {
           ? { label: "Installment", dueDate: selectedPaymentForEdit.scheduleDueDate, amount: selectedPaymentForEdit.scheduleAmount }
           : null}
       />
-    </div>
+    </Stagger>
   )
 }
 

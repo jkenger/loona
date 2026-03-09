@@ -74,48 +74,38 @@ function AgentContactDetailPage() {
   }
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Back Link */}
-          <Link
-            to="/agent/contacts"
-            className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Contacts
-          </Link>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Back Link */}
+      <Link
+        to="/agent/contacts"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Contacts
+      </Link>
 
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center">
-                <User className="h-7 w-7 text-primary-foreground" weight="bold" />
-              </div>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
-                  {activeLoans.length > 0 && (
-                    <Badge className="bg-primary/20 text-primary-foreground border-primary/30 text-xs">
-                      {activeLoans.length} loan{activeLoans.length !== 1 ? "s" : ""}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-blue-200/70">
-                  {formatCurrencyCompact(totalRemaining)} remaining
-                </p>
-              </div>
-            </div>
+      {/* Title */}
+      <div className="flex items-center gap-4">
+        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
+          <User className="h-7 w-7 text-primary" weight="bold" />
+        </div>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
+            {activeLoans.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {activeLoans.length} loan{activeLoans.length !== 1 ? "s" : ""}
+              </Badge>
+            )}
           </div>
+          <p className="text-muted-foreground">
+            {formatCurrencyCompact(totalRemaining)} remaining
+          </p>
         </div>
       </div>
 
-      {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-
       {/* Contact Info - Compact */}
-      <Card className="shadow-lg">
+      <Card className="shadow-sm rounded-xl">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-base md:text-lg">Contact Info</CardTitle>
         </CardHeader>
@@ -193,7 +183,7 @@ function AgentContactDetailPage() {
       </Card>
 
       {/* Assigned Loans */}
-      <Card className="shadow-sm">
+      <Card className="shadow-sm rounded-xl">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="flex items-center gap-2 text-base md:text-lg">
             <CurrencyCircleDollar className="h-4 w-4 md:h-5 md:w-5 text-primary" />
@@ -258,7 +248,6 @@ function AgentContactDetailPage() {
           )}
         </CardContent>
       </Card>
-    </div>
     </div>
   )
 }

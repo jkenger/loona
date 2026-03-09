@@ -12,7 +12,6 @@ import { CurrencyInput } from "@/components/ui/currency-input"
 import { Button } from "@/components/ui/button"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { useTheme } from "@/lib/theme"
-import { LoonaBrand } from "@/components/ui/loona-brand"
 import {
   House,
   Users,
@@ -35,19 +34,11 @@ import {
   Check,
   Spinner,
   X,
-  Article,
   Newspaper,
   Envelope,
   BookOpenText,
   Calculator,
 } from "@phosphor-icons/react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Popover,
   PopoverTrigger,
@@ -115,27 +106,27 @@ export const Route = createFileRoute("/_dashboard")({
   component: DashboardLayout,
 })
 
-// Navigation items for lenders (shown in top nav)
-// Playbook + Settings live in the user dropdown; Penalties is a tab within Payments
+// Navigation items for lenders
 const lenderNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: House, exact: true },
   { name: "Contacts", href: "/contacts", icon: Users, exact: false },
   { name: "Loans", href: "/loans", icon: CurrencyCircleDollar, exact: false },
   { name: "Payments", href: "/payments", icon: Receipt, exact: false },
   { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
+  { name: "Estimator", href: "/tools/estimator", icon: Calculator, exact: false },
+  { name: "Playbook", href: "/playbook", icon: BookOpenText, exact: true },
 ]
 
-// Navigation items for admin portal (shown in top nav when on /admin routes)
+// Navigation items for admin portal
 const adminNavigation = [
   { name: "Overview", href: "/admin", icon: ShieldStar, exact: true },
   { name: "Users", href: "/admin/users", icon: UserList, exact: false },
   { name: "Compliance", href: "/admin/compliance", icon: ShieldCheck, exact: false },
   { name: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardText, exact: false },
   { name: "Waitlist", href: "/admin/waitlist", icon: Envelope, exact: false },
-  { name: "Blog", href: "/admin/blog", icon: Article, exact: false },
 ]
 
-// Navigation items for agent portal (minimal — mobile-first design)
+// Navigation items for agent portal
 const agentNavigation = [
   { name: "Home", href: "/agent", icon: House, exact: true },
   { name: "Loans", href: "/agent/loans", icon: CurrencyCircleDollar, exact: false },
@@ -258,404 +249,333 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-page relative">
-      {/* Decorative background circles */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute -top-20 -right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-32 w-72 h-72 bg-primary/[0.07] rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 right-1/3 w-[500px] h-[500px] bg-primary/[0.05] rounded-full blur-3xl" />
-      </div>
-
-      {/* Route loading progress */}
+    <div className="min-h-screen bg-gradient-sidebar">
       <RouteProgress />
 
-      {/* Top Navigation */}
-      <header className="sticky top-0 z-50 bg-[hsl(215_50%_10%)] text-white relative">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            {/* Logo */}
-            <Link to={homeLink} className="flex items-center">
-              <LoonaBrand size="sm" variant="white" animated={false} />
-            </Link>
+      {/* Beta Banner */}
+      <div className="bg-amber-500 text-amber-950">
+        <div className="flex items-center justify-center gap-2 py-2 text-sm font-medium px-4">
+          <Flask className="h-4 w-4" weight="fill" />
+          <span>
+            You're using the beta version of Loona.{" "}
+            <a
+              href="mailto:feedback@loona.ph"
+              className="underline underline-offset-2 hover:no-underline"
+            >
+              Send feedback
+            </a>
+          </span>
+        </div>
+      </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navigation.map((item) => {
-                // Payments link should also appear active when on /penalties
-                const forceActive = item.href === "/payments" && location.pathname.startsWith("/penalties")
-                return (
+      <div className="flex h-[calc(100vh-40px)]">
+        {/* Sidebar — desktop only */}
+        <aside className="hidden md:flex flex-col w-60 shrink-0 h-full bg-gradient-sidebar text-sidebar-foreground overflow-hidden">
+          {/* User Header */}
+          <div className="px-4 py-4 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <span className="text-sm font-medium text-primary">
+                  {session.user.name?.charAt(0).toUpperCase() || "U"}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-sidebar-foreground truncate">
+                  {session.user.name}
+                </p>
+                <Link to={homeLink} className="text-[11px] text-muted-foreground hover:text-sidebar-foreground transition-colors">
+                  Loona
+                </Link>
+              </div>
+              <button
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors shrink-0 p-1 rounded-md hover:bg-sidebar-accent"
+                title={resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun className="h-4.5 w-4.5" />
+                ) : (
+                  <Moon className="h-4.5 w-4.5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Nav links */}
+          <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+            {navigation.map((item) => {
+              const forceActive = item.href === "/payments" && location.pathname.startsWith("/penalties")
+              return (
                 <Link
                   key={item.name}
                   to={item.href}
                   activeOptions={{ exact: item.exact }}
-                  className={`relative px-3 py-1.5 text-sm font-medium text-blue-200/70 hover:text-white transition-colors [&.active]:text-white after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 after:ease-out hover:after:w-full [&.active]:after:w-full ${forceActive ? "text-white after:w-full" : ""}`}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors [&.active]:bg-sidebar-primary/10 [&.active]:text-sidebar-primary [&.active]:font-semibold ${forceActive ? "bg-sidebar-primary/10 text-sidebar-primary font-semibold" : ""}`}
                 >
+                  <item.icon className="h-5 w-5 shrink-0" />
                   {item.name}
-                  {"badge" in item && (item as { badge?: string }).badge && (
-                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none bg-primary text-primary-foreground">
-                      {(item as { badge?: string }).badge}
-                    </span>
-                  )}
                 </Link>
-                )
-              })}
-              {/* Tools dropdown — lender portal only */}
-              {portal === "lender" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className={`relative px-3 py-1.5 text-sm font-medium text-blue-200/70 hover:text-white transition-colors flex items-center gap-1 ${location.pathname.startsWith("/tools") ? "text-white after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-primary" : "after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 after:ease-out hover:after:w-full"}`}
-                  >
-                    Tools
-                    <CaretDown className="h-3 w-3" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem
-                      onClick={() => navigate({ to: "/tools/estimator" })}
-                      className="cursor-pointer"
-                    >
-                      <Calculator className="h-4 w-4 mr-2" />
-                      Estimator
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </nav>
+              )
+            })}
+          </nav>
 
-            {/* User Menu */}
-            <div className="flex items-center gap-3">
-              {/* What's New Popover (hidden on admin portal) */}
-              {!isOnAdminPortal && (
-                <Popover onOpenChange={(open) => { if (open) markPostsSeen() }}>
-                  <PopoverTrigger className="relative flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/15 transition-colors">
-                    <Newspaper className="h-4 w-4 text-white" />
+          {/* Cash Position Card — lender portal only */}
+          {isLender && !isOnAgentPortal && !isOnAdminPortal && (
+            <div className="mx-3 mb-3 rounded-lg bg-sidebar-accent/50 p-3">
+              {hasCapitalSet && !isEditingCapital ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Wallet className="h-4 w-4 text-primary" weight="fill" />
+                      <span className="text-xs font-medium text-muted-foreground">Cash Position</span>
+                    </div>
+                    <button
+                      onClick={handleEditCapital}
+                      className="text-muted-foreground hover:text-sidebar-foreground transition-colors"
+                    >
+                      <PencilSimple className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-lg font-bold text-primary">
+                    {formatPHP(cashPosition.cashAvailable)}
+                  </p>
+                  <button
+                    onClick={() => setShowBreakdown(!showBreakdown)}
+                    className="text-[11px] text-muted-foreground hover:text-sidebar-foreground transition-colors flex items-center gap-1 mt-0.5"
+                  >
+                    <CaretDown className={`h-3 w-3 transition-transform ${showBreakdown ? "rotate-180" : ""}`} />
+                    {showBreakdown ? "Hide" : "How is this calculated?"}
+                  </button>
+                  {showBreakdown && (
+                    <div className="space-y-0.5 text-xs text-muted-foreground rounded bg-sidebar-accent p-2 mt-1.5">
+                      <div className="flex justify-between">
+                        <span>Starting Capital</span>
+                        <span className="font-medium text-sidebar-foreground">{formatPHP(cashPosition.initialCapital)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>&minus; Total Disbursed</span>
+                        <span className="font-medium text-sidebar-foreground">{formatPHP(parseFloat(cashPosition.totalDisbursed))}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>+ Total Collected</span>
+                        <span className="font-medium text-sidebar-foreground">{formatPHP(parseFloat(cashPosition.totalCollected))}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-sidebar-border pt-1 mt-1">
+                        <span className="font-medium text-sidebar-foreground">= Cash Available</span>
+                        <span className="font-bold text-primary">{formatPHP(cashPosition.cashAvailable)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Wallet className="h-4 w-4 text-primary" weight="fill" />
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {isEditingCapital ? "Edit Starting Capital" : "Set Starting Capital"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CurrencyInput
+                      value={capitalInput}
+                      onValueChange={setCapitalInput}
+                      placeholder="500,000"
+                      className="h-8 text-sm flex-1"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveCapital()
+                        if (e.key === "Escape") setIsEditingCapital(false)
+                      }}
+                    />
+                    <Button
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={handleSaveCapital}
+                      disabled={isSavingCapital}
+                    >
+                      {isSavingCapital ? (
+                        <Spinner className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                    {isEditingCapital && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => setIsEditingCapital(false)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                  {!isEditingCapital && (
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                      Track your available cash on hand
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Bottom utilities */}
+          <div className="border-t border-sidebar-border px-2 py-2 space-y-0.5">
+            {/* Settings */}
+            <Link
+              to="/settings"
+              activeOptions={{ exact: false }}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors [&.active]:bg-sidebar-primary/10 [&.active]:text-sidebar-primary [&.active]:font-semibold"
+            >
+              <Gear className="h-5 w-5 shrink-0" />
+              Settings
+            </Link>
+
+            {/* Portal switches */}
+            {isAdmin && !isOnAdminPortal && (
+              <Link
+                to="/admin"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              >
+                <ShieldStar className="h-5 w-5 shrink-0" />
+                Admin Portal
+              </Link>
+            )}
+            {isAgent && !isOnAgentPortal && (
+              <Link
+                to="/agent"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              >
+                <UsersThree className="h-5 w-5 shrink-0" />
+                Agent Portal
+              </Link>
+            )}
+            {isOnAdminPortal && isLender && (
+              <Link
+                to="/dashboard"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              >
+                <House className="h-5 w-5 shrink-0" />
+                Back to Dashboard
+              </Link>
+            )}
+            {isAgent && isOnAgentPortal && (isLender || isAdmin) && (
+              <Link
+                to={isLender ? "/dashboard" : "/admin"}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              >
+                <House className="h-5 w-5 shrink-0" />
+                {isLender ? "Back to Dashboard" : "Back to Admin"}
+              </Link>
+            )}
+
+            {/* What's New */}
+            {!isOnAdminPortal && (
+              <Popover onOpenChange={(open) => { if (open) markPostsSeen() }}>
+                <PopoverTrigger className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors w-full text-left">
+                  <span className="relative">
+                    <Newspaper className="h-5 w-5 shrink-0" />
                     {hasNewPosts && (
-                      <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
                       </span>
                     )}
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="z-[60] w-80 p-0">
-                    <div className="px-4 pt-3 pb-2 border-b">
-                      <h3 className="text-sm font-semibold">What's New</h3>
-                    </div>
-                    {latestPosts.length > 0 ? (
-                      <div className="divide-y">
-                        {latestPosts.map((post) => (
-                          <Link
-                            key={post.slug}
-                            to={`/blog/${post.slug}`}
-                            className="block px-4 py-3 hover:bg-muted/50 transition-colors"
-                          >
-                            <p className="text-sm font-medium leading-snug">{post.title}</p>
-                            {post.excerpt && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{post.excerpt}</p>
-                            )}
-                            <div className="flex items-center gap-2 mt-1.5">
-                              {post.category && (
-                                <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                  {post.category.name}
-                                </span>
-                              )}
-                              {post.publishedAt && (
-                                <span className="text-[11px] text-muted-foreground">
-                                  {new Date(post.publishedAt).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="px-4 py-6 text-center">
-                        <p className="text-sm text-muted-foreground">No posts yet</p>
-                      </div>
-                    )}
-                    <div className="border-t px-4 py-2">
-                      <Link
-                        to="/blog"
-                        className="text-xs font-medium text-primary hover:underline"
-                      >
-                        View all posts &rarr;
-                      </Link>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
-              {/* User dropdown with integrated wallet */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-white/10 hover:bg-white/15 transition-colors"
-                >
-                  {hasCapitalSet && !isOnAgentPortal && !isOnAdminPortal ? (
-                    <>
-                      <Wallet className="h-4 w-4 text-primary" weight="fill" />
-                      <span className="font-semibold text-white">
-                        {formatPHP(cashPosition.cashAvailable)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-6 w-6 rounded-full bg-primary/30 flex items-center justify-center">
-                        <span className="text-xs font-medium text-white">
-                          {session.user.name?.charAt(0).toUpperCase() || "U"}
-                        </span>
-                      </div>
-                      <span className="hidden sm:block text-sm font-medium text-white max-w-[120px] truncate">
-                        {session.user.name}
-                      </span>
-                    </>
-                  )}
-                  <CaretDown className="h-3.5 w-3.5 text-blue-200/60" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{session.user.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+                  </span>
+                  What's New
+                </PopoverTrigger>
+                <PopoverContent side="right" align="end" className="z-[60] w-80 p-0">
+                  <div className="px-4 pt-3 pb-2 border-b">
+                    <h3 className="text-sm font-semibold">What's New</h3>
                   </div>
-                  <DropdownMenuSeparator />
-                  {/* Wallet Section (lender portal only) */}
-                  {isLender && !isOnAgentPortal && !isOnAdminPortal && (
-                    <>
-                      <div className="px-2 py-2">
-                        {hasCapitalSet && !isEditingCapital ? (
-                          <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <div className="flex items-center gap-1.5">
-                                <Wallet className="h-3.5 w-3.5 text-primary" weight="fill" />
-                                <span className="text-xs font-medium text-muted-foreground">Cash Position</span>
-                              </div>
-                              <button
-                                onClick={handleEditCapital}
-                                className="text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                <PencilSimple className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                            <p className="text-lg font-bold text-primary">
-                              {formatPHP(cashPosition.cashAvailable)}
-                            </p>
-                            <button
-                              onClick={() => setShowBreakdown(!showBreakdown)}
-                              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mt-0.5"
-                            >
-                              <CaretDown className={`h-3 w-3 transition-transform ${showBreakdown ? "rotate-180" : ""}`} />
-                              {showBreakdown ? "Hide" : "How is this calculated?"}
-                            </button>
-                            {showBreakdown && (
-                              <div className="space-y-0.5 text-xs text-muted-foreground rounded bg-muted/50 p-2 mt-1.5">
-                                <div className="flex justify-between">
-                                  <span>Starting Capital</span>
-                                  <span className="font-medium text-foreground">{formatPHP(cashPosition.initialCapital)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>&minus; Total Disbursed</span>
-                                  <span className="font-medium text-foreground">{formatPHP(parseFloat(cashPosition.totalDisbursed))}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>+ Total Collected</span>
-                                  <span className="font-medium text-foreground">{formatPHP(parseFloat(cashPosition.totalCollected))}</span>
-                                </div>
-                                <div className="flex justify-between border-t pt-1 mt-1">
-                                  <span className="font-medium text-foreground">= Cash Available</span>
-                                  <span className="font-bold text-primary">{formatPHP(cashPosition.cashAvailable)}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="flex items-center gap-1.5 mb-2">
-                              <Wallet className="h-3.5 w-3.5 text-primary" weight="fill" />
-                              <span className="text-xs font-medium text-muted-foreground">
-                                {isEditingCapital ? "Edit Starting Capital" : "Set Starting Capital"}
+                  {latestPosts.length > 0 ? (
+                    <div className="divide-y">
+                      {latestPosts.map((post) => (
+                        <Link
+                          key={post.slug}
+                          to={`/blog/${post.slug}`}
+                          className="block px-4 py-3 hover:bg-muted/50 transition-colors"
+                        >
+                          <p className="text-sm font-medium leading-snug">{post.title}</p>
+                          {post.excerpt && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{post.excerpt}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1.5">
+                            {post.category && (
+                              <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                {post.category.name}
                               </span>
-                            </div>
-                            <div
-                              className="flex items-center gap-1.5"
-                              onKeyDown={(e) => e.stopPropagation()}
-                            >
-                              <CurrencyInput
-                                value={capitalInput}
-                                onValueChange={setCapitalInput}
-                                placeholder="500,000"
-                                className="h-8 text-sm flex-1"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveCapital()
-                                  if (e.key === "Escape") setIsEditingCapital(false)
-                                }}
-                              />
-                              <Button
-                                size="icon"
-                                className="h-8 w-8 shrink-0"
-                                onClick={handleSaveCapital}
-                                disabled={isSavingCapital}
-                              >
-                                {isSavingCapital ? (
-                                  <Spinner className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Check className="h-3.5 w-3.5" />
-                                )}
-                              </Button>
-                              {isEditingCapital && (
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 shrink-0"
-                                  onClick={() => setIsEditingCapital(false)}
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                            {!isEditingCapital && (
-                              <p className="text-[11px] text-muted-foreground mt-1.5">
-                                Track your available cash on hand
-                              </p>
+                            )}
+                            {post.publishedAt && (
+                              <span className="text-[11px] text-muted-foreground">
+                                {new Date(post.publishedAt).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
                             )}
                           </div>
-                        )}
-                      </div>
-                      <DropdownMenuSeparator />
-                    </>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-sm text-muted-foreground">No posts yet</p>
+                    </div>
                   )}
-                  {isAdmin && !isOnAdminPortal && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => navigate({ to: "/admin" })}
-                        className="flex items-center cursor-pointer"
-                      >
-                        <ShieldStar className="h-4 w-4 mr-2" />
-                        <span>Admin Portal</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  {isOnAdminPortal && isLender && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => navigate({ to: "/dashboard" })}
-                        className="flex items-center cursor-pointer"
-                      >
-                        <House className="h-4 w-4 mr-2" />
-                        <span>Back to Dashboard</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  {isAgent && !isOnAgentPortal && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => navigate({ to: "/agent" })}
-                        className="flex items-center cursor-pointer"
-                      >
-                        <UsersThree className="h-4 w-4 mr-2" />
-                        <span>Agent Portal</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  {isAgent && isOnAgentPortal && (isLender || isAdmin) && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => navigate({ to: isLender ? "/dashboard" : "/admin" })}
-                        className="flex items-center cursor-pointer"
-                      >
-                        <House className="h-4 w-4 mr-2" />
-                        <span>{isLender ? "Back to Dashboard" : "Back to Admin"}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  {isLender && !isOnAgentPortal && !isOnAdminPortal && (
-                    <DropdownMenuItem
-                      onClick={() => navigate({ to: "/playbook" })}
-                      className="cursor-pointer"
+                  <div className="border-t px-4 py-2">
+                    <Link
+                      to="/blog"
+                      className="text-xs font-medium text-primary hover:underline"
                     >
-                      <BookOpenText className="h-4 w-4 mr-2" />
-                      Playbook
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem
-                    onClick={() => navigate({ to: "/settings" })}
-                    className="cursor-pointer"
-                  >
-                    <Gear className="h-4 w-4 mr-2" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                    className="cursor-pointer"
-                  >
-                    {resolvedTheme === "dark" ? (
-                      <Sun className="h-4 w-4 mr-2" />
-                    ) : (
-                      <Moon className="h-4 w-4 mr-2" />
-                    )}
-                    {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    className="text-destructive focus:text-destructive cursor-pointer"
-                  >
-                    <SignOut className="h-4 w-4 mr-2" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </header>
+                      View all posts &rarr;
+                    </Link>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
 
-      {/* Beta Banner */}
-      <div className="bg-amber-500 text-amber-950">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center gap-2 py-2 text-sm font-medium">
-            <Flask className="h-4 w-4" weight="fill" />
-            <span>
-              You're using the beta version of Loona.{" "}
-              <a
-                href="mailto:feedback@loona.ph"
-                className="underline underline-offset-2 hover:no-underline"
-              >
-                Send feedback
-              </a>
-            </span>
+            {/* Sign out */}
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-destructive transition-colors w-full text-left"
+            >
+              <SignOut className="h-5 w-5 shrink-0" />
+              Sign out
+            </button>
+          </div>
+        </aside>
+
+        {/* Main content column */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+          <div className="flex-1 flex flex-col min-w-0 bg-background md:border-l md:border-border">
+          {/* Agent Permissions Banner */}
+          {isOnAgentPortal && hasAgentRestrictions && (
+            <div className="bg-red-600 text-white">
+              <div className="flex items-center justify-center gap-2 py-2 text-sm font-medium px-4">
+                <Warning className="h-4 w-4" weight="fill" />
+                <span>
+                  Restricted access:{" "}
+                  {!agentPermissions?.canRecordPayments && !agentPermissions?.canCreateLoans
+                    ? "Payment recording and loan creation disabled"
+                    : !agentPermissions?.canRecordPayments
+                      ? "Payment recording disabled"
+                      : "Loan creation disabled"
+                  }
+                  {" "}by your lender.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Page content */}
+          <main className="relative pb-20 md:pb-0">
+            <Outlet />
+          </main>
           </div>
         </div>
       </div>
-
-      {/* Agent Permissions Banner */}
-      {isOnAgentPortal && hasAgentRestrictions && (
-        <div className="bg-red-600 text-white">
-          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-center gap-2 py-2 text-sm font-medium">
-              <Warning className="h-4 w-4" weight="fill" />
-              <span>
-                Restricted access:{" "}
-                {!agentPermissions?.canRecordPayments && !agentPermissions?.canCreateLoans
-                  ? "Payment recording and loan creation disabled"
-                  : !agentPermissions?.canRecordPayments
-                    ? "Payment recording disabled"
-                    : "Loan creation disabled"
-                }
-                {" "}by your lender.
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Page content - full width, pages control their own constraints */}
-      <main className="relative pb-20 md:pb-0">
-        <Outlet />
-      </main>
 
       {/* Mobile bottom nav */}
       <MobileBottomNav portal={portal} />

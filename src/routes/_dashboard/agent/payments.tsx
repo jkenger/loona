@@ -49,57 +49,48 @@ export const Route = createFileRoute('/_dashboard/agent/payments')({
 
 function PaymentsPageSkeleton() {
   return (
-    <div>
-      {/* Header skeleton */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          <Skeleton className="h-5 w-64 bg-white/10" />
-          <div className="border-l-4 border-primary pl-4 space-y-2">
-            <Skeleton className="h-10 w-40 bg-white/10" />
-            <Skeleton className="h-4 w-52 bg-white/10" />
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-40" />
+        <Skeleton className="h-4 w-52" />
       </div>
 
-      {/* Content skeleton */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        {/* Stats skeleton */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="shadow-sm">
-              <CardContent className="p-4">
-                <Skeleton className="h-4 w-20 mb-2" />
-                <Skeleton className="h-8 w-24" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {/* Stats skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="shadow-sm">
+            <CardContent className="p-4">
+              <Skeleton className="h-4 w-20 mb-2" />
+              <Skeleton className="h-8 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-        {/* Two column skeleton */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <Card className="shadow-lg">
-              <CardHeader className="p-4 pb-2">
-                <Skeleton className="h-6 w-32" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-          <Card className="shadow-sm">
+      {/* Two column skeleton */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
-              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-6 w-32" />
             </CardHeader>
             <CardContent className="p-4 pt-0 space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-14 w-full" />
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
               ))}
             </CardContent>
           </Card>
         </div>
+        <Card className="shadow-sm rounded-xl">
+          <CardHeader className="p-4 pb-2">
+            <Skeleton className="h-6 w-36" />
+          </CardHeader>
+          <CardContent className="p-4 pt-0 space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
@@ -159,31 +150,11 @@ function AgentPaymentsPage() {
   })
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Meta Bar */}
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground text-xs font-medium">
-              Agent Portal
-            </span>
-            <span className="text-blue-300/40">·</span>
-            <span>Payments</span>
-            <span className="text-blue-300/40">·</span>
-            <span>{format(new Date(), 'EEEE, MMMM d, yyyy')}</span>
-          </div>
-
-          {/* Title Row */}
-          <div className="border-l-4 border-primary pl-4">
-            <h1 className="text-4xl font-bold tracking-tight">Payments</h1>
-            <p className="text-blue-200/70">Collect and record payments for your assigned loans</p>
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Payments</h1>
+        <p className="text-muted-foreground">Collect and record payments for your assigned loans</p>
       </div>
-
-      {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -237,7 +208,7 @@ function AgentPaymentsPage() {
           {/* Left Column: Track - Overdue & Upcoming */}
           <div className="space-y-6">
             {/* Overdue Section */}
-            <Card className={`shadow-lg ${overdueItems.length > 0 ? 'border-destructive/50' : ''}`}>
+            <Card className={`shadow-sm rounded-xl ${overdueItems.length > 0 ? 'border-destructive/50' : ''}`}>
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2 text-destructive">
                   <Warning className="h-5 w-5" weight="bold" />
@@ -484,7 +455,6 @@ function AgentPaymentsPage() {
             </Card>
           </div>
         </div>
-      </div>
 
       {/* Record Payment Dialog */}
       <RecordPaymentDialog

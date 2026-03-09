@@ -369,24 +369,17 @@ function NewLoanWizard() {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white py-4 pb-12">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Link
-              to="/loans"
-              className="text-sm text-blue-200/70 hover:text-white transition-colors"
-            >
-              Loans
-            </Link>
-            <span className="text-blue-300/40">/</span>
-            <h1 className="text-lg font-semibold">{isRenewal ? "Renew Loan" : "New Loan"}</h1>
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Link to="/loans" className="hover:text-foreground transition-colors">
+          Loans
+        </Link>
+        <span>/</span>
+        <span className="text-foreground font-medium">{isRenewal ? "Renew Loan" : "New Loan"}</span>
       </div>
 
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-6 pb-8">
+      <div>
         {/* Renewal Banner */}
         {isRenewal && renewFromLoan && (
           <div className="mb-4 flex items-center gap-3 rounded-lg border border-blue-300/50 bg-blue-50 dark:bg-blue-950/30 p-3 text-sm">
@@ -406,7 +399,7 @@ function NewLoanWizard() {
         )}
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-0 mb-6 bg-card rounded-lg border shadow-lg p-4">
+        <div className="flex items-center justify-center gap-0 mb-6 bg-card rounded-lg border shadow-sm rounded-xl p-4">
           {STEP_LABELS.map((label, i) => {
             const stepNum = i + 1
             const isActive = step === stepNum
@@ -458,7 +451,7 @@ function NewLoanWizard() {
 
         {/* Step 1 — Borrower */}
         {step === 1 && (
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle>Borrower</CardTitle>
               <CardDescription>
@@ -697,7 +690,7 @@ function NewLoanWizard() {
         {/* Step 2 — Loan Terms */}
         {step === 2 && (
           <div className="grid gap-6 lg:grid-cols-5">
-            <Card className="lg:col-span-3 shadow-lg">
+            <Card className="lg:col-span-3 shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle>Loan Terms</CardTitle>
                 <CardDescription>
@@ -1217,7 +1210,7 @@ function NewLoanWizard() {
 
             {/* Summary Card + Scorecard Column */}
             <div className="lg:col-span-2 space-y-6">
-              <Card className="h-fit shadow-lg">
+              <Card className="h-fit shadow-sm rounded-xl">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="flex items-center gap-2">
                     <Calculator className="h-5 w-5 text-primary" />
@@ -1304,7 +1297,7 @@ function NewLoanWizard() {
 
               {/* Borrower History Scorecard — renewals only */}
               {isRenewal && scorecard && (
-                <Card className="h-fit shadow-lg">
+                <Card className="h-fit shadow-sm rounded-xl">
                   <CardHeader className="p-4 pb-2">
                     <CardTitle className="flex items-center gap-2">
                       <ChartBar className="h-5 w-5 text-primary" />
@@ -1414,7 +1407,7 @@ function NewLoanWizard() {
         {step === 3 && (
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Borrower Summary */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5 text-primary" />
@@ -1499,7 +1492,7 @@ function NewLoanWizard() {
             </Card>
 
             {/* Loan Terms Summary */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <CurrencyCircleDollar className="h-5 w-5 text-primary" />
@@ -1602,7 +1595,7 @@ function NewLoanWizard() {
             </Card>
 
             {/* Penalties Summary */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <Gavel className="h-5 w-5 text-primary" />
@@ -1737,7 +1730,7 @@ function NewLoanWizard() {
         {/* Step 4 — Success */}
         {step === 4 && createdLoanId && (
           <div className="max-w-2xl mx-auto space-y-6">
-            <Card className="shadow-lg text-center">
+            <Card className="shadow-sm rounded-xl text-center">
               <CardContent className="p-8 space-y-4">
                 <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
                   <CheckCircle
@@ -1763,7 +1756,7 @@ function NewLoanWizard() {
             </Card>
 
             {/* Documents */}
-            <Card className="shadow-lg">
+            <Card className="shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-base">Documents Ready</CardTitle>
                 <CardDescription>

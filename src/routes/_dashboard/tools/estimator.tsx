@@ -197,26 +197,18 @@ function EstimatorPage() {
   }, [principal, interestRate, termMonths, paymentFrequency, income, selectedContact])
 
   return (
-    <div>
-      {/* Dark header */}
-      <div className="bg-[hsl(215_45%_14%)] text-white py-4 pb-12">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Calculator className="h-6 w-6 text-primary" />
-            <h1 className="text-lg font-semibold">Loan Estimator</h1>
+      <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Loan Estimator</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Quick what-if calculator — no loan created
+            </p>
           </div>
-          <p className="text-blue-200/70 text-sm mt-1">
-            Quick what-if calculator — no loan created
-          </p>
-        </div>
-      </div>
 
-      {/* Content overlapping header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-6 pb-8">
-        <Stagger className="grid gap-6 lg:grid-cols-5">
+          <div className="grid gap-6 lg:grid-cols-5">
           {/* ── Inputs ── */}
           <StaggerItem className="lg:col-span-3">
-            <Card className="shadow-lg">
+            <Card className="shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle>Loan Parameters</CardTitle>
               </CardHeader>
@@ -409,7 +401,7 @@ function EstimatorPage() {
           <StaggerItem className="lg:col-span-2">
             <div className="space-y-6">
               {/* Estimate Card */}
-              <Card className="shadow-lg">
+              <Card className="shadow-sm rounded-xl">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="flex items-center gap-2">
                     <Calculator className="h-5 w-5 text-primary" />
@@ -533,7 +525,7 @@ function EstimatorPage() {
               {/* DTI Card */}
               {calc?.dti && (
                 <Card className={cn(
-                  "shadow-lg border-2",
+                  "shadow-sm rounded-xl border-2",
                   calc.dti.color === "green" && "border-green-500/30",
                   calc.dti.color === "yellow" && "border-amber-500/30",
                   calc.dti.color === "red" && "border-red-500/30",
@@ -642,9 +634,8 @@ function EstimatorPage() {
               )}
             </div>
           </StaggerItem>
-        </Stagger>
-      </div>
-    </div>
+          </div>
+      </Stagger>
   )
 }
 

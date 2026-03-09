@@ -248,63 +248,56 @@ function ContactDetailPage() {
   }
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Back link */}
-          <Link to="/contacts" className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Contacts
-          </Link>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Back link */}
+      <Link to="/contacts" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft className="h-4 w-4" />
+        Back to Contacts
+      </Link>
 
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center">
-                <User className="h-7 w-7 text-primary-foreground" weight="bold" />
-              </div>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
-                  {activeLoansCount > 0 && (
-                    <Badge variant="secondary" className="bg-primary/20 text-primary-foreground border-0">
-                      {activeLoansCount} active loan{activeLoansCount !== 1 ? "s" : ""}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-blue-200/70">{contact.city || "Contact"}</p>
-              </div>
+      {/* Title Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="h-6 w-6 text-primary" weight="bold" />
+          </div>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
+              {activeLoansCount > 0 && (
+                <Badge variant="secondary">
+                  {activeLoansCount} active loan{activeLoansCount !== 1 ? "s" : ""}
+                </Badge>
+              )}
             </div>
-            {contact.isLender && (
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowEditDialog(true)} className="gap-2">
-                  <PencilSimple className="h-4 w-4" weight="bold" />
-                  Edit
-                </Button>
-                <Button variant="outline" onClick={() => setShowDeleteDialog(true)} className="gap-2">
-                  <Trash className="h-4 w-4" weight="bold" />
-                  Delete
-                </Button>
-                <Link to="/loans/new-wizard" search={{ contactId: contact.id }}>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" weight="bold" />
-                    New Loan
-                  </Button>
-                </Link>
-              </div>
-            )}
+            <p className="text-muted-foreground">{contact.city || "Contact"}</p>
           </div>
         </div>
+        {contact.isLender && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowEditDialog(true)} className="gap-2">
+              <PencilSimple className="h-4 w-4" weight="bold" />
+              Edit
+            </Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(true)} className="gap-2">
+              <Trash className="h-4 w-4" weight="bold" />
+              Delete
+            </Button>
+            <Link to="/loans/new-wizard" search={{ contactId: contact.id }}>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" weight="bold" />
+                New Loan
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
 
-      {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column */}
         <div className="space-y-6">
           {/* Contact Info */}
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle>Contact Information</CardTitle>
             </CardHeader>
@@ -435,7 +428,7 @@ function ContactDetailPage() {
           </Card>
 
           {/* Inline Notes */}
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
@@ -469,7 +462,7 @@ function ContactDetailPage() {
           </Card>
 
           {/* Borrower Profile */}
-          <Card className="shadow-lg">
+          <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="flex items-center gap-2">
                 <UserCircle className="h-4 w-4" />
@@ -529,7 +522,7 @@ function ContactDetailPage() {
         </div>
 
         {/* Loans */}
-        <Card className="lg:col-span-2 shadow-lg">
+        <Card className="lg:col-span-2 shadow-sm rounded-xl">
           <CardHeader className="p-4 pb-2">
             <CardTitle>Loans</CardTitle>
             <CardDescription>
@@ -598,7 +591,6 @@ function ContactDetailPage() {
             )}
           </CardContent>
         </Card>
-      </div>
       </div>
 
       {/* Edit Dialog */}

@@ -7,13 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
@@ -38,11 +32,12 @@ import {
   FacebookLogo,
   LinkSimple,
   Copy,
+  GearSix,
 } from "@phosphor-icons/react"
-import { SkeletonFormPage } from "@/components/ui/skeleton"
 import { getLenderSettings, saveLenderSettings } from "@/server/lender-settings"
 import { getLenderProfileLinks, saveLenderProfileLinks } from "@/server/lender-profile"
 import { hasRole, ROLES } from "@/lib/constants/roles"
+import { Stagger, StaggerItem } from "@/components/ui/stagger"
 
 export const Route = createFileRoute("/_dashboard/settings/")({
   loader: async ({ context }) => {
@@ -55,9 +50,44 @@ export const Route = createFileRoute("/_dashboard/settings/")({
       : [null, null]
     return { lenderConfig, profileLinks }
   },
-  pendingComponent: SkeletonFormPage,
+  pendingComponent: SettingsSkeleton,
   component: SettingsPage,
 })
+
+function SettingsSkeleton() {
+  return (
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <Skeleton className="h-9 w-32" />
+        <Skeleton className="h-4 w-56 mt-2" />
+      </div>
+      <div className="grid gap-5 lg:grid-cols-5">
+        <div className="lg:col-span-3 space-y-5">
+          <div className="rounded-xl border shadow-sm p-5 space-y-4">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+          <div className="rounded-xl border shadow-sm p-5 space-y-4">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </div>
+        <div className="lg:col-span-2 space-y-5">
+          <div className="rounded-xl border shadow-sm p-5 space-y-4">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+          <div className="rounded-xl border shadow-sm p-5 space-y-4">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function SettingsPage() {
   const router = useRouter()
@@ -144,7 +174,6 @@ function SettingsPage() {
   const handleChangePassword = async () => {
     setPasswordError("")
 
-    // Validation
     if (!currentPassword) {
       setPasswordError("Current password is required")
       return
@@ -186,7 +215,6 @@ function SettingsPage() {
     setCapitalInput(currentCapital > 0 ? currentCapital.toString() : "")
     setIsEditingCapital(true)
   }
-
 
   const handleSaveCapital = async () => {
     const amount = parseFloat(capitalInput)
@@ -266,38 +294,25 @@ function SettingsPage() {
   }
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Meta Bar */}
-          <div className="flex items-center gap-2 text-sm text-blue-200/70">
-            <span>Settings</span>
-            <span className="text-blue-300/40">·</span>
-            <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
-          </div>
-
-          {/* Title Row */}
-          <div className="border-l-4 border-primary pl-4">
-            <h1 className="text-4xl font-bold tracking-tight">Settings</h1>
-            <p className="text-blue-200/70">Manage your account and preferences</p>
-          </div>
-        </div>
+    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground">Manage your account and preferences</p>
       </div>
 
-      {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
-        <div className="max-w-2xl space-y-6">
-          {/* Profile Card */}
-          <Card className="shadow-lg">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Profile
-              </CardTitle>
-              <CardDescription>Your account information</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-4">
+      {/* Bento Grid */}
+      <StaggerItem className="grid gap-5 lg:grid-cols-5">
+        {/* Left Column — Account */}
+        <div className="lg:col-span-3 space-y-5">
+          {/* Profile */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Profile</h3>
+              </div>
+            </div>
+            <div className="p-5 pt-0 space-y-4">
               {/* Name */}
               <div className="space-y-2">
                 <Label>Name</Label>
@@ -368,23 +383,75 @@ function SettingsPage() {
               <div className="text-sm text-muted-foreground pt-2 border-t">
                 Account created: {user.createdAt ? format(new Date(user.createdAt), "MMMM d, yyyy") : "—"}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Public Profile Card */}
+          {/* Security */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Security</h3>
+              </div>
+            </div>
+            <div className="p-5 pt-0">
+              <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Lock className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Password</p>
+                    <p className="text-sm text-muted-foreground">
+                      Last changed: Unknown
+                    </p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={openPasswordDialog}>
+                  Change Password
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Penalty Rules */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <Warning className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">Penalty Rules</h3>
+              </div>
+            </div>
+            <div className="p-5 pt-0">
+              <Link
+                to="/settings/penalty-settings"
+                className="group flex items-center justify-between p-3 rounded border bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <div>
+                  <p className="font-medium text-sm">Late Fees & Penalties</p>
+                  <p className="text-xs text-muted-foreground">
+                    Set up late fees, daily penalty interest, and caps
+                  </p>
+                </div>
+                <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column — Lender Settings */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Public Profile */}
           {isLender && (
-            <Card className="shadow-lg">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="flex items-center gap-2">
-                  <LinkSimple className="h-5 w-5 text-primary" />
-                  Public Profile
-                </CardTitle>
-                <CardDescription>Shareable profile for potential borrowers</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-4">
+            <div className="rounded-xl border shadow-sm">
+              <div className="p-5 pb-3">
+                <div className="flex items-center gap-2">
+                  <LinkSimple className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-base font-semibold">Public Profile</h3>
+                </div>
+              </div>
+              <div className="p-5 pt-0 space-y-4">
                 {/* Website URL */}
                 <div className="space-y-2">
-                  <Label>Website URL</Label>
+                  <Label className="text-xs">Website URL</Label>
                   {isEditingWebsite ? (
                     <div className="flex gap-2">
                       <Input
@@ -420,7 +487,7 @@ function SettingsPage() {
                     <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
                       <div className="flex items-center gap-3 min-w-0">
                         <GlobeSimple className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <span className="font-medium truncate">
+                        <span className="font-medium truncate text-sm">
                           {currentWebsite || "Not set"}
                         </span>
                       </div>
@@ -439,7 +506,7 @@ function SettingsPage() {
 
                 {/* Facebook URL */}
                 <div className="space-y-2">
-                  <Label>Facebook URL</Label>
+                  <Label className="text-xs">Facebook URL</Label>
                   {isEditingFacebook ? (
                     <div className="flex gap-2">
                       <Input
@@ -475,7 +542,7 @@ function SettingsPage() {
                     <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
                       <div className="flex items-center gap-3 min-w-0">
                         <FacebookLogo className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <span className="font-medium truncate">
+                        <span className="font-medium truncate text-sm">
                           {currentFacebook || "Not set"}
                         </span>
                       </div>
@@ -494,11 +561,11 @@ function SettingsPage() {
 
                 {/* Share Link */}
                 <div className="space-y-2">
-                  <Label>Share Link</Label>
+                  <Label className="text-xs">Share Link</Label>
                   <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
                     <div className="flex items-center gap-3 min-w-0">
                       <LinkSimple className="h-5 w-5 text-muted-foreground shrink-0" />
-                      <span className="text-sm truncate text-muted-foreground">
+                      <span className="text-xs truncate text-muted-foreground">
                         {typeof window !== "undefined"
                           ? `${window.location.origin}/share/lender/${user?.id}`
                           : `/share/lender/${user?.id}`}
@@ -518,75 +585,22 @@ function SettingsPage() {
                     Share this link with potential borrowers to show your lender profile.
                   </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
-          {/* Security Card */}
-          <Card className="shadow-lg">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5 text-primary" />
-                Security
-              </CardTitle>
-              <CardDescription>Manage your password</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-4">
-              <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Password</p>
-                    <p className="text-sm text-muted-foreground">
-                      Last changed: Unknown
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" onClick={openPasswordDialog}>
-                  Change Password
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Penalty Settings Card */}
-          <Card className="shadow-lg">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="flex items-center gap-2">
-                <Warning className="h-5 w-5 text-destructive" />
-                Penalty Rules
-              </CardTitle>
-              <CardDescription>Configure late fees and penalty interest for overdue payments</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <Link
-                to="/settings/penalty-settings"
-                className="group flex items-center justify-between p-3 rounded border bg-muted/30 hover:bg-muted/50 transition-colors"
-              >
-                <div>
-                  <p className="font-medium">Late Fees & Penalties</p>
-                  <p className="text-sm text-muted-foreground">
-                    Set up late fees, daily penalty interest, and caps
-                  </p>
-                </div>
-                <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Financial Settings Card */}
+          {/* Financial Settings */}
           {isLender && (
-            <Card className="shadow-lg">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5 text-primary" />
-                  Financial Settings
-                </CardTitle>
-                <CardDescription>Set your starting capital for cash position tracking</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
+            <div className="rounded-xl border shadow-sm">
+              <div className="p-5 pb-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-base font-semibold">Financial</h3>
+                </div>
+              </div>
+              <div className="p-5 pt-0">
                 <div className="space-y-2">
-                  <Label>Starting Capital</Label>
+                  <Label className="text-xs">Starting Capital</Label>
                   {isEditingCapital ? (
                     <div className="flex gap-2">
                       <CurrencyInput
@@ -622,7 +636,7 @@ function SettingsPage() {
                     <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
                       <div className="flex items-center gap-3">
                         <Wallet className="h-5 w-5 text-muted-foreground" />
-                        <span className="font-medium">
+                        <span className="font-medium text-sm">
                           {currentCapital > 0
                             ? new Intl.NumberFormat("en-PH", {
                                 style: "currency",
@@ -648,11 +662,48 @@ function SettingsPage() {
                     This is used to calculate your cash position on the dashboard.
                   </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
+
+          {/* Quick Links */}
+          <div className="rounded-xl border shadow-sm">
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-2">
+                <GearSix className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-base font-semibold">More Settings</h3>
+              </div>
+            </div>
+            <div className="p-5 pt-0 space-y-0">
+              <Link
+                to="/settings/penalty-settings"
+                className="flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors"
+              >
+                <span className="h-2 w-2 rounded-full shrink-0 bg-destructive" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Penalty Settings</p>
+                  <p className="text-xs text-muted-foreground">Late fees & daily interest</p>
+                </div>
+                <ArrowSquareOut className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              {isLender && (
+                <Link
+                  to="/agents/commission-settings"
+                  search={{ tab: undefined }}
+                  className="flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors"
+                >
+                  <span className="h-2 w-2 rounded-full shrink-0 bg-primary" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Commission Settings</p>
+                    <p className="text-xs text-muted-foreground">Agent commission tiers & rules</p>
+                  </div>
+                  <ArrowSquareOut className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      </StaggerItem>
 
       {/* Change Password Dialog */}
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
@@ -763,6 +814,6 @@ function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Stagger>
   )
 }

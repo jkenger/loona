@@ -251,79 +251,72 @@ function LoanDetailPage() {
   }
 
   return (
-    <div>
-      {/* Header with background */}
-      <div className="bg-[hsl(215_45%_14%)] text-white pt-6 lg:pt-8 pb-16">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Back link */}
-          <Link to="/loans" className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-white transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Loans
-          </Link>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Back link */}
+      <Link to="/loans" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft className="h-4 w-4" />
+        Back to Loans
+      </Link>
 
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="border-l-4 border-primary pl-4">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {formatCurrency(loan.principal)}
-                </h1>
-                <Badge variant={statusConfig[loan.status].variant} className={loan.status === "active" ? "bg-primary/20 text-primary-foreground border-0" : statusConfig[loan.status].className || ""}>
-                  {statusConfig[loan.status].label}
-                </Badge>
-              </div>
-              <p className="text-blue-200/70">
-                {loan.contact.name} · {loan.interestRate}% for {loan.termMonths} months
-              </p>
-            </div>
-            {loan.isLender && (
-              <div className="flex gap-2">
-                {loan.status === "completed" && (
-                  <Link
-                    to="/loans/new-wizard"
-                    search={{ renewFromLoanId: loan.id }}
-                  >
-                    <Button variant="outline" className="gap-2">
-                      <ArrowClockwise className="h-4 w-4" weight="bold" />
-                      Renew
-                    </Button>
-                  </Link>
-                )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={(props) => (
-                      <Button {...props} variant="ghost" size="icon" className="text-blue-200/60 hover:text-white hover:bg-white/10">
-                        <DotsThreeVertical className="h-5 w-5" weight="bold" />
-                      </Button>
-                    )}
-                  />
-                  <DropdownMenuContent align="end">
-                    {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                      <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
-                        <ArrowsClockwise className="h-4 w-4" />
-                        Regenerate Schedule
-                      </DropdownMenuItem>
-                    )}
-                    {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                      <DropdownMenuSeparator />
-                    )}
-                    <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-                      <Trash className="h-4 w-4" />
-                      Delete Loan
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
+      {/* Title Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">
+              {formatCurrency(loan.principal)}
+            </h1>
+            <Badge variant={statusConfig[loan.status].variant} className={statusConfig[loan.status].className || ""}>
+              {statusConfig[loan.status].label}
+            </Badge>
           </div>
+          <p className="text-muted-foreground">
+            {loan.contact.name} · {loan.interestRate}% for {loan.termMonths} months
+          </p>
         </div>
+        {loan.isLender && (
+          <div className="flex gap-2">
+            {loan.status === "completed" && (
+              <Link
+                to="/loans/new-wizard"
+                search={{ renewFromLoanId: loan.id }}
+              >
+                <Button variant="outline" className="gap-2">
+                  <ArrowClockwise className="h-4 w-4" weight="bold" />
+                  Renew
+                </Button>
+              </Link>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={(props) => (
+                  <Button {...props} variant="ghost" size="icon">
+                    <DotsThreeVertical className="h-5 w-5" weight="bold" />
+                  </Button>
+                )}
+              />
+              <DropdownMenuContent align="end">
+                {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                  <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
+                    <ArrowsClockwise className="h-4 w-4" />
+                    Regenerate Schedule
+                  </DropdownMenuItem>
+                )}
+                {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                  <DropdownMenuSeparator />
+                )}
+                <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+                  <Trash className="h-4 w-4" />
+                  Delete Loan
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
 
-      {/* Content - overlaps header */}
-      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 -mt-8 pb-8 space-y-6 relative">
       {/* Pending Approval Banner */}
       {loan.status === "pending_approval" && loan.isLender && (
-        <Card className="border-amber-300 bg-amber-50 shadow-lg">
+        <Card className="border-amber-300 bg-amber-50 shadow-sm rounded-xl">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -361,7 +354,7 @@ function LoanDetailPage() {
 
       {/* Rejected Notice */}
       {loan.status === "rejected" && (
-        <Card className="border-gray-300 bg-gray-50 shadow-lg">
+        <Card className="border-gray-300 bg-gray-50 shadow-sm rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
@@ -410,7 +403,7 @@ function LoanDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Loan Summary */}
-        <Card className="shadow-lg">
+        <Card className="shadow-sm rounded-xl">
           <CardHeader className="p-4 pb-2">
             <CardTitle>Loan Summary</CardTitle>
           </CardHeader>
@@ -477,7 +470,7 @@ function LoanDetailPage() {
         </Card>
 
         {/* Borrower */}
-        <Card className="shadow-lg">
+        <Card className="shadow-sm rounded-xl">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
@@ -502,7 +495,7 @@ function LoanDetailPage() {
         </Card>
 
         {/* Dates */}
-        <Card className="shadow-lg">
+        <Card className="shadow-sm rounded-xl">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2">
               <CalendarCheck className="h-5 w-5 text-primary" />
@@ -963,7 +956,6 @@ function LoanDetailPage() {
           </CardContent>
         </Card>
       )}
-      </div>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
