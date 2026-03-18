@@ -115,6 +115,7 @@ function LoanDetailPage() {
   const [assigning, setAssigning] = useState(false)
   const [pendingAgentId, setPendingAgentId] = useState<string | null>(null)
   const [showAssignDialog, setShowAssignDialog] = useState(false)
+  const [notifyAgent, setNotifyAgent] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -168,6 +169,7 @@ function LoanDetailPage() {
 
   const handleAgentSelectChange = (value: string) => {
     setPendingAgentId(value)
+    setNotifyAgent(false)
     setShowAssignDialog(true)
   }
 
@@ -180,6 +182,7 @@ function LoanDetailPage() {
         data: {
           loanId: loan.id,
           agentId: pendingAgentId === "unassigned" ? null : pendingAgentId,
+          notify: notifyAgent,
         },
       })
       toast.success(pendingAgentId === "unassigned" ? "Agent unassigned" : "Agent assigned successfully")
@@ -987,6 +990,15 @@ function LoanDetailPage() {
               }
             </DialogDescription>
           </DialogHeader>
+          {pendingAgentId !== "unassigned" && (
+            <label className="flex items-center gap-3 cursor-pointer py-1">
+              <Checkbox
+                checked={notifyAgent}
+                onCheckedChange={(checked) => setNotifyAgent(!!checked)}
+              />
+              <span className="text-sm">Notify agent by email</span>
+            </label>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowAssignDialog(false); setPendingAgentId(null) }}>
               Cancel

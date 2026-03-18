@@ -178,6 +178,7 @@ function NewLoanWizard() {
     loaderPenaltyConfig ?? DEFAULT_PENALTY_CONFIG
   )
   const [assignedAgentId, setAssignedAgentId] = useState("")
+  const [notifyAgent, setNotifyAgent] = useState(false)
   const activeAgents = agents.filter((a) => a.status === "active")
 
   const lenderHasPenaltySettings = loaderPenaltyConfig?.enabled === true
@@ -325,6 +326,7 @@ function NewLoanWizard() {
         renewedFromLoanId: renewFromLoan?.id || undefined,
         penaltyConfigJson: JSON.stringify(penaltyConfig),
         assignedAgentId: assignedAgentId || undefined,
+        notifyAgent,
       }
 
       const payload = isNewContact
@@ -1220,6 +1222,15 @@ function NewLoanWizard() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {assignedAgentId && (
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <Checkbox
+                            checked={notifyAgent}
+                            onCheckedChange={(checked) => setNotifyAgent(!!checked)}
+                          />
+                          <span className="text-sm">Notify agent by email</span>
+                        </label>
+                      )}
                     </div>
                   </>
                 )}

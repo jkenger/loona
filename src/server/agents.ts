@@ -341,6 +341,7 @@ export const payCommission = createServerFn()
 const assignLoanSchema = z.object({
   loanId: z.string(),
   agentId: z.string().nullable(),
+  notify: z.boolean().optional().default(false),
 })
 
 // Assign a loan to an agent
@@ -396,7 +397,7 @@ export const assignLoanToAgent = createServerFn()
       previousAgentId: loan.assignedAgentId || null,
     })
 
-    if (agentId && agentEmail) {
+    if (agentId && agentEmail && data.notify) {
       const agent = await db.query.agents.findFirst({
         where: eq(agents.id, agentId),
         with: { agentUser: true },

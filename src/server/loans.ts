@@ -523,6 +523,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     renewedFromLoanId: z.string().optional(),
     penaltyConfigJson: z.string().optional(),
     assignedAgentId: z.string().optional(),
+    notifyAgent: z.boolean().optional().default(false),
   }),
   z.object({
     isNewContact: z.literal(false),
@@ -541,6 +542,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     renewedFromLoanId: z.string().optional(),
     penaltyConfigJson: z.string().optional(),
     assignedAgentId: z.string().optional(),
+    notifyAgent: z.boolean().optional().default(false),
   }),
 ])
 
@@ -663,7 +665,7 @@ export const createContactAndLoan = createServerFn()
     })
 
     if (data.assignedAgentId) {
-      assignLoanToAgent({ data: { loanId: loan.id, agentId: data.assignedAgentId } }).catch((err) => {
+      assignLoanToAgent({ data: { loanId: loan.id, agentId: data.assignedAgentId, notify: data.notifyAgent } }).catch((err) => {
         console.error('[Loan] Post-create agent assignment failed', err)
       })
     }
