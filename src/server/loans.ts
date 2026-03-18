@@ -13,6 +13,7 @@ import {
   type PenaltyConfig,
 } from "@/lib/constants/penalty-defaults"
 import { parseCommissionConfig } from "@/lib/constants/commission-defaults"
+import { assignLoanToAgent } from "@/server/agents"
 
 // Valid loan status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -521,6 +522,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     coMakerRelationship: z.string().optional(),
     renewedFromLoanId: z.string().optional(),
     penaltyConfigJson: z.string().optional(),
+    assignedAgentId: z.string().optional(),
   }),
   z.object({
     isNewContact: z.literal(false),
@@ -538,6 +540,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     coMakerRelationship: z.string().optional(),
     renewedFromLoanId: z.string().optional(),
     penaltyConfigJson: z.string().optional(),
+    assignedAgentId: z.string().optional(),
   }),
 ])
 
@@ -634,6 +637,7 @@ export const createContactAndLoan = createServerFn()
         coMakerRelationship: data.coMakerRelationship || null,
         renewedFromLoanId: data.renewedFromLoanId || null,
         penaltyConfig: penaltyConfigSnapshot,
+        assignedAgentId: data.assignedAgentId || null,
       })
       .returning()
 
@@ -657,6 +661,12 @@ export const createContactAndLoan = createServerFn()
       isNewContact: data.isNewContact,
       renewedFromLoanId: data.renewedFromLoanId || null,
     })
+
+    if (data.assignedAgentId) {
+      assignLoanToAgent({ data: { loanId: loan.id, agentId: data.assignedAgentId } }).catch((err) => {
+        console.error('[Loan] Post-create agent assignment failed', err)
+      })
+    }
 
     return {
       ...loan,

@@ -12,7 +12,7 @@ import { requireAuth } from './session'
 import { createAuditLogger } from './audit'
 import { z } from 'zod'
 import { ROLES } from '@/lib/constants/roles'
-import { sendEmail, agentInviteEmail } from '@/lib/email'
+import { sendEmail, agentInviteEmail, loanAssignedEmail } from '@/lib/email'
 import { randomBytes } from 'crypto'
 
 // ============================================================================
@@ -395,6 +395,24 @@ export const assignLoanToAgent = createServerFn()
       principal: loan.principal,
       previousAgentId: loan.assignedAgentId || null,
     })
+
+    if (agentId && agentEmail) {
+      const agent = await db.query.agents.findFirst({
+        where: eq(agents.id, agentId),
+        with: { agentUser: true },
+      })
+      const baseUrl = process.env.BETTER_AUTH_URL || 'https://www.loona.ph'
+      const email = loanAssignedEmail({
+        agentName: agent?.agentUser.name || 'Agent',
+        lenderName: session.user.name || 'Your lender',
+        borrowerName: loan.contact.name,
+        principal: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 0 }).format(parseFloat(loan.principal)),
+        loanUrl: `${baseUrl}/loans/${loanId}`,
+      })
+      sendEmail({ to: agentEmail, ...email }).catch((err) => {
+        console.error('[Email] Loan assigned notification failed', err)
+      })
+    }
 
     return {
       ...updated,

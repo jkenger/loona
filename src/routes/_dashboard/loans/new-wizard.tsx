@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 import { createContactAndLoan, getLoan } from "@/server/loans"
 import { getContacts, getBorrowerScorecard } from "@/server/contacts"
+import { getAgents } from "@/server/agents"
 import { getCashPosition } from "@/server/lender-settings"
 import { getPenaltySettings } from "@/server/penalty-settings"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,7 @@ import {
   Gavel,
   ChartBar,
   TrendUp,
+  UsersThree,
 } from "@phosphor-icons/react"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
@@ -94,12 +96,13 @@ export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
       session: { user: { role: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { contacts: [], cashPosition: null, unauthorized: true, renewFromLoan: null, scorecard: null, penaltyConfig: null }
+      return { contacts: [], cashPosition: null, unauthorized: true, renewFromLoan: null, scorecard: null, penaltyConfig: null, agents: [] }
     }
-    const [contacts, cashPosition, penaltyConfig] = await Promise.all([
+    const [contacts, cashPosition, penaltyConfig, agents] = await Promise.all([
       getContacts(),
       getCashPosition().catch(() => null),
       getPenaltySettings().catch(() => null),
+      getAgents().catch(() => []),
     ])
     let renewFromLoan: Awaited<ReturnType<typeof getLoan>> | null = null
     let scorecard: Awaited<ReturnType<typeof getBorrowerScorecard>> | null = null
@@ -113,14 +116,14 @@ export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
         // Source loan not found or not accessible
       }
     }
-    return { contacts, cashPosition, unauthorized: false, renewFromLoan, scorecard, penaltyConfig }
+    return { contacts, cashPosition, unauthorized: false, renewFromLoan, scorecard, penaltyConfig, agents }
   },
   pendingComponent: SkeletonFormPage,
   component: NewLoanWizard,
 })
 
 function NewLoanWizard() {
-  const { contacts, cashPosition, unauthorized, renewFromLoan, scorecard, penaltyConfig: loaderPenaltyConfig } = Route.useLoaderData()
+  const { contacts, cashPosition, unauthorized, renewFromLoan, scorecard, penaltyConfig: loaderPenaltyConfig, agents } = Route.useLoaderData()
   const {
     contactId: preselectedContactId,
     principal: searchPrincipal,
@@ -174,6 +177,9 @@ function NewLoanWizard() {
   const [penaltyConfig, setPenaltyConfig] = useState<PenaltyConfig>(
     loaderPenaltyConfig ?? DEFAULT_PENALTY_CONFIG
   )
+  const [assignedAgentId, setAssignedAgentId] = useState("")
+  const activeAgents = agents.filter((a) => a.status === "active")
+
   const lenderHasPenaltySettings = loaderPenaltyConfig?.enabled === true
   const updatePenalty = (partial: Partial<PenaltyConfig>) =>
     setPenaltyConfig(prev => ({ ...prev, ...partial }))
@@ -318,6 +324,7 @@ function NewLoanWizard() {
         coMakerRelationship: hasCoMaker ? coMakerRelationship : undefined,
         renewedFromLoanId: renewFromLoan?.id || undefined,
         penaltyConfigJson: JSON.stringify(penaltyConfig),
+        assignedAgentId: assignedAgentId || undefined,
       }
 
       const payload = isNewContact
@@ -1180,6 +1187,43 @@ function NewLoanWizard() {
                   )}
                 </div>
 
+                {activeAgents.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <UsersThree className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Assign Agent</span>
+                        <span className="text-muted-foreground font-normal text-sm">(optional)</span>
+                      </div>
+                      <Select
+                        value={assignedAgentId || "unassigned"}
+                        onValueChange={(v) => setAssignedAgentId(v === "unassigned" ? "" : v)}
+                      >
+                        <SelectTrigger>
+                          {assignedAgentId
+                            ? (() => {
+                                const agent = activeAgents.find((a) => a.id === assignedAgentId)
+                                return agent ? `${agent.agentName} (${agent.commissionRate}%)` : "Select an agent"
+                              })()
+                            : <span className="text-muted-foreground">No agent assigned</span>
+                          }
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">
+                            <span className="text-muted-foreground">No agent assigned</span>
+                          </SelectItem>
+                          {activeAgents.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id}>
+                              {agent.agentName} ({agent.commissionRate}%)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
                 {stepError && (
                   <div className="p-3 rounded bg-destructive/10 text-destructive text-sm">
                     {stepError}
@@ -1558,7 +1602,7 @@ function NewLoanWizard() {
                   </div>
                 </div>
 
-                {(purpose || hasCollateral || hasCoMaker) && (
+                {(purpose || hasCollateral || hasCoMaker || assignedAgentId) && (
                   <>
                     <Separator />
                     <div className="space-y-2 text-sm">
@@ -1586,6 +1630,14 @@ function NewLoanWizard() {
                             Co-maker
                           </span>
                           <span className="font-medium">{coMakerName}</span>
+                        </div>
+                      )}
+                      {assignedAgentId && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Agent</span>
+                          <span className="font-medium">
+                            {activeAgents.find((a) => a.id === assignedAgentId)?.agentName || "—"}
+                          </span>
                         </div>
                       )}
                     </div>

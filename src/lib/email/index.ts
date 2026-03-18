@@ -394,6 +394,71 @@ If you have any questions, feel free to reach out to our support team.
   return { subject, html, text }
 }
 
+export function loanAssignedEmail(params: {
+  agentName: string
+  lenderName: string
+  borrowerName: string
+  principal: string
+  loanUrl: string
+}) {
+  const { agentName, lenderName, borrowerName, principal, loanUrl } = params
+  const subject = `New loan assigned — ${borrowerName}`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+    <p style="color: #666; margin: 8px 0 0 0;">Loan Management Made Simple</p>
+  </div>
+
+  <h2 style="color: #1a1a1a; margin-bottom: 16px;">New Loan Assigned</h2>
+
+  <p>Hi ${agentName},</p>
+
+  <p><strong>${lenderName}</strong> has assigned a new loan to you.</p>
+
+  <div style="background-color: #f5f5f5; border-radius: 8px; padding: 20px; margin: 24px 0;">
+    <p style="margin: 0; color: #444;">
+      <strong>Borrower:</strong> ${borrowerName}<br>
+      <strong>Principal:</strong> ${principal}
+    </p>
+  </div>
+
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${loanUrl}" style="background-color: #1a8cff; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">View Loan</a>
+  </div>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+  <p style="color: #999; font-size: 12px; text-align: center;">
+    This email was sent by Loona on behalf of ${lenderName}.
+  </p>
+</body>
+</html>
+  `
+
+  const text = `
+Hi ${agentName},
+
+${lenderName} has assigned a new loan to you.
+
+Borrower: ${borrowerName}
+Principal: ${principal}
+
+View loan: ${loanUrl}
+
+This email was sent by Loona on behalf of ${lenderName}.
+  `
+
+  return { subject, html, text }
+}
+
 export function paymentReminderEmail(params: {
   borrowerName: string
   lenderName: string
