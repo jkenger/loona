@@ -984,19 +984,22 @@ function LoanDetailPage() {
                 : (() => {
                     const agent = activeAgents.find((a) => a.id === pendingAgentId)
                     return agent
-                      ? `Assign ${agent.agentName} (${agent.commissionRate}%) to this loan? They will be notified by email.`
+                      ? `Assign ${agent.agentName} (${agent.commissionRate}%) to this loan?`
                       : "Assign this agent to the loan?"
                   })()
               }
             </DialogDescription>
           </DialogHeader>
           {pendingAgentId !== "unassigned" && (
-            <label className="flex items-center gap-3 cursor-pointer py-1">
+            <label className="flex items-center gap-2 cursor-pointer rounded-lg border p-3">
               <Checkbox
                 checked={notifyAgent}
                 onCheckedChange={(checked) => setNotifyAgent(!!checked)}
               />
-              <span className="text-sm">Notify agent by email</span>
+              <div>
+                <p className="text-sm font-medium">Notify agent by email</p>
+                <p className="text-xs text-muted-foreground">Send an email to the agent about this assignment</p>
+              </div>
             </label>
           )}
           <DialogFooter>
