@@ -113,6 +113,8 @@ function LoanDetailPage() {
   const penaltyData = loan?.penaltyData ?? null
   const router = useRouter()
   const [assigning, setAssigning] = useState(false)
+  const [pendingAgentId, setPendingAgentId] = useState<string | null>(null)
+  const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -164,21 +166,29 @@ function LoanDetailPage() {
   const activeAgents = (agents || []).filter((a) => a.status === "active")
   const hasPayments = loan.payments.length > 0
 
-  const handleAssignAgent = async (agentId: string | null) => {
+  const handleAgentSelectChange = (value: string) => {
+    setPendingAgentId(value)
+    setShowAssignDialog(true)
+  }
+
+  const handleConfirmAssign = async () => {
+    if (pendingAgentId === undefined) return
     setAssigning(true)
+    setShowAssignDialog(false)
     try {
       await assignLoanToAgent({
         data: {
           loanId: loan.id,
-          agentId: agentId === "unassigned" ? null : agentId,
+          agentId: pendingAgentId === "unassigned" ? null : pendingAgentId,
         },
       })
-      toast.success(agentId === "unassigned" ? "Agent unassigned" : "Agent assigned successfully")
+      toast.success(pendingAgentId === "unassigned" ? "Agent unassigned" : "Agent assigned successfully")
       router.invalidate()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to assign agent")
     } finally {
       setAssigning(false)
+      setPendingAgentId(null)
     }
   }
 
@@ -599,7 +609,7 @@ function LoanDetailPage() {
                   <div className="space-y-2">
                     <Select
                       value={loan.assignedAgentId || "unassigned"}
-                      onValueChange={handleAssignAgent}
+                      onValueChange={handleAgentSelectChange}
                       disabled={assigning}
                     >
                       <SelectTrigger className="w-full">
@@ -956,6 +966,38 @@ function LoanDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Agent Assignment Confirmation Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={(open) => { if (!open) { setShowAssignDialog(false); setPendingAgentId(null) } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UsersThree className="h-5 w-5 text-primary" />
+              {pendingAgentId === "unassigned" ? "Remove Agent" : "Assign Agent"}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingAgentId === "unassigned"
+                ? "Remove the agent assignment from this loan?"
+                : (() => {
+                    const agent = activeAgents.find((a) => a.id === pendingAgentId)
+                    return agent
+                      ? `Assign ${agent.agentName} (${agent.commissionRate}%) to this loan? They will be notified by email.`
+                      : "Assign this agent to the loan?"
+                  })()
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowAssignDialog(false); setPendingAgentId(null) }}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmAssign} disabled={assigning} className="gap-2">
+              {assigning && <Spinner className="h-4 w-4 animate-spin" />}
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
