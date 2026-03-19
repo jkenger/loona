@@ -447,6 +447,18 @@ function LoanDetailPage() {
                 )}
               </span>
             </div>
+            {loan.processingFeePercent && parseFloat(loan.processingFeePercent) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Processing Fee ({loan.processingFeePercent}%)</span>
+                <span className="font-medium">{formatCurrency(parseFloat(loan.principal) * parseFloat(loan.processingFeePercent) / 100)}</span>
+              </div>
+            )}
+            {loan.processingFeePercent && parseFloat(loan.processingFeePercent) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Net Proceeds</span>
+                <span className="font-medium">{formatCurrency(parseFloat(loan.principal) - parseFloat(loan.principal) * parseFloat(loan.processingFeePercent) / 100)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t pt-4">
               <span className="text-muted-foreground">Amount Paid</span>
               <span className="font-medium text-primary">{formatCurrency(loan.amountPaid)}</span>

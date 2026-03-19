@@ -211,6 +211,9 @@ export const loans = pgTable("loans", {
   // Snapshot of lender's penalty config at loan creation (JSON)
   penaltyConfig: text("penalty_config"),
 
+  // Processing fee (deducted from disbursement)
+  processingFeePercent: decimal("processing_fee_percent", { precision: 5, scale: 2 }),
+
   // Renewal tracking
   renewedFromLoanId: text("renewed_from_loan_id"),
 

@@ -346,55 +346,64 @@ function DisclosurePage() {
                 <tbody>
                   {[
                     {
-                      label: "1. Principal Amount",
+                      label: "Principal Amount",
                       value: formatCurrency(principal),
                       bold: true,
                     },
                     {
-                      label: "2. Finance Charges (Total Interest)",
+                      label: "Finance Charges (Total Interest)",
                       value: formatCurrency(totalInterest),
                       bold: true,
                     },
+                    ...(loan.processingFeePercent && parseFloat(loan.processingFeePercent) > 0
+                      ? [
+                          {
+                            label: `Processing Fee (${loan.processingFeePercent}%)`,
+                            value: formatCurrency(principal * parseFloat(loan.processingFeePercent) / 100),
+                          },
+                          {
+                            label: "Net Proceeds (Amount Disbursed)",
+                            value: formatCurrency(principal - principal * parseFloat(loan.processingFeePercent) / 100),
+                            bold: true,
+                          },
+                        ]
+                      : []),
                     {
-                      label: "3. Total Amount Financed",
-                      value: formatCurrency(principal),
-                    },
-                    {
-                      label: "4. Total Amount to be Paid",
+                      label: "Total Amount to be Paid",
                       value: formatCurrency(totalToRepay),
                       bold: true,
                     },
                     {
-                      label: "5. Nominal Interest Rate (Monthly)",
+                      label: "Nominal Interest Rate (Monthly)",
                       value: `${loan.interestRate}% per month`,
                     },
                     {
-                      label: "6. Effective Interest Rate (EIR) Per Annum",
+                      label: "Effective Interest Rate (EIR) Per Annum",
                       value: formatEIR(eir),
                       highlight: true,
                       bold: true,
                     },
                     {
-                      label: "7. Loan Term",
+                      label: "Loan Term",
                       value: `${loan.termMonths} month${loan.termMonths !== 1 ? "s" : ""}`,
                     },
                     {
-                      label: "8. Payment Frequency",
+                      label: "Payment Frequency",
                       value:
                         frequencyLabels[loan.paymentFrequency] ||
                         loan.paymentFrequency,
                     },
                     {
-                      label: "9. Regular Payment Amount",
+                      label: "Regular Payment Amount",
                       value: formatCurrency(loan.paymentAmount),
                       bold: true,
                     },
                     {
-                      label: "10. Number of Payments",
+                      label: "Number of Payments",
                       value: loan.schedule.length.toString(),
                     },
                     {
-                      label: "11. First Payment Due Date",
+                      label: "First Payment Due Date",
                       value:
                         loan.schedule.length > 0
                           ? format(
@@ -404,27 +413,27 @@ function DisclosurePage() {
                           : "—",
                     },
                     {
-                      label: "12. Maturity Date",
+                      label: "Maturity Date",
                       value: loan.maturityDate
                         ? format(new Date(loan.maturityDate), "MMMM d, yyyy")
                         : "—",
                     },
                     {
-                      label: "13. Late Payment Penalty",
+                      label: "Late Payment Penalty",
                       value: penaltyConfig
                         ? formatPenaltyForDisclosure(penaltyConfig, loan.paymentFrequency)
                         : "None",
                     },
                     {
-                      label: "14. Default / Acceleration Charges",
+                      label: "Default / Acceleration Charges",
                       value: "None",
                     },
                     {
-                      label: "15. Prepayment Policy",
+                      label: "Prepayment Policy",
                       value: "No penalty for early repayment",
                     },
                     {
-                      label: "16. Payment Allocation",
+                      label: "Payment Allocation",
                       value: "Each payment is applied to the scheduled installment selected at the time of recording",
                     },
                   ].map((row, i) => (
@@ -445,7 +454,7 @@ function DisclosurePage() {
                           fontWeight: 500,
                         }}
                       >
-                        {row.label}
+                        {i + 1}. {row.label}
                       </td>
                       <td
                         style={{

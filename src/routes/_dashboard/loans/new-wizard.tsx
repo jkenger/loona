@@ -173,6 +173,10 @@ function NewLoanWizard() {
   const [coMakerPhone, setCoMakerPhone] = useState(renewFromLoan?.coMakerPhone || "")
   const [coMakerRelationship, setCoMakerRelationship] = useState(renewFromLoan?.coMakerRelationship || "")
 
+  // Processing fee
+  const [hasProcessingFee, setHasProcessingFee] = useState(false)
+  const [processingFeePercent, setProcessingFeePercent] = useState("3")
+
   // Penalty config — pre-filled from lender's global settings
   const [penaltyConfig, setPenaltyConfig] = useState<PenaltyConfig>(
     loaderPenaltyConfig ?? DEFAULT_PENALTY_CONFIG
@@ -325,6 +329,7 @@ function NewLoanWizard() {
         coMakerRelationship: hasCoMaker ? coMakerRelationship : undefined,
         renewedFromLoanId: renewFromLoan?.id || undefined,
         penaltyConfigJson: JSON.stringify(penaltyConfig),
+        processingFeePercent: hasProcessingFee ? parseFloat(processingFeePercent) || 0 : undefined,
         assignedAgentId: assignedAgentId || undefined,
         notifyAgent,
       }
@@ -914,6 +919,49 @@ function NewLoanWizard() {
 
                 <Separator />
 
+                {/* Processing Fee */}
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <Checkbox
+                      checked={hasProcessingFee}
+                      onCheckedChange={(checked) =>
+                        setHasProcessingFee(!!checked)
+                      }
+                    />
+                    <div className="flex items-center gap-2">
+                      <CurrencyCircleDollar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        Charge processing fee
+                      </span>
+                    </div>
+                  </label>
+                  {hasProcessingFee && (
+                    <div className="space-y-2">
+                      <div className="relative max-w-[160px]">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={processingFeePercent}
+                          onChange={(e) => setProcessingFeePercent(e.target.value)}
+                          className="pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                          %
+                        </span>
+                      </div>
+                      {parseFloat(principal) > 0 && parseFloat(processingFeePercent) > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Fee: {formatCurrency(parseFloat(principal) * parseFloat(processingFeePercent) / 100)} — Borrower receives {formatCurrency(parseFloat(principal) - parseFloat(principal) * parseFloat(processingFeePercent) / 100)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
                 {/* Collateral */}
                 <div className="space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -1347,6 +1395,23 @@ function NewLoanWizard() {
                       </span>
                     </div>
                   </div>
+
+                  {hasProcessingFee && parseFloat(processingFeePercent) > 0 && parseFloat(principal) > 0 && (
+                    <div className="border-t pt-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Processing Fee ({processingFeePercent}%)</span>
+                        <span className="font-medium">
+                          {formatCurrency(parseFloat(principal) * parseFloat(processingFeePercent) / 100)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Net Proceeds</span>
+                        <span className="font-medium">
+                          {formatCurrency(parseFloat(principal) - parseFloat(principal) * parseFloat(processingFeePercent) / 100)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1611,6 +1676,22 @@ function NewLoanWizard() {
                       {formatCurrency(calculations.paymentAmount)}
                     </span>
                   </div>
+                  {hasProcessingFee && parseFloat(processingFeePercent) > 0 && parseFloat(principal) > 0 && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Processing Fee ({processingFeePercent}%)</span>
+                        <span className="font-medium">
+                          {formatCurrency(parseFloat(principal) * parseFloat(processingFeePercent) / 100)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Net Proceeds</span>
+                        <span className="font-medium">
+                          {formatCurrency(parseFloat(principal) - parseFloat(principal) * parseFloat(processingFeePercent) / 100)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {(purpose || hasCollateral || hasCoMaker || assignedAgentId) && (

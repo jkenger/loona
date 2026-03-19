@@ -1,0 +1,1 @@
+ALTER TABLE "loans" ADD COLUMN "processing_fee_percent" numeric(5, 2);

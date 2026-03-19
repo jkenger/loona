@@ -524,6 +524,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     penaltyConfigJson: z.string().optional(),
     assignedAgentId: z.string().optional(),
     notifyAgent: z.boolean().optional().default(false),
+    processingFeePercent: z.number().min(0).max(100).optional(),
   }),
   z.object({
     isNewContact: z.literal(false),
@@ -543,6 +544,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     penaltyConfigJson: z.string().optional(),
     assignedAgentId: z.string().optional(),
     notifyAgent: z.boolean().optional().default(false),
+    processingFeePercent: z.number().min(0).max(100).optional(),
   }),
 ])
 
@@ -639,6 +641,7 @@ export const createContactAndLoan = createServerFn()
         coMakerRelationship: data.coMakerRelationship || null,
         renewedFromLoanId: data.renewedFromLoanId || null,
         penaltyConfig: penaltyConfigSnapshot,
+        processingFeePercent: data.processingFeePercent?.toString() || null,
         assignedAgentId: data.assignedAgentId || null,
       })
       .returning()
