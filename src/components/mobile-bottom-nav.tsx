@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router"
+import { Link, useLocation, useRouter } from "@tanstack/react-router"
 import {
   House,
   CurrencyCircleDollar,
@@ -16,6 +16,7 @@ import {
   DotsThree,
   BookOpenText,
   Calculator,
+  SignOut,
 } from "@phosphor-icons/react"
 import type { Icon } from "@phosphor-icons/react"
 import {
@@ -24,6 +25,7 @@ import {
   BottomSheetClose,
   BottomSheetContent,
 } from "@/components/ui/bottom-sheet"
+import { signOut } from "@/lib/auth-client"
 
 type NavItem = {
   name: string
@@ -83,7 +85,13 @@ function isActive(pathname: string, href: string, exact: boolean) {
 
 export function MobileBottomNav({ portal }: { portal: "lender" | "agent" | "admin" }) {
   const location = useLocation()
+  const router = useRouter()
   const { primary, more } = portalConfig[portal]
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.navigate({ to: "/login" })
+  }
 
   const moreIsActive = more.some((item) => isActive(location.pathname, item.href, item.exact))
 
@@ -127,6 +135,15 @@ export function MobileBottomNav({ portal }: { portal: "lender" | "agent" | "admi
                     </BottomSheetClose>
                   )
                 })}
+                <div className="border-t pt-2 mt-2">
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors w-full text-left"
+                  >
+                    <SignOut className="h-5 w-5" />
+                    Sign out
+                  </button>
+                </div>
               </div>
             </BottomSheetContent>
           </BottomSheet>
