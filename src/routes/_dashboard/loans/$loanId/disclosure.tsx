@@ -1,9 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useRef, useState, useEffect } from "react"
 import { getLoan } from "@/server/loans"
 import {
   getDocumentSignatures,
-  generateSigningLink,
+  sendSigningRequest,
 } from "@/server/signatures"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,7 @@ import {
   ArrowLeft,
   FilePdf,
   Spinner,
-  LinkSimple,
+  EnvelopeSimple,
   Check,
 } from "@phosphor-icons/react"
 import { toast } from "sonner"
@@ -91,6 +91,7 @@ function useDocColors(pdfMode: boolean) {
 
 function DisclosurePage() {
   const { loan, unauthorized, lenderName, penaltyConfig, signatures } = Route.useLoaderData()
+  const router = useRouter()
   const documentRef = useRef<HTMLDivElement>(null)
   const [generating, setGenerating] = useState(false)
   const [pdfMode, setPdfMode] = useState(false)
@@ -183,26 +184,20 @@ function DisclosurePage() {
     }
   }
 
-  const handleGenerateLink = async () => {
+  const handleSendSigningRequest = async (signerRole: "borrower" | "co_maker" = "borrower") => {
     setSigningLoading(true)
     try {
-      const result = await generateSigningLink({
+      const result = await sendSigningRequest({
         data: {
           loanId: loan.id,
           documentType: "disclosure",
-          signerRole: "borrower",
+          signerRole,
         },
       })
-      const url = `${window.location.origin}/share/sign/${result.token}`
-      try {
-        await navigator.clipboard.writeText(url)
-        toast.success("Signing link copied to clipboard")
-      } catch {
-        prompt("Copy this signing link:", url)
-      }
+      toast.success(`Signing request sent to ${result.maskedEmail}`)
+      router.invalidate()
     } catch (err) {
-      console.error("generateSigningLink error:", err)
-      toast.error("Failed to generate signing link")
+      toast.error(err instanceof Error ? err.message : "Failed to send signing request")
     } finally {
       setSigningLoading(false)
     }
@@ -977,20 +972,38 @@ function DisclosurePage() {
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleGenerateLink}
-                  disabled={signingLoading}
-                  variant="outline"
-                  className="gap-2 w-full justify-center"
-                  size="sm"
-                >
-                  {signingLoading ? (
-                    <Spinner className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <LinkSimple className="h-3.5 w-3.5" />
-                  )}
-                  Send to Borrower for Signing
-                </Button>
+                {!borrowerSig?.otpVerifiedAt && (
+                  <Button
+                    onClick={() => handleSendSigningRequest("borrower")}
+                    disabled={signingLoading}
+                    variant="outline"
+                    className="gap-2 w-full justify-center"
+                    size="sm"
+                  >
+                    {signingLoading ? (
+                      <Spinner className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <EnvelopeSimple className="h-3.5 w-3.5" />
+                    )}
+                    {borrowerSig?.signingToken ? "Resend Signing Request" : "Send Signing Request"}
+                  </Button>
+                )}
+                {loan.coMakerName && !coMakerSig?.otpVerifiedAt && (
+                  <Button
+                    onClick={() => handleSendSigningRequest("co_maker")}
+                    disabled={signingLoading || !loan.coMakerEmail}
+                    variant="outline"
+                    className="gap-2 w-full justify-center"
+                    size="sm"
+                  >
+                    {signingLoading ? (
+                      <Spinner className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <EnvelopeSimple className="h-3.5 w-3.5" />
+                    )}
+                    {coMakerSig?.signingToken ? "Resend to Co-maker" : "Send to Co-maker"}
+                  </Button>
+                )}
               </div>
 
             </div>

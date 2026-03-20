@@ -5,7 +5,7 @@ import {
   getDocumentSignatures,
   initiateLenderOtp,
   verifyLenderOtp,
-  generateSigningLink,
+  sendSigningRequest,
   deleteSignature,
 } from "@/server/signatures"
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,6 @@ import {
   CaretDown,
   Check,
   EnvelopeSimple,
-  LinkSimple,
   Trash,
 } from "@phosphor-icons/react"
 import { toast } from "sonner"
@@ -323,28 +322,21 @@ function PromissoryNotePage() {
     }
   }
 
-  const handleGenerateLink = async () => {
+  const handleSendSigningRequest = async (signerRole: "borrower" | "co_maker" = "borrower") => {
     setSigningLoading(true)
     try {
-      const result = await generateSigningLink({
+      const result = await sendSigningRequest({
         data: {
           loanId: loan.id,
           documentType: "promissory_note",
-          signerRole: "borrower",
+          signerRole,
           docStyle,
         },
       })
-      const url = `${window.location.origin}/share/sign/${result.token}`
-      try {
-        await navigator.clipboard.writeText(url)
-        toast.success("Signing link copied to clipboard")
-      } catch {
-        // Clipboard API may fail in some contexts — show the link instead
-        prompt("Copy this signing link:", url)
-      }
+      toast.success(`Signing request sent to ${result.maskedEmail}`)
+      router.invalidate()
     } catch (err) {
-      console.error("generateSigningLink error:", err)
-      toast.error("Failed to generate signing link")
+      toast.error(err instanceof Error ? err.message : "Failed to send signing request")
     } finally {
       setSigningLoading(false)
     }
@@ -1209,9 +1201,9 @@ function PromissoryNotePage() {
             </div>
           )}
 
-          {lenderSig?.otpVerifiedAt && (
+          {lenderSig?.otpVerifiedAt && !borrowerSig?.otpVerifiedAt && (
             <Button
-              onClick={handleGenerateLink}
+              onClick={() => handleSendSigningRequest("borrower")}
               disabled={signingLoading}
               variant="outline"
               className="gap-2 w-full justify-center"
@@ -1220,9 +1212,25 @@ function PromissoryNotePage() {
               {signingLoading ? (
                 <Spinner className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <LinkSimple className="h-3.5 w-3.5" />
+                <EnvelopeSimple className="h-3.5 w-3.5" />
               )}
-              Send to Borrower for Signing
+              {borrowerSig?.signingToken ? "Resend Signing Request" : "Send Signing Request"}
+            </Button>
+          )}
+          {lenderSig?.otpVerifiedAt && loan.coMakerName && !coMakerSig?.otpVerifiedAt && (
+            <Button
+              onClick={() => handleSendSigningRequest("co_maker")}
+              disabled={signingLoading || !loan.coMakerEmail}
+              variant="outline"
+              className="gap-2 w-full justify-center"
+              size="sm"
+            >
+              {signingLoading ? (
+                <Spinner className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <EnvelopeSimple className="h-3.5 w-3.5" />
+              )}
+              {coMakerSig?.signingToken ? "Resend to Co-maker" : "Send to Co-maker"}
             </Button>
           )}
         </div>

@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useState, useEffect, useRef } from "react"
 import { getSigningDocument, initiatePublicOtp, verifyPublicOtp } from "@/server/signatures"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { LoonaBrand, FloatingCircle } from "@/components/ui/loona-brand"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
-import { Spinner, Check, Warning, EnvelopeSimple, ShieldCheck } from "@phosphor-icons/react"
-import { motion, AnimatePresence } from "framer-motion"
+import { Spinner, Check, Warning, ShieldCheck } from "@phosphor-icons/react"
+import { motion } from "framer-motion"
 import { format } from "date-fns"
 import { useDocColors } from "@/lib/utils/share"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
@@ -45,18 +46,17 @@ function formatCurrency(amount: string | number): string {
 }
 
 const RESEND_COOLDOWN = 60
-const OTP_EXPIRY_MINUTES = 10
+const RESEND_OTP_EXPIRY_MINUTES = 10
 
 function SigningPage() {
   const { result, token } = Route.useLoaderData()
-  const [step, setStep] = useState<"document" | "otp" | "success">("document")
-  const [maskedEmail, setMaskedEmail] = useState<string | null>(null)
+  const [signed, setSigned] = useState(false)
   const [otpCode, setOtpCode] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resendCooldown, setResendCooldown] = useState(0)
   const [signedAt, setSignedAt] = useState<string | null>(null)
-  const [agreed, setAgreed] = useState(false)
+  const [resendEmail, setResendEmail] = useState<string | null>(null)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -104,9 +104,10 @@ function SigningPage() {
     )
   }
 
-  const { loan, documentType, signerName, docStyle } = result
+  const { loan, documentType, signerName, signerEmail: maskedEmailFromResult, docStyle } = result
   const docTitle = documentType === "disclosure" ? "Disclosure Statement" : "Promissory Note"
   const c = useDocColors(false)
+  const maskedEmail = resendEmail ?? maskedEmailFromResult
 
   const startCooldown = () => {
     setResendCooldown(RESEND_COOLDOWN)
@@ -121,27 +122,13 @@ function SigningPage() {
     }, 1000)
   }
 
-  const handleSendOtp = async () => {
-    setSubmitting(true)
-    setError(null)
-    try {
-      const res = await initiatePublicOtp({ data: { token } })
-      setMaskedEmail(res.email)
-      setStep("otp")
-      startCooldown()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to send code")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   const handleResend = async () => {
     if (resendCooldown > 0) return
     setSubmitting(true)
     setError(null)
     try {
-      await initiatePublicOtp({ data: { token } })
+      const res = await initiatePublicOtp({ data: { token } })
+      setResendEmail(res.email)
       startCooldown()
       setOtpCode("")
     } catch (e) {
@@ -161,7 +148,7 @@ function SigningPage() {
       try {
         const res = await verifyPublicOtp({ data: { token, code: digits } })
         setSignedAt(res.signedAt)
-        setStep("success")
+        setSigned(true)
       } catch (e) {
         setError(e instanceof Error ? e.message : "Invalid code")
       } finally {
@@ -170,7 +157,7 @@ function SigningPage() {
     }
   }
 
-  if (step === "success") {
+  if (signed) {
     return (
       <div className="min-h-screen bg-gradient-page relative overflow-hidden">
         <FloatingCircle
@@ -267,105 +254,43 @@ function SigningPage() {
                 <CardHeader>
                   <CardTitle>Sign Document</CardTitle>
                   <CardDescription>
-                    Verify your identity via email to sign this {docTitle.toLowerCase()}.
+                    Enter the 6-digit code sent to{maskedEmail ? ` ${maskedEmail}` : " your email"} to sign this {docTitle.toLowerCase()}.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <AnimatePresence mode="wait">
-                    {step === "document" && (
-                      <motion.div
-                        key="document-step"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="space-y-4"
-                      >
-                        <label className="flex items-start gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="mt-0.5"
-                            checked={agreed}
-                            onChange={(e) => setAgreed(e.target.checked)}
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            I have read and understood this {docTitle} and agree to sign it electronically.
-                          </span>
-                        </label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="000000"
+                    value={otpCode}
+                    onChange={(e) => handleOtpChange(e.target.value)}
+                    disabled={submitting}
+                    maxLength={6}
+                    className="text-center text-2xl tracking-[0.5em] font-mono h-14"
+                    autoFocus
+                  />
 
-                        {error && <p className="text-sm text-destructive">{error}</p>}
+                  {submitting && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Spinner className="h-4 w-4 animate-spin" />
+                      Verifying...
+                    </div>
+                  )}
 
-                        <Button
-                          onClick={handleSendOtp}
-                          disabled={submitting || !agreed}
-                          className="w-full gap-2"
-                        >
-                          {submitting ? (
-                            <>
-                              <Spinner className="h-4 w-4 animate-spin" />
-                              Sending code...
-                            </>
-                          ) : (
-                            <>
-                              <EnvelopeSimple className="h-4 w-4" weight="bold" />
-                              Send Verification Code
-                            </>
-                          )}
-                        </Button>
-                      </motion.div>
-                    )}
+                  {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
-                    {step === "otp" && (
-                      <motion.div
-                        key="otp-step"
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="space-y-4"
-                      >
-                        <div className="text-center space-y-1">
-                          <EnvelopeSimple className="h-8 w-8 mx-auto text-primary" weight="duotone" />
-                          <p className="text-sm font-medium">Code sent to {maskedEmail}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Enter the 6-digit code from your email. Expires in {OTP_EXPIRY_MINUTES} minutes.
-                          </p>
-                        </div>
-
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          placeholder="000000"
-                          value={otpCode}
-                          onChange={(e) => handleOtpChange(e.target.value)}
-                          disabled={submitting}
-                          maxLength={6}
-                          className="text-center text-2xl tracking-[0.5em] font-mono h-14"
-                          autoFocus
-                        />
-
-                        {submitting && (
-                          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                            <Spinner className="h-4 w-4 animate-spin" />
-                            Verifying...
-                          </div>
-                        )}
-
-                        {error && <p className="text-sm text-destructive text-center">{error}</p>}
-
-                        <div className="text-center">
-                          <button
-                            onClick={handleResend}
-                            disabled={resendCooldown > 0 || submitting}
-                            className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-not-allowed"
-                          >
-                            {resendCooldown > 0
-                              ? `Resend code in ${resendCooldown}s`
-                              : "Didn't receive a code? Resend"}
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <div className="text-center">
+                    <button
+                      onClick={handleResend}
+                      disabled={resendCooldown > 0 || submitting}
+                      className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-not-allowed"
+                    >
+                      {resendCooldown > 0
+                        ? `Resend code in ${resendCooldown}s`
+                        : "Didn't receive a code? Resend"}
+                    </button>
+                  </div>
                 </CardContent>
               </Card>
             </StaggerItem>

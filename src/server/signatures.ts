@@ -5,9 +5,9 @@ import { eq, and } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { z } from "zod"
 import { createHash } from "crypto"
-import { sendEmail, signingOtpEmail } from "@/lib/email"
-
+import { sendEmail, signingOtpEmail, signingRequestEmail } from "@/lib/email"
 const OTP_EXPIRY_MINUTES = 10
+const SIGNING_REQUEST_OTP_HOURS = 48
 const OTP_MAX_ATTEMPTS = 5
 const OTP_MAX_SENDS = 5
 
@@ -149,6 +149,92 @@ export const generateSigningLink = createServerFn()
     })
 
     return { token }
+  })
+
+// Send signing request email to borrower/co-maker with link + OTP in one shot
+const sendSigningRequestSchema = z.object({
+  loanId: z.string().min(1),
+  documentType: z.enum(["disclosure", "promissory_note"]),
+  signerRole: z.enum(["borrower", "co_maker"]),
+  docStyle: z.enum(["full", "simple"]).optional(),
+})
+
+export const sendSigningRequest = createServerFn()
+  .inputValidator(sendSigningRequestSchema)
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+      with: { contact: true, lender: true },
+    })
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    const signerName =
+      data.signerRole === "borrower" ? loan.contact.name : loan.coMakerName ?? "Co-maker"
+    const signerEmail =
+      data.signerRole === "borrower" ? loan.contact.email : loan.coMakerEmail
+
+    if (!signerEmail) {
+      throw new Error(
+        data.signerRole === "borrower"
+          ? "Borrower has no email address on file"
+          : "Co-maker has no email address on file. Please add their email to the loan."
+      )
+    }
+
+    // Find or create signing record
+    const existing = await db.query.documentSignatures.findFirst({
+      where: and(
+        eq(documentSignatures.loanId, data.loanId),
+        eq(documentSignatures.documentType, data.documentType),
+        eq(documentSignatures.signerRole, data.signerRole),
+      ),
+    })
+
+    if (existing?.otpVerifiedAt) {
+      throw new Error("This document has already been signed")
+    }
+
+    // Delete old unsigned record to issue fresh token + OTP
+    if (existing) {
+      await db.delete(documentSignatures).where(eq(documentSignatures.id, existing.id))
+    }
+
+    const token = crypto.randomUUID()
+    const code = generateOtp()
+    const otpHash = hashOtp(code)
+    const otpExpiresAt = new Date(Date.now() + SIGNING_REQUEST_OTP_HOURS * 60 * 60 * 1000)
+
+    await db.insert(documentSignatures).values({
+      loanId: data.loanId,
+      documentType: data.documentType,
+      signerRole: data.signerRole,
+      signerName,
+      signerEmail,
+      signingToken: token,
+      docStyle: data.docStyle ?? null,
+      otpHash,
+      otpExpiresAt,
+    })
+
+    const origin = process.env.BETTER_AUTH_URL ?? "https://www.loona.ph"
+    const signingUrl = `${origin}/share/sign/${token}`
+
+    await sendEmail({
+      to: signerEmail,
+      ...signingRequestEmail({
+        signerName,
+        lenderName: session.user.name,
+        documentType: data.documentType,
+        otpCode: code,
+        signingUrl,
+      }),
+    })
+
+    return { success: true, maskedEmail: maskEmail(signerEmail) }
   })
 
 const deleteSignatureSchema = z.object({

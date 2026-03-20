@@ -587,3 +587,74 @@ If you did not request this code, ignore this email.
 
   return { subject, html, text }
 }
+
+export function signingRequestEmail(params: {
+  signerName: string
+  lenderName: string
+  documentType: "disclosure" | "promissory_note"
+  otpCode: string
+  signingUrl: string
+}) {
+  const { signerName, lenderName, documentType, otpCode, signingUrl } = params
+  const docLabel = documentType === "disclosure" ? "Disclosure Statement" : "Promissory Note"
+  const subject = `Please sign your ${docLabel} — ${lenderName}`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+  </div>
+
+  <h2 style="color: #1a1a1a; margin-bottom: 8px;">Document Ready to Sign</h2>
+  <p>Hi ${signerName},</p>
+  <p><strong>${lenderName}</strong> has sent you a <strong>${docLabel}</strong> for your review and signature.</p>
+
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${signingUrl}" style="display: inline-block; background-color: #1a8cff; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+      Review &amp; Sign Document
+    </a>
+  </div>
+
+  <div style="background-color: #f0f7ff; border: 2px solid #1a8cff; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+    <p style="margin: 0 0 8px; color: #555; font-size: 14px;">Your verification code</p>
+    <p style="margin: 0; font-size: 42px; font-weight: 700; letter-spacing: 10px; color: #1a1a1a; font-family: monospace;">${otpCode}</p>
+    <p style="margin: 10px 0 0; color: #888; font-size: 13px;">Enter this code when prompted on the signing page</p>
+  </div>
+
+  <p style="color: #cc0000; font-size: 14px;">
+    <strong>Do not share this code.</strong> Entering it confirms your consent to sign the ${docLabel}.
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+  <p style="color: #999; font-size: 12px; text-align: center;">
+    If you were not expecting this document, you can ignore this email. This was sent via Loona on behalf of ${lenderName}.
+  </p>
+</body>
+</html>
+  `
+
+  const text = `
+Document Ready to Sign
+
+Hi ${signerName},
+
+${lenderName} has sent you a ${docLabel} for your review and signature.
+
+Sign your document here: ${signingUrl}
+
+Your verification code: ${otpCode}
+
+Enter this code when prompted on the signing page. Do not share this code — it confirms your consent to sign the ${docLabel}.
+
+If you were not expecting this, you can ignore this email.
+  `
+
+  return { subject, html, text }
+}
