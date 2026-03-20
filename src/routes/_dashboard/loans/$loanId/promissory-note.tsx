@@ -3,7 +3,8 @@ import { useRef, useState, useEffect, useMemo } from "react"
 import { getLoan, updateLoanClauses } from "@/server/loans"
 import {
   getDocumentSignatures,
-  saveLenderSignature,
+  initiateLenderOtp,
+  verifyLenderOtp,
   generateSigningLink,
   deleteSignature,
 } from "@/server/signatures"
@@ -12,8 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { SkeletonDetailPage } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
-import { SignaturePad } from "@/components/ui/signature-pad"
 import { SignatureBlock } from "@/components/documents/signature-block"
+import { Input } from "@/components/ui/input"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import {
   ArrowLeft,
@@ -24,7 +25,7 @@ import {
   X,
   CaretDown,
   Check,
-  PenNib,
+  EnvelopeSimple,
   LinkSimple,
   Trash,
 } from "@phosphor-icons/react"
@@ -144,8 +145,12 @@ function PromissoryNotePage() {
   const [docStyle, setDocStyle] = useState<"full" | "simple">("full")
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [showSignPad, setShowSignPad] = useState(false)
   const [signingLoading, setSigningLoading] = useState(false)
+  const [showOtpInput, setShowOtpInput] = useState(false)
+  const [otpSigId, setOtpSigId] = useState<string | null>(null)
+  const [otpMaskedEmail, setOtpMaskedEmail] = useState<string | null>(null)
+  const [otpCode, setOtpCode] = useState("")
+  const [otpError, setOtpError] = useState<string | null>(null)
 
   const sigs = signatures ?? []
   const lenderSig = sigs.find((s) => s.signerRole === "lender")
@@ -283,21 +288,36 @@ function PromissoryNotePage() {
     }))
   }
 
-  const handleSaveLenderSignature = async (dataUrl: string) => {
+  const handleInitiateLenderOtp = async () => {
     setSigningLoading(true)
+    setOtpError(null)
     try {
-      await saveLenderSignature({
-        data: {
-          loanId: loan.id,
-          documentType: "promissory_note",
-          signatureData: dataUrl,
-        },
+      const res = await initiateLenderOtp({
+        data: { loanId: loan.id, documentType: "promissory_note" },
       })
-      toast.success("Signature saved")
-      setShowSignPad(false)
+      setOtpSigId(res.sigId)
+      setOtpMaskedEmail(res.email)
+      setShowOtpInput(true)
+      setOtpCode("")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send code")
+    } finally {
+      setSigningLoading(false)
+    }
+  }
+
+  const handleVerifyLenderOtp = async (code: string) => {
+    if (!otpSigId) return
+    setSigningLoading(true)
+    setOtpError(null)
+    try {
+      await verifyLenderOtp({ data: { sigId: otpSigId, code } })
+      toast.success("Document signed")
+      setShowOtpInput(false)
+      setOtpCode("")
       router.invalidate()
-    } catch {
-      toast.error("Failed to save signature")
+    } catch (e) {
+      setOtpError(e instanceof Error ? e.message : "Invalid code")
     } finally {
       setSigningLoading(false)
     }
@@ -789,7 +809,6 @@ function PromissoryNotePage() {
             <SignatureBlock
               name={loan.contact.name}
               label="Borrower / Maker"
-              signatureData={borrowerSig?.signatureData}
               signedAt={borrowerSig?.signedAt}
               borderColor={c.borderSignature}
               mutedColor={c.muted}
@@ -800,7 +819,6 @@ function PromissoryNotePage() {
               <SignatureBlock
                 name={loan.coMakerName}
                 label="Co-maker / Guarantor"
-                signatureData={coMakerSig?.signatureData}
                 signedAt={coMakerSig?.signedAt}
                 borderColor={c.borderSignature}
                 mutedColor={c.muted}
@@ -825,7 +843,6 @@ function PromissoryNotePage() {
               <SignatureBlock
                 name={lenderName || "—"}
                 label="Lender / Payee"
-                signatureData={lenderSig?.signatureData}
                 signedAt={lenderSig?.signedAt}
                 borderColor={c.borderSignature}
                 mutedColor={c.muted}
@@ -1091,13 +1108,13 @@ function PromissoryNotePage() {
         <div className="px-4 pt-3 pb-4 border-t space-y-3">
           <div>
             <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
-              E-Signatures
+              Signatures
             </label>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Lender</span>
-                {lenderSig?.signatureData ? (
+                {lenderSig?.otpVerifiedAt ? (
                   <div className="flex items-center gap-1.5">
                     <Badge variant="outline" className="text-[10px] h-5 text-green-600 border-green-200">
                       <Check className="h-3 w-3 mr-0.5" />
@@ -1122,12 +1139,12 @@ function PromissoryNotePage() {
                 <span className="text-xs text-muted-foreground">
                   {loan.coMakerName ? "Borrower & Co-maker" : "Borrower"}
                 </span>
-                {borrowerSig?.signatureData ? (
+                {borrowerSig?.otpVerifiedAt ? (
                   <Badge variant="outline" className="text-[10px] h-5 text-green-600 border-green-200">
                     <Check className="h-3 w-3 mr-0.5" />
                     Signed
                   </Badge>
-                ) : borrowerSig?.signingToken && !borrowerSig?.tokenUsedAt ? (
+                ) : borrowerSig?.signingToken && !borrowerSig?.otpVerifiedAt ? (
                   <Badge variant="outline" className="text-[10px] h-5 text-amber-600 border-amber-200">
                     Pending
                   </Badge>
@@ -1140,30 +1157,51 @@ function PromissoryNotePage() {
             </div>
           </div>
 
-          {!lenderSig?.signatureData && !showSignPad && (
+          {!lenderSig?.otpVerifiedAt && !showOtpInput && (
             <Button
-              onClick={() => setShowSignPad(true)}
+              onClick={handleInitiateLenderOtp}
+              disabled={signingLoading}
               variant="outline"
               className="gap-2 w-full justify-center"
               size="sm"
             >
-              <PenNib className="h-3.5 w-3.5" />
+              {signingLoading ? (
+                <Spinner className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <EnvelopeSimple className="h-3.5 w-3.5" />
+              )}
               Sign as Lender
             </Button>
           )}
 
-          {showSignPad && (
+          {showOtpInput && (
             <div className="space-y-2">
-              <SignaturePad
-                onSave={handleSaveLenderSignature}
+              <p className="text-xs text-muted-foreground text-center">
+                Code sent to {otpMaskedEmail}
+              </p>
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                value={otpCode}
+                maxLength={6}
+                className="text-center text-lg tracking-widest font-mono"
+                autoFocus
                 disabled={signingLoading}
-                height={120}
-                label="Your Signature"
+                onChange={async (e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 6)
+                  setOtpCode(digits)
+                  setOtpError(null)
+                  if (digits.length === 6) {
+                    await handleVerifyLenderOtp(digits)
+                  }
+                }}
               />
+              {otpError && <p className="text-xs text-destructive text-center">{otpError}</p>}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowSignPad(false)}
+                onClick={() => { setShowOtpInput(false); setOtpCode(""); setOtpError(null) }}
                 className="w-full text-xs"
               >
                 Cancel
@@ -1171,7 +1209,7 @@ function PromissoryNotePage() {
             </div>
           )}
 
-          {lenderSig?.signatureData && (
+          {lenderSig?.otpVerifiedAt && (
             <Button
               onClick={handleGenerateLink}
               disabled={signingLoading}

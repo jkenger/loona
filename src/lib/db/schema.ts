@@ -195,6 +195,7 @@ export const loans = pgTable("loans", {
   purpose: text("purpose"),
   collateralDescription: text("collateral_description"),
   coMakerName: text("co_maker_name"),
+  coMakerEmail: text("co_maker_email"),
   coMakerPhone: text("co_maker_phone"),
   coMakerRelationship: text("co_maker_relationship"),
 
@@ -405,7 +406,7 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
-// Document Signatures (e-signing for disclosure/promissory notes)
+// Document Signatures (OTP-based signing for disclosure/promissory notes)
 export const documentSignatures = pgTable("document_signatures", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   loanId: text("loan_id")
@@ -414,11 +415,16 @@ export const documentSignatures = pgTable("document_signatures", {
   documentType: documentTypeEnum("document_type").notNull(),
   signerRole: signerRoleEnum("signer_role").notNull(),
   signerName: text("signer_name").notNull(),
-  signatureData: text("signature_data"), // base64 PNG data URL — null until signed
+  signerEmail: text("signer_email"), // email OTP was sent to
   signedAt: timestamp("signed_at"),
   ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
   signingToken: text("signing_token").unique(), // for public signing links
-  tokenUsedAt: timestamp("token_used_at"), // set when borrower submits via token
+  tokenUsedAt: timestamp("token_used_at"), // set when signer first opens the link
+  otpHash: text("otp_hash"), // SHA-256 of current OTP code
+  otpExpiresAt: timestamp("otp_expires_at"),
+  otpAttempts: integer("otp_attempts").notNull().default(0),
+  otpVerifiedAt: timestamp("otp_verified_at"), // set when OTP is successfully verified
   docStyle: text("doc_style"), // "full" | "simple" — only for promissory_note
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })

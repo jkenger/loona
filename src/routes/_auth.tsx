@@ -1,11 +1,20 @@
-import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router"
-import { getServerSession } from "@/server/session"
-import { getDashboardPath } from "@/lib/constants/roles"
-import { ChartLineUp, ShieldCheck, Users, Lightning } from "@phosphor-icons/react"
-import { motion } from "framer-motion"
-import { LoonaBrand, AnimatedTagline, FloatingCircle } from "@/components/ui/loona-brand"
+import { createFileRoute, Outlet, redirect, Link } from '@tanstack/react-router'
+import { getServerSession } from '@/server/session'
+import { getDashboardPath } from '@/lib/constants/roles'
+import {
+  ChartLineUp,
+  ShieldCheck,
+  Users,
+  Lightning,
+} from '@phosphor-icons/react'
+import { motion } from 'framer-motion'
+import {
+  LoonaBrand,
+  AnimatedTagline,
+  FloatingCircle,
+} from '@/components/ui/loona-brand'
 
-export const Route = createFileRoute("/_auth")({
+export const Route = createFileRoute('/_auth')({
   beforeLoad: async () => {
     const session = await getServerSession()
     if (session) {
@@ -18,23 +27,23 @@ export const Route = createFileRoute("/_auth")({
 const features = [
   {
     icon: ChartLineUp,
-    title: "Track Everything",
-    description: "Monitor loans, payments, and cashflow in real-time",
+    title: 'Track Everything',
+    description: 'Monitor loans, payments, and cashflow in real-time',
   },
   {
     icon: Users,
-    title: "Manage Contacts",
-    description: "Keep all borrower information organized",
+    title: 'Manage Contacts',
+    description: 'Keep all borrower information organized',
   },
   {
     icon: Lightning,
-    title: "Fast & Simple",
-    description: "Record payments in seconds, not minutes",
+    title: 'Fast & Simple',
+    description: 'Record payments in seconds, not minutes',
   },
   {
     icon: ShieldCheck,
-    title: "Secure & Private",
-    description: "Your data is encrypted and protected",
+    title: 'Secure & Private',
+    description: 'Your data is encrypted and protected',
   },
 ]
 
@@ -56,7 +65,7 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     transition: {
-      type: "spring" as const,
+      type: 'spring' as const,
       damping: 15,
       stiffness: 100,
     },
@@ -69,14 +78,14 @@ const featureCardVariants = {
     opacity: 1,
     scale: 1,
     transition: {
-      type: "spring" as const,
+      type: 'spring' as const,
       damping: 20,
       stiffness: 100,
     },
   },
   hover: {
     scale: 1.02,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     transition: { duration: 0.2 },
   },
 }
@@ -131,7 +140,8 @@ function AuthLayout() {
               Manage your lending business with confidence
             </h2>
             <p className="text-primary-foreground/70">
-              Everything you need to track loans, collect payments, and grow your portfolio.
+              Everything you need to track loans, collect payments, and grow
+              your portfolio.
             </p>
           </motion.div>
 
@@ -147,9 +157,16 @@ function AuthLayout() {
                 whileHover="hover"
                 custom={index}
               >
-                <feature.icon className="h-6 w-6 text-white mb-2" weight="duotone" />
-                <h3 className="font-medium text-white text-sm">{feature.title}</h3>
-                <p className="text-primary-foreground/60 text-xs mt-1">{feature.description}</p>
+                <feature.icon
+                  className="h-6 w-6 text-white mb-2"
+                  weight="duotone"
+                />
+                <h3 className="font-medium text-white text-sm">
+                  {feature.title}
+                </h3>
+                <p className="text-primary-foreground/60 text-xs mt-1">
+                  {feature.description}
+                </p>
               </motion.div>
             ))}
           </motion.div>
@@ -165,10 +182,16 @@ function AuthLayout() {
             Trusted by lenders across the Philippines
           </p>
           <div className="flex gap-4 text-xs text-primary-foreground/40">
-            <Link to="/privacy" className="hover:text-primary-foreground/70 transition-colors">
+            <Link
+              to="/privacy"
+              className="hover:text-primary-foreground/70 transition-colors"
+            >
               Privacy Policy
             </Link>
-            <Link to="/terms" className="hover:text-primary-foreground/70 transition-colors">
+            <Link
+              to="/terms"
+              className="hover:text-primary-foreground/70 transition-colors"
+            >
               Terms of Service
             </Link>
           </div>
@@ -193,7 +216,10 @@ function AuthLayout() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
         >
-          <Link to="/privacy" className="hover:text-foreground transition-colors">
+          <Link
+            to="/privacy"
+            className="hover:text-foreground transition-colors"
+          >
             Privacy Policy
           </Link>
           <Link to="/terms" className="hover:text-foreground transition-colors">

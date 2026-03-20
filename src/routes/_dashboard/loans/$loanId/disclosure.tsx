@@ -836,7 +836,6 @@ function DisclosurePage() {
                   label={lang === "en"
                     ? "Borrower's Signature over Printed Name"
                     : "Lagda ng Borrower sa ibabaw ng Nakalimbag na Pangalan"}
-                  signatureData={borrowerSig?.signatureData}
                   signedAt={borrowerSig?.signedAt}
                   borderColor={c.borderSignature}
                   mutedColor={c.muted}
@@ -849,7 +848,6 @@ function DisclosurePage() {
                     label={lang === "en"
                       ? "Co-maker's Signature over Printed Name"
                       : "Lagda ng Co-maker sa ibabaw ng Nakalimbag na Pangalan"}
-                    signatureData={coMakerSig?.signatureData}
                     signedAt={coMakerSig?.signedAt}
                     borderColor={c.borderSignature}
                     mutedColor={c.muted}
@@ -949,11 +947,11 @@ function DisclosurePage() {
                 </Button>
               </div>
 
-              {/* E-Signing Section */}
+              {/* Signing Section */}
               <div className="px-4 pt-3 pb-4 border-t space-y-3">
                 <div>
                   <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
-                    E-Signatures
+                    Signatures
                   </label>
 
                   <div className="space-y-2">
@@ -961,12 +959,12 @@ function DisclosurePage() {
                       <span className="text-xs text-muted-foreground">
                         {loan.coMakerName ? "Borrower & Co-maker" : "Borrower"}
                       </span>
-                      {borrowerSig?.signatureData ? (
+                      {borrowerSig?.otpVerifiedAt ? (
                         <Badge variant="outline" className="text-[10px] h-5 text-green-600 border-green-200">
                           <Check className="h-3 w-3 mr-0.5" />
                           Signed
                         </Badge>
-                      ) : borrowerSig?.signingToken && !borrowerSig?.tokenUsedAt ? (
+                      ) : borrowerSig?.signingToken && !borrowerSig?.otpVerifiedAt ? (
                         <Badge variant="outline" className="text-[10px] h-5 text-amber-600 border-amber-200">
                           Pending
                         </Badge>

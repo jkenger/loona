@@ -232,6 +232,13 @@
       "when": 1773910458498,
       "tag": "0032_high_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1774005251750,
+      "tag": "0033_otp_signing",
+      "breakpoints": true
     }
   ]
 }

@@ -4,66 +4,45 @@ import { db, documentSignatures, loans } from "@/lib/db"
 import { eq, and } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { z } from "zod"
+import { createHash } from "crypto"
+import { sendEmail, signingOtpEmail } from "@/lib/email"
+
+const OTP_EXPIRY_MINUTES = 10
+const OTP_MAX_ATTEMPTS = 5
+const OTP_MAX_SENDS = 5
+
+function generateOtp(): string {
+  // 6-digit cryptographically random code
+  const buf = new Uint32Array(1)
+  crypto.getRandomValues(buf)
+  return String(100000 + (buf[0] % 900000))
+}
+
+function hashOtp(code: string): string {
+  return createHash("sha256").update(code).digest("hex")
+}
+
+function getClientInfo() {
+  let ipAddress: string | null = null
+  let userAgent: string | null = null
+  try {
+    const headers = getRequestHeaders()
+    if (headers) {
+      ipAddress =
+        headers["x-forwarded-for"]?.split(",")[0]?.trim() ??
+        headers["x-real-ip"] ??
+        null
+      userAgent = headers["user-agent"] ?? null
+    }
+  } catch {
+    // Ignore
+  }
+  return { ipAddress, userAgent }
+}
 
 // ============================================================================
 // Authenticated (lender-only) endpoints
 // ============================================================================
-
-const saveLenderSignatureSchema = z.object({
-  loanId: z.string().min(1),
-  documentType: z.enum(["disclosure", "promissory_note"]),
-  signatureData: z.string().min(1),
-})
-
-export const saveLenderSignature = createServerFn()
-  .inputValidator(saveLenderSignatureSchema)
-  .handler(async ({ data }) => {
-    const session = await requireAuth()
-
-    const loan = await db.query.loans.findFirst({
-      where: eq(loans.id, data.loanId),
-    })
-    if (!loan || loan.lenderId !== session.user.id) {
-      throw new Error("Loan not found")
-    }
-
-    // Check for existing lender signature
-    const existing = await db.query.documentSignatures.findFirst({
-      where: and(
-        eq(documentSignatures.loanId, data.loanId),
-        eq(documentSignatures.documentType, data.documentType),
-        eq(documentSignatures.signerRole, "lender"),
-      ),
-    })
-
-    if (existing) {
-      // Update existing
-      const [updated] = await db
-        .update(documentSignatures)
-        .set({
-          signatureData: data.signatureData,
-          signedAt: new Date(),
-          signerName: session.user.name,
-        })
-        .where(eq(documentSignatures.id, existing.id))
-        .returning()
-      return updated
-    }
-
-    // Create new
-    const [created] = await db
-      .insert(documentSignatures)
-      .values({
-        loanId: data.loanId,
-        documentType: data.documentType,
-        signerRole: "lender",
-        signerName: session.user.name,
-        signatureData: data.signatureData,
-        signedAt: new Date(),
-      })
-      .returning()
-    return created
-  })
 
 const getDocumentSignaturesSchema = z.object({
   loanId: z.string().min(1),
@@ -92,6 +71,8 @@ export const getDocumentSignatures = createServerFn()
     return signatures.map((s) => ({
       ...s,
       signedAt: s.signedAt?.toISOString() ?? null,
+      otpVerifiedAt: s.otpVerifiedAt?.toISOString() ?? null,
+      otpExpiresAt: s.otpExpiresAt?.toISOString() ?? null,
       tokenUsedAt: s.tokenUsedAt?.toISOString() ?? null,
       createdAt: s.createdAt.toISOString(),
     }))
@@ -100,14 +81,13 @@ export const getDocumentSignatures = createServerFn()
 const generateSigningLinkSchema = z.object({
   loanId: z.string().min(1),
   documentType: z.enum(["disclosure", "promissory_note"]),
-  signerRole: z.enum(["borrower", "co_maker"]),
+  signerRole: z.enum(["borrower", "co_maker", "lender"]),
   docStyle: z.enum(["full", "simple"]).optional(),
 })
 
 export const generateSigningLink = createServerFn()
   .inputValidator(generateSigningLinkSchema)
   .handler(async ({ data }) => {
-    console.log("[generateSigningLink] called with:", JSON.stringify(data))
     const session = await requireAuth()
 
     const loan = await db.query.loans.findFirst({
@@ -115,16 +95,24 @@ export const generateSigningLink = createServerFn()
       with: { contact: true },
     })
     if (!loan || loan.lenderId !== session.user.id) {
-      console.error("[generateSigningLink] loan not found or not owned by user", { loanId: data.loanId, userId: session.user.id })
       throw new Error("Loan not found")
     }
 
     const signerName =
       data.signerRole === "borrower"
         ? loan.contact.name
-        : loan.coMakerName ?? "Co-maker"
+        : data.signerRole === "co_maker"
+          ? loan.coMakerName ?? "Co-maker"
+          : session.user.name
 
-    // Check for existing unused token for same loan+doc+role
+    const signerEmail =
+      data.signerRole === "borrower"
+        ? loan.contact.email
+        : data.signerRole === "co_maker"
+          ? loan.coMakerEmail
+          : session.user.email
+
+    // Check for existing record for same loan+doc+role
     const existing = await db.query.documentSignatures.findFirst({
       where: and(
         eq(documentSignatures.loanId, data.loanId),
@@ -133,8 +121,8 @@ export const generateSigningLink = createServerFn()
       ),
     })
 
-    if (existing && existing.signingToken && !existing.tokenUsedAt) {
-      // Update docStyle if changed, then reuse existing token
+    if (existing && existing.signingToken && !existing.otpVerifiedAt) {
+      // Reuse existing token — update docStyle if changed
       if (data.docStyle && existing.docStyle !== data.docStyle) {
         await db.update(documentSignatures)
           .set({ docStyle: data.docStyle })
@@ -143,8 +131,8 @@ export const generateSigningLink = createServerFn()
       return { token: existing.signingToken }
     }
 
-    if (existing && existing.tokenUsedAt) {
-      // Already signed — delete old and create fresh if re-signing needed
+    if (existing && existing.otpVerifiedAt) {
+      // Already signed — delete old so signer can re-sign
       await db.delete(documentSignatures).where(eq(documentSignatures.id, existing.id))
     }
 
@@ -155,6 +143,7 @@ export const generateSigningLink = createServerFn()
       documentType: data.documentType,
       signerRole: data.signerRole,
       signerName,
+      signerEmail,
       signingToken: token,
       docStyle: data.docStyle ?? null,
     })
@@ -204,13 +193,13 @@ export const getLoanSigningStatus = createServerFn()
     const getStatus = (docType: "disclosure" | "promissory_note") => {
       const docSigs = signatures.filter((s) => s.documentType === docType)
       const lenderSigned = docSigs.some(
-        (s) => s.signerRole === "lender" && s.signatureData
+        (s) => s.signerRole === "lender" && s.otpVerifiedAt
       )
       const borrowerSigned = docSigs.some(
-        (s) => s.signerRole === "borrower" && s.signatureData
+        (s) => s.signerRole === "borrower" && s.otpVerifiedAt
       )
       const borrowerPending = docSigs.some(
-        (s) => s.signerRole === "borrower" && s.signingToken && !s.tokenUsedAt
+        (s) => s.signerRole === "borrower" && s.signingToken && !s.otpVerifiedAt
       )
 
       if (lenderSigned && borrowerSigned) return "signed" as const
@@ -223,6 +212,124 @@ export const getLoanSigningStatus = createServerFn()
       disclosure: getStatus("disclosure"),
       promissory_note: getStatus("promissory_note"),
     }
+  })
+
+// Lender signs their own document via OTP (authenticated)
+const initiateLenderOtpSchema = z.object({
+  loanId: z.string().min(1),
+  documentType: z.enum(["disclosure", "promissory_note"]),
+})
+
+export const initiateLenderOtp = createServerFn()
+  .inputValidator(initiateLenderOtpSchema)
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+    })
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    // Find or create lender signature record
+    let sig = await db.query.documentSignatures.findFirst({
+      where: and(
+        eq(documentSignatures.loanId, data.loanId),
+        eq(documentSignatures.documentType, data.documentType),
+        eq(documentSignatures.signerRole, "lender"),
+      ),
+    })
+
+    if (sig && sig.otpVerifiedAt) {
+      throw new Error("Already signed")
+    }
+
+    const code = generateOtp()
+    const otpHash = hashOtp(code)
+    const otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
+
+    if (sig) {
+      if ((sig.otpAttempts ?? 0) >= OTP_MAX_SENDS) {
+        throw new Error("Too many OTP requests. Please wait before requesting another.")
+      }
+      await db.update(documentSignatures)
+        .set({ otpHash, otpExpiresAt, otpAttempts: 0 })
+        .where(eq(documentSignatures.id, sig.id))
+    } else {
+      const [created] = await db.insert(documentSignatures).values({
+        loanId: data.loanId,
+        documentType: data.documentType,
+        signerRole: "lender",
+        signerName: session.user.name,
+        signerEmail: session.user.email,
+        otpHash,
+        otpExpiresAt,
+      }).returning()
+      sig = created
+    }
+
+    await sendEmail({
+      to: session.user.email,
+      ...signingOtpEmail({
+        signerName: session.user.name,
+        documentType: data.documentType,
+        otpCode: code,
+        expiresInMinutes: OTP_EXPIRY_MINUTES,
+      }),
+    })
+
+    return { sigId: sig!.id, email: maskEmail(session.user.email) }
+  })
+
+const verifyLenderOtpSchema = z.object({
+  sigId: z.string().min(1),
+  code: z.string().length(6),
+})
+
+export const verifyLenderOtp = createServerFn()
+  .inputValidator(verifyLenderOtpSchema)
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+
+    const sig = await db.query.documentSignatures.findFirst({
+      where: eq(documentSignatures.id, data.sigId),
+      with: { loan: true },
+    })
+
+    if (!sig || sig.loan.lenderId !== session.user.id) {
+      throw new Error("Invalid request")
+    }
+
+    if (sig.otpVerifiedAt) {
+      throw new Error("Already signed")
+    }
+
+    if ((sig.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
+      throw new Error("Too many failed attempts. Please request a new code.")
+    }
+
+    if (!sig.otpHash || !sig.otpExpiresAt || sig.otpExpiresAt < new Date()) {
+      throw new Error("Code has expired. Please request a new code.")
+    }
+
+    const inputHash = hashOtp(data.code)
+    if (inputHash !== sig.otpHash) {
+      await db.update(documentSignatures)
+        .set({ otpAttempts: (sig.otpAttempts ?? 0) + 1 })
+        .where(eq(documentSignatures.id, sig.id))
+      const remaining = OTP_MAX_ATTEMPTS - (sig.otpAttempts ?? 0) - 1
+      throw new Error(`Invalid code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`)
+    }
+
+    const { ipAddress, userAgent } = getClientInfo()
+    const now = new Date()
+
+    await db.update(documentSignatures)
+      .set({ otpVerifiedAt: now, signedAt: now, ipAddress, userAgent, otpHash: null })
+      .where(eq(documentSignatures.id, sig.id))
+
+    return { success: true }
   })
 
 // ============================================================================
@@ -240,7 +347,7 @@ export const getSigningDocument = createServerFn()
       return { error: "invalid" as const }
     }
 
-    if (sig.tokenUsedAt) {
+    if (sig.otpVerifiedAt) {
       return { error: "already_signed" as const }
     }
 
@@ -257,19 +364,29 @@ export const getSigningDocument = createServerFn()
       return { error: "invalid" as const }
     }
 
-    // Get all signatures for this document (including lender's)
-    const allSignatures = await db.query.documentSignatures.findMany({
+    // Mark token as first opened
+    if (!sig.tokenUsedAt) {
+      await db.update(documentSignatures)
+        .set({ tokenUsedAt: new Date() })
+        .where(eq(documentSignatures.id, sig.id))
+    }
+
+    // Get co-maker signing status for this document
+    const coMakerSig = await db.query.documentSignatures.findFirst({
       where: and(
         eq(documentSignatures.loanId, sig.loanId),
         eq(documentSignatures.documentType, sig.documentType),
+        eq(documentSignatures.signerRole, "co_maker"),
       ),
     })
 
     return {
       error: null,
+      sigId: sig.id,
       documentType: sig.documentType,
       signerRole: sig.signerRole,
       signerName: sig.signerName,
+      signerEmail: sig.signerEmail ? maskEmail(sig.signerEmail) : null,
       docStyle: (sig.docStyle as "full" | "simple" | null) ?? "full",
       loan: {
         id: loan.id,
@@ -283,10 +400,12 @@ export const getSigningDocument = createServerFn()
         maturityDate: loan.maturityDate?.toISOString() ?? null,
         collateralDescription: loan.collateralDescription,
         coMakerName: loan.coMakerName,
+        coMakerEmail: loan.coMakerEmail,
         coMakerPhone: loan.coMakerPhone,
         coMakerRelationship: loan.coMakerRelationship,
         penaltyConfig: loan.penaltyConfig,
         customClauses: loan.customClauses,
+        processingFeePercent: loan.processingFeePercent,
         contact: {
           name: loan.contact.name,
           address: loan.contact.address,
@@ -301,104 +420,101 @@ export const getSigningDocument = createServerFn()
           status: s.status,
         })),
       },
-      signatures: allSignatures
-        .filter((s) => s.signatureData)
-        .map((s) => ({
-          signerRole: s.signerRole,
-          signerName: s.signerName,
-          signatureData: s.signatureData,
-          signedAt: s.signedAt?.toISOString() ?? null,
-        })),
+      coMakerSigned: !!(coMakerSig?.otpVerifiedAt),
     }
   })
 
-const submitBorrowerSignatureSchema = z.object({
+// Send OTP to the signer (public — no auth)
+const initiatePublicOtpSchema = z.object({
   token: z.string().min(1),
-  signatureData: z.string().min(1),
-  coMakerSignatureData: z.string().optional(), // co-maker signs on the same page
 })
 
-export const submitBorrowerSignature = createServerFn()
-  .inputValidator(submitBorrowerSignatureSchema)
+export const initiatePublicOtp = createServerFn()
+  .inputValidator(initiatePublicOtpSchema)
   .handler(async ({ data }) => {
     const sig = await db.query.documentSignatures.findFirst({
       where: eq(documentSignatures.signingToken, data.token),
     })
 
-    if (!sig) {
-      throw new Error("Invalid signing link")
+    if (!sig) throw new Error("Invalid signing link")
+    if (sig.otpVerifiedAt) throw new Error("This document has already been signed")
+    if (!sig.signerEmail) throw new Error("No email address on file for this signer")
+
+    if ((sig.otpAttempts ?? 0) >= OTP_MAX_SENDS) {
+      throw new Error("Too many OTP requests. Please contact your lender.")
     }
 
-    if (sig.tokenUsedAt) {
-      throw new Error("This document has already been signed")
-    }
+    const code = generateOtp()
+    const otpHash = hashOtp(code)
+    const otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
 
-    // Get IP address from request headers
-    let ipAddress: string | null = null
-    try {
-      const headers = getRequestHeaders()
-      if (headers) {
-        ipAddress =
-          headers["x-forwarded-for"]?.split(",")[0]?.trim() ??
-          headers["x-real-ip"] ??
-          null
-      }
-    } catch {
-      // Ignore header errors
-    }
-
-    const now = new Date()
-
-    // Save borrower signature
-    await db
-      .update(documentSignatures)
-      .set({
-        signatureData: data.signatureData,
-        signedAt: now,
-        tokenUsedAt: now,
-        ipAddress,
-      })
+    await db.update(documentSignatures)
+      .set({ otpHash, otpExpiresAt, otpAttempts: 0 })
       .where(eq(documentSignatures.id, sig.id))
 
-    // Save co-maker signature if provided
-    if (data.coMakerSignatureData) {
-      // Look up the loan to get co-maker name
-      const loan = await db.query.loans.findFirst({
-        where: eq(loans.id, sig.loanId),
-      })
+    await sendEmail({
+      to: sig.signerEmail,
+      ...signingOtpEmail({
+        signerName: sig.signerName,
+        documentType: sig.documentType,
+        otpCode: code,
+        expiresInMinutes: OTP_EXPIRY_MINUTES,
+      }),
+    })
 
-      if (loan?.coMakerName) {
-        // Upsert co-maker signature
-        const existingCoMaker = await db.query.documentSignatures.findFirst({
-          where: and(
-            eq(documentSignatures.loanId, sig.loanId),
-            eq(documentSignatures.documentType, sig.documentType),
-            eq(documentSignatures.signerRole, "co_maker"),
-          ),
-        })
+    return { email: maskEmail(sig.signerEmail) }
+  })
 
-        if (existingCoMaker) {
-          await db
-            .update(documentSignatures)
-            .set({
-              signatureData: data.coMakerSignatureData,
-              signedAt: now,
-              ipAddress,
-            })
-            .where(eq(documentSignatures.id, existingCoMaker.id))
-        } else {
-          await db.insert(documentSignatures).values({
-            loanId: sig.loanId,
-            documentType: sig.documentType,
-            signerRole: "co_maker",
-            signerName: loan.coMakerName,
-            signatureData: data.coMakerSignatureData,
-            signedAt: now,
-            ipAddress,
-          })
-        }
-      }
+// Verify OTP and mark document as signed (public — no auth)
+const verifyPublicOtpSchema = z.object({
+  token: z.string().min(1),
+  code: z.string().length(6),
+})
+
+export const verifyPublicOtp = createServerFn()
+  .inputValidator(verifyPublicOtpSchema)
+  .handler(async ({ data }) => {
+    const sig = await db.query.documentSignatures.findFirst({
+      where: eq(documentSignatures.signingToken, data.token),
+    })
+
+    if (!sig) throw new Error("Invalid signing link")
+    if (sig.otpVerifiedAt) throw new Error("This document has already been signed")
+
+    if ((sig.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
+      throw new Error("Too many failed attempts. Please request a new code.")
     }
 
-    return { success: true }
+    if (!sig.otpHash || !sig.otpExpiresAt || sig.otpExpiresAt < new Date()) {
+      throw new Error("Code has expired. Please request a new code.")
+    }
+
+    const inputHash = hashOtp(data.code)
+    if (inputHash !== sig.otpHash) {
+      await db.update(documentSignatures)
+        .set({ otpAttempts: (sig.otpAttempts ?? 0) + 1 })
+        .where(eq(documentSignatures.id, sig.id))
+      const remaining = OTP_MAX_ATTEMPTS - (sig.otpAttempts ?? 0) - 1
+      throw new Error(`Invalid code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`)
+    }
+
+    const { ipAddress, userAgent } = getClientInfo()
+    const now = new Date()
+
+    await db.update(documentSignatures)
+      .set({ otpVerifiedAt: now, signedAt: now, ipAddress, userAgent, otpHash: null })
+      .where(eq(documentSignatures.id, sig.id))
+
+    return { success: true, signedAt: now.toISOString() }
   })
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@")
+  if (!domain) return email
+  const visible = local.length > 2 ? local.slice(0, 2) : local.slice(0, 1)
+  return `${visible}***@${domain}`
+}

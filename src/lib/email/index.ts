@@ -523,3 +523,67 @@ This email was sent via Loona on behalf of ${lenderName}.
 
   return { subject, html, text }
 }
+
+export function signingOtpEmail(params: {
+  signerName: string
+  documentType: "disclosure" | "promissory_note"
+  otpCode: string
+  expiresInMinutes: number
+}) {
+  const { signerName, documentType, otpCode, expiresInMinutes } = params
+  const docLabel = documentType === "disclosure" ? "Disclosure Statement" : "Promissory Note"
+  const subject = `Your signing code: ${otpCode}`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+  </div>
+
+  <h2 style="color: #1a1a1a; margin-bottom: 8px;">Document Signing Code</h2>
+  <p>Hi ${signerName},</p>
+  <p>Use the code below to sign the <strong>${docLabel}</strong>.</p>
+
+  <div style="background-color: #f0f7ff; border: 2px solid #1a8cff; border-radius: 12px; padding: 32px; margin: 24px 0; text-align: center;">
+    <p style="margin: 0 0 8px; color: #555; font-size: 14px;">Your verification code</p>
+    <p style="margin: 0; font-size: 48px; font-weight: 700; letter-spacing: 12px; color: #1a1a1a; font-family: monospace;">${otpCode}</p>
+    <p style="margin: 12px 0 0; color: #888; font-size: 13px;">Expires in ${expiresInMinutes} minutes</p>
+  </div>
+
+  <p style="color: #cc0000; font-size: 14px;">
+    <strong>Do not share this code.</strong> Entering this code confirms your consent to sign the ${docLabel}.
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+  <p style="color: #999; font-size: 12px; text-align: center;">
+    If you did not request this code, you can ignore this email. This email was sent via Loona.
+  </p>
+</body>
+</html>
+  `
+
+  const text = `
+Document Signing Code
+
+Hi ${signerName},
+
+Use the code below to sign the ${docLabel}.
+
+Your verification code: ${otpCode}
+
+This code expires in ${expiresInMinutes} minutes.
+
+Do not share this code. Entering it confirms your consent to sign the ${docLabel}.
+
+If you did not request this code, ignore this email.
+  `
+
+  return { subject, html, text }
+}

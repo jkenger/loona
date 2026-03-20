@@ -1,15 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useState } from "react"
-import { getSigningDocument, submitBorrowerSignature } from "@/server/signatures"
+import { useState, useEffect, useRef } from "react"
+import { getSigningDocument, initiatePublicOtp, verifyPublicOtp } from "@/server/signatures"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { LoonaBrand, FloatingCircle } from "@/components/ui/loona-brand"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
-import { SignaturePad } from "@/components/ui/signature-pad"
-import { SignatureBlock } from "@/components/documents/signature-block"
-import { Spinner, Check, Warning } from "@phosphor-icons/react"
-import { motion } from "framer-motion"
+import { Spinner, Check, Warning, EnvelopeSimple, ShieldCheck } from "@phosphor-icons/react"
+import { motion, AnimatePresence } from "framer-motion"
 import { format } from "date-fns"
 import { useDocColors } from "@/lib/utils/share"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
@@ -45,14 +44,26 @@ function formatCurrency(amount: string | number): string {
   }).format(num)
 }
 
+const RESEND_COOLDOWN = 60
+const OTP_EXPIRY_MINUTES = 10
+
 function SigningPage() {
   const { result, token } = Route.useLoaderData()
+  const [step, setStep] = useState<"document" | "otp" | "success">("document")
+  const [maskedEmail, setMaskedEmail] = useState<string | null>(null)
+  const [otpCode, setOtpCode] = useState("")
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [borrowerSigData, setBorrowerSigData] = useState<string | null>(null)
-  const [coMakerSigData, setCoMakerSigData] = useState<string | null>(null)
-  const c = useDocColors(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [signedAt, setSignedAt] = useState<string | null>(null)
+  const [agreed, setAgreed] = useState(false)
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current)
+    }
+  }, [])
 
   if (result.error === "invalid") {
     return (
@@ -93,34 +104,73 @@ function SigningPage() {
     )
   }
 
-  const { loan, documentType, signerName, signatures, docStyle } = result
-  const lenderSignature = signatures.find((s) => s.signerRole === "lender")
+  const { loan, documentType, signerName, docStyle } = result
   const docTitle = documentType === "disclosure" ? "Disclosure Statement" : "Promissory Note"
-  const hasCoMaker = !!loan.coMakerName
+  const c = useDocColors(false)
 
-  const handleSubmit = async () => {
-    if (!borrowerSigData) return
-    if (hasCoMaker && !coMakerSigData) return
+  const startCooldown = () => {
+    setResendCooldown(RESEND_COOLDOWN)
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
 
+  const handleSendOtp = async () => {
     setSubmitting(true)
     setError(null)
     try {
-      await submitBorrowerSignature({
-        data: {
-          token,
-          signatureData: borrowerSigData,
-          coMakerSignatureData: coMakerSigData ?? undefined,
-        },
-      })
-      setSubmitted(true)
+      const res = await initiatePublicOtp({ data: { token } })
+      setMaskedEmail(res.email)
+      setStep("otp")
+      startCooldown()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to submit signature")
+      setError(e instanceof Error ? e.message : "Failed to send code")
     } finally {
       setSubmitting(false)
     }
   }
 
-  if (submitted) {
+  const handleResend = async () => {
+    if (resendCooldown > 0) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await initiatePublicOtp({ data: { token } })
+      startCooldown()
+      setOtpCode("")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to resend code")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleOtpChange = async (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 6)
+    setOtpCode(digits)
+    setError(null)
+
+    if (digits.length === 6) {
+      setSubmitting(true)
+      try {
+        const res = await verifyPublicOtp({ data: { token, code: digits } })
+        setSignedAt(res.signedAt)
+        setStep("success")
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Invalid code")
+      } finally {
+        setSubmitting(false)
+      }
+    }
+  }
+
+  if (step === "success") {
     return (
       <div className="min-h-screen bg-gradient-page relative overflow-hidden">
         <FloatingCircle
@@ -135,15 +185,18 @@ function SigningPage() {
           <LoonaBrand size="sm" variant="gradient" animated={false} />
           <Badge variant="outline">Document Signing</Badge>
         </nav>
-        <div className="relative z-10 mx-auto max-w-3xl px-4 py-16 text-center">
-          <Check className="h-16 w-16 text-green-500 mx-auto mb-4" weight="bold" />
-          <h1 className="text-2xl font-bold mb-2">Document Signed</h1>
+        <div className="relative z-10 mx-auto max-w-3xl px-4 py-16 text-center space-y-3">
+          <ShieldCheck className="h-16 w-16 text-green-500 mx-auto" weight="fill" />
+          <h1 className="text-2xl font-bold">Document Signed</h1>
           <p className="text-muted-foreground">
-            Thank you, {signerName}. Your signature has been recorded for the {docTitle}.
+            Thank you, {signerName}. Your identity has been verified and the {docTitle} has been signed.
           </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            You may close this page.
-          </p>
+          {signedAt && (
+            <p className="text-sm text-muted-foreground">
+              Signed on {format(new Date(signedAt), "MMMM d, yyyy 'at' h:mm a")}
+            </p>
+          )}
+          <p className="text-sm text-muted-foreground">You may close this page.</p>
         </div>
         <footer className="relative z-10 px-6 sm:px-12 py-6 flex justify-center gap-6 text-xs text-muted-foreground">
           <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
@@ -164,112 +217,159 @@ function SigningPage() {
         delay={0.5} duration={7}
       />
 
-      {/* Header */}
       <nav className="relative z-10 flex items-center justify-between px-6 sm:px-12 py-6">
         <LoonaBrand size="sm" variant="gradient" animated={false} />
         <Badge variant="outline">Document Signing</Badge>
       </nav>
 
-      {/* Content */}
       <div className="relative z-10 mx-auto max-w-3xl px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-        <Stagger className="space-y-4">
-          {/* Info Card */}
-          <StaggerItem>
-            <Card>
-              <CardHeader>
-                <CardTitle>{docTitle}</CardTitle>
-                <CardDescription>
-                  {signerName}, please review the document below and provide your signature.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </StaggerItem>
+          <Stagger className="space-y-4">
+            {/* Info Card */}
+            <StaggerItem>
+              <Card>
+                <CardHeader>
+                  <CardTitle>{docTitle}</CardTitle>
+                  <CardDescription>
+                    {signerName}, please review the document below, then sign using your registered email address.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </StaggerItem>
 
-          {/* Document Zone */}
-          <StaggerItem>
-            <div
-              className="shadow-lg rounded-lg overflow-hidden"
-              style={{
-                fontFamily: "system-ui, -apple-system, sans-serif",
-                backgroundColor: c.bg,
-                color: c.text,
-              }}
-            >
-              <div className="p-8">
-                {documentType === "disclosure" ? (
-                  <DisclosureDocumentBody loan={loan} c={c} />
-                ) : (
-                  <PromissoryDocumentBody loan={loan} lenderSignature={lenderSignature} c={c} docStyle={docStyle ?? "full"} />
-                )}
-              </div>
-            </div>
-          </StaggerItem>
-
-          {/* Signing Card */}
-          <StaggerItem>
-            <Card>
-              <CardHeader>
-                <CardTitle>Sign Document</CardTitle>
-                <CardDescription>
-                  {hasCoMaker
-                    ? "Both the borrower and co-maker must sign below."
-                    : `Draw your signature below to sign this ${docTitle.toLowerCase()}.`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Borrower Signature */}
-                <SignaturePad
-                  onSave={(dataUrl) => setBorrowerSigData(dataUrl)}
-                  onClearExisting={() => setBorrowerSigData(null)}
-                  disabled={submitting}
-                  height={150}
-                  existingSignature={borrowerSigData}
-                  label={`${signerName}'s Signature (Borrower)`}
-                />
-
-                {/* Co-maker Signature */}
-                {hasCoMaker && (
-                  <SignaturePad
-                    onSave={(dataUrl) => setCoMakerSigData(dataUrl)}
-                    onClearExisting={() => setCoMakerSigData(null)}
-                    disabled={submitting}
-                    height={150}
-                    existingSignature={coMakerSigData}
-                    label={`${loan.coMakerName}'s Signature (Co-maker)`}
-                  />
-                )}
-
-                {/* Submit Button */}
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting || !borrowerSigData || (hasCoMaker && !coMakerSigData)}
-                  className="w-full gap-2"
-                >
-                  {submitting ? (
-                    <>
-                      <Spinner className="h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
+            {/* Document Zone */}
+            <StaggerItem>
+              <div
+                className="shadow-lg rounded-lg overflow-hidden"
+                style={{
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                  backgroundColor: c.bg,
+                  color: c.text,
+                }}
+              >
+                <div className="p-8">
+                  {documentType === "disclosure" ? (
+                    <DisclosureDocumentBody loan={loan} c={c} />
                   ) : (
-                    <>
-                      <Check className="h-4 w-4" weight="bold" />
-                      Submit {hasCoMaker ? "Signatures" : "Signature"}
-                    </>
+                    <PromissoryDocumentBody loan={loan} c={c} docStyle={docStyle ?? "full"} />
                   )}
-                </Button>
+                </div>
+              </div>
+            </StaggerItem>
 
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
-                )}
-              </CardContent>
-            </Card>
-          </StaggerItem>
-        </Stagger>
+            {/* Sign Card */}
+            <StaggerItem>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sign Document</CardTitle>
+                  <CardDescription>
+                    Verify your identity via email to sign this {docTitle.toLowerCase()}.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <AnimatePresence mode="wait">
+                    {step === "document" && (
+                      <motion.div
+                        key="document-step"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="space-y-4"
+                      >
+                        <label className="flex items-start gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5"
+                            checked={agreed}
+                            onChange={(e) => setAgreed(e.target.checked)}
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            I have read and understood this {docTitle} and agree to sign it electronically.
+                          </span>
+                        </label>
+
+                        {error && <p className="text-sm text-destructive">{error}</p>}
+
+                        <Button
+                          onClick={handleSendOtp}
+                          disabled={submitting || !agreed}
+                          className="w-full gap-2"
+                        >
+                          {submitting ? (
+                            <>
+                              <Spinner className="h-4 w-4 animate-spin" />
+                              Sending code...
+                            </>
+                          ) : (
+                            <>
+                              <EnvelopeSimple className="h-4 w-4" weight="bold" />
+                              Send Verification Code
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
+                    )}
+
+                    {step === "otp" && (
+                      <motion.div
+                        key="otp-step"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="space-y-4"
+                      >
+                        <div className="text-center space-y-1">
+                          <EnvelopeSimple className="h-8 w-8 mx-auto text-primary" weight="duotone" />
+                          <p className="text-sm font-medium">Code sent to {maskedEmail}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Enter the 6-digit code from your email. Expires in {OTP_EXPIRY_MINUTES} minutes.
+                          </p>
+                        </div>
+
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder="000000"
+                          value={otpCode}
+                          onChange={(e) => handleOtpChange(e.target.value)}
+                          disabled={submitting}
+                          maxLength={6}
+                          className="text-center text-2xl tracking-[0.5em] font-mono h-14"
+                          autoFocus
+                        />
+
+                        {submitting && (
+                          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <Spinner className="h-4 w-4 animate-spin" />
+                            Verifying...
+                          </div>
+                        )}
+
+                        {error && <p className="text-sm text-destructive text-center">{error}</p>}
+
+                        <div className="text-center">
+                          <button
+                            onClick={handleResend}
+                            disabled={resendCooldown > 0 || submitting}
+                            className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-not-allowed"
+                          >
+                            {resendCooldown > 0
+                              ? `Resend code in ${resendCooldown}s`
+                              : "Didn't receive a code? Resend"}
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </CardContent>
+              </Card>
+            </StaggerItem>
+          </Stagger>
         </motion.div>
       </div>
 
@@ -286,8 +386,38 @@ function SigningPage() {
 // ============================================================================
 
 type LoanData = NonNullable<Extract<SigningResult, { error: null }>["loan"]>
-type SignatureInfo = { signerRole: string; signerName: string; signatureData: string | null; signedAt: string | null }
 type DocColors = ReturnType<typeof useDocColors>
+
+function VerifiedBadge({ name, date }: { name: string; date?: string | null }) {
+  return (
+    <div style={{ marginTop: "8px", fontSize: "12px", color: "#16a34a", display: "flex", alignItems: "center", gap: "4px" }}>
+      <span>✓ Digitally signed by {name}</span>
+      {date && <span style={{ color: "#6b7280" }}>on {format(new Date(date), "MMM d, yyyy")}</span>}
+    </div>
+  )
+}
+
+function SignatureLine({ name, label, borderColor, mutedColor, signedAt }: {
+  name: string
+  label: string
+  borderColor: string
+  mutedColor: string
+  signedAt?: string | null
+}) {
+  return (
+    <div style={{ textAlign: "center" }}>
+      {signedAt ? (
+        <div style={{ borderBottom: `2px solid ${borderColor}`, paddingBottom: "8px", marginBottom: "8px", minHeight: "40px", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <VerifiedBadge name={name} date={signedAt} />
+        </div>
+      ) : (
+        <div style={{ borderBottom: `2px solid ${borderColor}`, height: "40px", marginBottom: "8px" }} />
+      )}
+      <p style={{ fontSize: "12px", color: mutedColor }}>{label}</p>
+      <p style={{ fontSize: "13px", fontWeight: 600, marginTop: "4px" }}>{name}</p>
+    </div>
+  )
+}
 
 function DisclosureDocumentBody({
   loan,
@@ -319,9 +449,38 @@ function DisclosureDocumentBody({
     ? parsePenaltyConfig(loan.penaltyConfig)
     : null
 
+  const processingFee = loan.processingFeePercent
+    ? parseFloat(loan.processingFeePercent) * principal / 100
+    : null
+  const netProceeds = processingFee != null ? principal - processingFee : null
+
+  const baseRows = [
+    { label: "Principal Amount", value: formatCurrency(principal), bold: true },
+    { label: "Finance Charges (Total Interest)", value: formatCurrency(totalInterest), bold: true },
+    { label: "Total Amount Financed", value: formatCurrency(principal) },
+    { label: "Total Amount to be Paid", value: formatCurrency(totalToRepay), bold: true },
+    { label: "Nominal Interest Rate (Monthly)", value: `${loan.interestRate}% per month` },
+    { label: "Effective Interest Rate (EIR) Per Annum", value: formatEIR(eir), bold: true },
+    { label: "Loan Term", value: `${loan.termMonths} month${loan.termMonths !== 1 ? "s" : ""}` },
+    { label: "Payment Frequency", value: frequencyLabels[loan.paymentFrequency] || loan.paymentFrequency },
+    { label: "Regular Payment Amount", value: formatCurrency(loan.paymentAmount), bold: true },
+    { label: "Number of Payments", value: loan.schedule.length.toString() },
+    {
+      label: "First Payment Due Date",
+      value: loan.schedule.length > 0 ? format(new Date(loan.schedule[0].dueDate), "MMMM d, yyyy") : "—",
+    },
+    { label: "Maturity Date", value: loan.maturityDate ? format(new Date(loan.maturityDate), "MMMM d, yyyy") : "—" },
+    ...(processingFee != null ? [
+      { label: `Processing Fee (${loan.processingFeePercent}%)`, value: formatCurrency(processingFee) },
+      { label: "Net Proceeds (Disbursed Amount)", value: formatCurrency(netProceeds!), bold: true },
+    ] : []),
+    { label: "Late Payment Penalty", value: penaltyConfig ? formatPenaltyForDisclosure(penaltyConfig, loan.paymentFrequency) : "None" },
+    { label: "Default / Acceleration Charges", value: "None" },
+    { label: "Prepayment Policy", value: "No penalty for early repayment" },
+  ]
+
   return (
     <>
-      {/* Header */}
       <div
         className="text-center pb-6 mb-6"
         style={{ borderBottom: `2px solid ${c.border}` }}
@@ -337,16 +496,12 @@ function DisclosureDocumentBody({
         </p>
       </div>
 
-      {/* Lender & Borrower Information */}
       <div
         className="grid grid-cols-2 gap-8 mb-8"
         style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}
       >
         <div>
-          <h2
-            className="font-semibold uppercase mb-2"
-            style={{ fontSize: "11px", color: c.muted }}
-          >
+          <h2 className="font-semibold uppercase mb-2" style={{ fontSize: "11px", color: c.muted }}>
             Lender / Creditor
           </h2>
           <p className="font-medium" style={{ fontSize: "14px" }}>
@@ -354,10 +509,7 @@ function DisclosureDocumentBody({
           </p>
         </div>
         <div>
-          <h2
-            className="font-semibold uppercase mb-2"
-            style={{ fontSize: "11px", color: c.muted }}
-          >
+          <h2 className="font-semibold uppercase mb-2" style={{ fontSize: "11px", color: c.muted }}>
             Borrower / Debtor
           </h2>
           <p className="font-medium" style={{ fontSize: "14px" }}>
@@ -370,46 +522,21 @@ function DisclosureDocumentBody({
             </p>
           )}
           {loan.contact.phone && (
-            <p style={{ fontSize: "12px", color: c.muted }}>
-              {loan.contact.phone}
-            </p>
+            <p style={{ fontSize: "12px", color: c.muted }}>{loan.contact.phone}</p>
           )}
         </div>
       </div>
 
-      {/* Credit Terms Table */}
       <div className="mb-8">
-        <h2
-          className="font-semibold mb-4"
-          style={{ fontSize: "16px", color: c.textStrong }}
-        >
+        <h2 className="font-semibold mb-4" style={{ fontSize: "16px", color: c.textStrong }}>
           Credit Terms
         </h2>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
           <tbody>
-            {[
-              { label: "1. Principal Amount", value: formatCurrency(principal), bold: true },
-              { label: "2. Finance Charges (Total Interest)", value: formatCurrency(totalInterest), bold: true },
-              { label: "3. Total Amount Financed", value: formatCurrency(principal) },
-              { label: "4. Total Amount to be Paid", value: formatCurrency(totalToRepay), bold: true },
-              { label: "5. Nominal Interest Rate (Monthly)", value: `${loan.interestRate}% per month` },
-              { label: "6. Effective Interest Rate (EIR) Per Annum", value: formatEIR(eir), bold: true },
-              { label: "7. Loan Term", value: `${loan.termMonths} month${loan.termMonths !== 1 ? "s" : ""}` },
-              { label: "8. Payment Frequency", value: frequencyLabels[loan.paymentFrequency] || loan.paymentFrequency },
-              { label: "9. Regular Payment Amount", value: formatCurrency(loan.paymentAmount), bold: true },
-              { label: "10. Number of Payments", value: loan.schedule.length.toString() },
-              {
-                label: "11. First Payment Due Date",
-                value: loan.schedule.length > 0 ? format(new Date(loan.schedule[0].dueDate), "MMMM d, yyyy") : "—",
-              },
-              { label: "12. Maturity Date", value: loan.maturityDate ? format(new Date(loan.maturityDate), "MMMM d, yyyy") : "—" },
-              { label: "13. Late Payment Penalty", value: penaltyConfig ? formatPenaltyForDisclosure(penaltyConfig, loan.paymentFrequency) : "None" },
-              { label: "14. Default / Acceleration Charges", value: "None" },
-              { label: "15. Prepayment Policy", value: "No penalty for early repayment" },
-            ].map((row, i) => (
+            {baseRows.map((row, i) => (
               <tr key={i} style={{ backgroundColor: i % 2 === 0 ? c.rowAlt : c.rowEven }}>
                 <td style={{ padding: "10px 12px", border: `1px solid ${c.border}`, fontWeight: 500 }}>
-                  {row.label}
+                  {i + 1}. {row.label}
                 </td>
                 <td style={{ padding: "10px 12px", border: `1px solid ${c.border}`, textAlign: "right", fontWeight: row.bold ? 600 : 400 }}>
                   {row.value}
@@ -420,7 +547,6 @@ function DisclosureDocumentBody({
         </table>
       </div>
 
-      {/* Payment Schedule */}
       <div className="mb-8" style={{ pageBreakInside: "avoid" }}>
         <h2 className="font-semibold mb-4" style={{ fontSize: "16px", color: c.textStrong }}>
           Payment Schedule
@@ -451,7 +577,6 @@ function DisclosureDocumentBody({
         </table>
       </div>
 
-      {/* Signature Section */}
       <div style={{ borderTop: `2px solid ${c.border}`, paddingTop: "24px", marginTop: "24px" }}>
         <h2 className="font-semibold mb-4" style={{ fontSize: "16px", color: c.textStrong }}>
           Borrower's Acknowledgment
@@ -472,15 +597,14 @@ function DisclosureDocumentBody({
             marginTop: "48px",
           }}
         >
-          <SignatureBlock
+          <SignatureLine
             name={loan.contact.name}
             label="Borrower's Signature over Printed Name"
             borderColor={c.borderStrong}
             mutedColor={c.muted}
           />
-
           {loan.coMakerName && (
-            <SignatureBlock
+            <SignatureLine
               name={loan.coMakerName}
               label="Co-maker's Signature over Printed Name"
               borderColor={c.borderStrong}
@@ -490,7 +614,6 @@ function DisclosureDocumentBody({
         </div>
       </div>
 
-      {/* Footer */}
       <div style={{ borderTop: `1px solid ${c.border}`, marginTop: "48px", paddingTop: "16px", textAlign: "center", fontSize: "11px", color: c.muted }}>
         <p>Document generated on {format(new Date(), "MMMM d, yyyy 'at' h:mm a")}</p>
       </div>
@@ -500,12 +623,10 @@ function DisclosureDocumentBody({
 
 function PromissoryDocumentBody({
   loan,
-  lenderSignature,
   c,
   docStyle = "full",
 }: {
   loan: LoanData
-  lenderSignature?: SignatureInfo
   c: DocColors
   docStyle?: "full" | "simple"
 }) {
@@ -542,7 +663,6 @@ function PromissoryDocumentBody({
 
   return (
     <>
-      {/* Header */}
       <div
         className="text-center pb-6 mb-6"
         style={{ borderBottom: `2px solid ${c.border}` }}
@@ -555,7 +675,6 @@ function PromissoryDocumentBody({
         </h1>
       </div>
 
-      {/* Reference Row */}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "24px" }}>
         <div>
           <span style={{ color: c.muted }}>Date: </span>
@@ -569,7 +688,6 @@ function PromissoryDocumentBody({
         </div>
       </div>
 
-      {/* Principal Amount Box */}
       <div
         style={{
           border: `2px solid #1e3a5f`,
@@ -585,7 +703,6 @@ function PromissoryDocumentBody({
         </div>
       </div>
 
-      {/* Promise to Pay */}
       <div style={{ marginBottom: "24px" }}>
         <p style={{ fontSize: "13px", lineHeight: "1.8", color: c.text, textAlign: "justify" }}>
           I/We, <span style={{ fontWeight: 600 }}>{loan.contact.name}</span>,
@@ -597,7 +714,6 @@ function PromissoryDocumentBody({
         </p>
       </div>
 
-      {/* Terms and Conditions */}
       <div style={{ marginBottom: "24px" }}>
         <h2 className="font-semibold mb-4" style={{ fontSize: "16px", color: c.textStrong }}>
           Terms and Conditions
@@ -630,7 +746,6 @@ function PromissoryDocumentBody({
         </div>
       </div>
 
-      {/* Collateral */}
       {docStyle === "full" && loan.collateralDescription && (
         <div style={{ marginBottom: "24px" }}>
           <h2 className="font-semibold mb-3" style={{ fontSize: "16px", color: c.textStrong }}>
@@ -642,7 +757,6 @@ function PromissoryDocumentBody({
         </div>
       )}
 
-      {/* Co-maker Undertaking */}
       {docStyle === "full" && loan.coMakerName && (
         <div style={{ marginBottom: "24px" }}>
           <h2 className="font-semibold mb-3" style={{ fontSize: "16px", color: c.textStrong }}>
@@ -657,7 +771,6 @@ function PromissoryDocumentBody({
         </div>
       )}
 
-      {/* Signature Blocks */}
       <div style={{ borderTop: `2px solid ${c.border}`, paddingTop: "24px", marginTop: "32px" }}>
         <div
           style={{
@@ -667,14 +780,14 @@ function PromissoryDocumentBody({
             marginBottom: "40px",
           }}
         >
-          <SignatureBlock
+          <SignatureLine
             name={loan.contact.name}
             label="Borrower / Maker"
             borderColor={c.borderStrong}
             mutedColor={c.muted}
           />
           {docStyle === "full" && loan.coMakerName && (
-            <SignatureBlock
+            <SignatureLine
               name={loan.coMakerName}
               label="Co-maker / Guarantor"
               borderColor={c.borderStrong}
@@ -688,11 +801,9 @@ function PromissoryDocumentBody({
             Conforme:
           </p>
           <div style={{ maxWidth: "300px" }}>
-            <SignatureBlock
+            <SignatureLine
               name={loan.lenderName || "—"}
               label="Lender / Payee"
-              signatureData={lenderSignature?.signatureData}
-              signedAt={lenderSignature?.signedAt}
               borderColor={c.borderStrong}
               mutedColor={c.muted}
             />
@@ -700,7 +811,6 @@ function PromissoryDocumentBody({
         </div>
       </div>
 
-      {/* Footer */}
       <div style={{ borderTop: `1px solid ${c.border}`, marginTop: "48px", paddingTop: "16px", textAlign: "center", fontSize: "11px", color: c.muted }}>
         <p>Document generated on {format(new Date(), "MMMM d, yyyy 'at' h:mm a")}</p>
       </div>

@@ -1,11 +1,10 @@
 /**
- * Renders a signature line with an optional embedded signature image.
- * Used in both dashboard document pages and public signing page.
+ * Renders a signature line showing OTP verification status.
+ * Used in dashboard document pages.
  */
 interface SignatureBlockProps {
   name: string
   label: string
-  signatureData?: string | null
   signedAt?: string | null
   borderColor: string
   mutedColor: string
@@ -16,7 +15,6 @@ interface SignatureBlockProps {
 export function SignatureBlock({
   name,
   label,
-  signatureData,
   signedAt,
   borderColor,
   mutedColor,
@@ -28,25 +26,17 @@ export function SignatureBlock({
       <div
         style={{
           borderBottom: `1px solid ${borderColor}`,
-          height: "40px",
+          minHeight: "40px",
           marginBottom: "8px",
-          position: "relative",
+          display: "flex",
+          alignItems: "flex-end",
+          paddingBottom: "4px",
         }}
       >
-        {signatureData && (
-          <img
-            src={signatureData}
-            alt={`${name}'s signature`}
-            style={{
-              position: "absolute",
-              bottom: "0",
-              left: "0",
-              height: "38px",
-              width: "auto",
-              maxWidth: "100%",
-              objectFit: "contain",
-            }}
-          />
+        {signedAt && (
+          <p style={{ fontSize: "11px", color: "#16a34a" }}>
+            ✓ {lang === "en" ? "Digitally signed via email" : "Nilagdaan sa pamamagitan ng email"}
+          </p>
         )}
       </div>
       <p style={{ fontSize: "13px", fontWeight: 500 }}>{name}</p>
@@ -55,7 +45,8 @@ export function SignatureBlock({
         <div style={{ marginTop: "16px" }}>
           {signedAt ? (
             <p style={{ fontSize: "11px", color: mutedColor }}>
-              Signed: {new Date(signedAt).toLocaleDateString("en-PH", {
+              {lang === "en" ? "Signed" : "Nilagdaan"}:{" "}
+              {new Date(signedAt).toLocaleDateString("en-PH", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",

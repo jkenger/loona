@@ -170,6 +170,7 @@ function NewLoanWizard() {
   const [collateralDescription, setCollateralDescription] = useState(renewFromLoan?.collateralDescription || "")
   const [hasCoMaker, setHasCoMaker] = useState(!!renewFromLoan?.coMakerName)
   const [coMakerName, setCoMakerName] = useState(renewFromLoan?.coMakerName || "")
+  const [coMakerEmail, setCoMakerEmail] = useState(renewFromLoan?.coMakerEmail || "")
   const [coMakerPhone, setCoMakerPhone] = useState(renewFromLoan?.coMakerPhone || "")
   const [coMakerRelationship, setCoMakerRelationship] = useState(renewFromLoan?.coMakerRelationship || "")
 
@@ -325,6 +326,7 @@ function NewLoanWizard() {
           ? collateralDescription
           : undefined,
         coMakerName: hasCoMaker ? coMakerName : undefined,
+        coMakerEmail: hasCoMaker ? coMakerEmail : undefined,
         coMakerPhone: hasCoMaker ? coMakerPhone : undefined,
         coMakerRelationship: hasCoMaker ? coMakerRelationship : undefined,
         renewedFromLoanId: renewFromLoan?.id || undefined,
@@ -1016,6 +1018,17 @@ function NewLoanWizard() {
                           onChange={(e) => setCoMakerName(e.target.value)}
                           placeholder="Full name of co-maker"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="coMakerEmail">Email Address</Label>
+                        <Input
+                          id="coMakerEmail"
+                          type="email"
+                          value={coMakerEmail}
+                          onChange={(e) => setCoMakerEmail(e.target.value)}
+                          placeholder="co-maker@email.com"
+                        />
+                        <p className="text-xs text-muted-foreground">Required for document signing via email OTP</p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-2">
