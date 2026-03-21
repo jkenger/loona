@@ -38,6 +38,7 @@ import { Route as ShareReceiptPaymentIdRouteImport } from './routes/share/receip
 import { Route as ShareRecapLoanIdRouteImport } from './routes/share/recap/$loanId'
 import { Route as ShareLenderUserIdRouteImport } from './routes/share/lender/$userId'
 import { Route as ShareBorrowerContactIdRouteImport } from './routes/share/borrower/$contactId'
+import { Route as ApiCronOverdueAlertsRouteImport } from './routes/api/cron/overdue-alerts'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
@@ -214,6 +215,11 @@ const ShareLenderUserIdRoute = ShareLenderUserIdRouteImport.update({
 const ShareBorrowerContactIdRoute = ShareBorrowerContactIdRouteImport.update({
   id: '/share/borrower/$contactId',
   path: '/share/borrower/$contactId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronOverdueAlertsRoute = ApiCronOverdueAlertsRouteImport.update({
+  id: '/api/cron/overdue-alerts',
+  path: '/api/cron/overdue-alerts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronOverdueRoute = ApiCronOverdueRouteImport.update({
@@ -437,6 +443,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
@@ -500,6 +507,7 @@ export interface FileRoutesByTo {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
@@ -566,6 +574,7 @@ export interface FileRoutesById {
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
+  '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
@@ -631,6 +640,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/api/cron/overdue-alerts'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
     | '/share/recap/$loanId'
@@ -694,6 +704,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/api/cron/overdue-alerts'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
     | '/share/recap/$loanId'
@@ -759,6 +770,7 @@ export interface FileRouteTypes {
     | '/api/auth/error'
     | '/api/cron/digest'
     | '/api/cron/overdue'
+    | '/api/cron/overdue-alerts'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
     | '/share/recap/$loanId'
@@ -805,6 +817,7 @@ export interface RootRouteChildren {
   ApiAuthErrorRoute: typeof ApiAuthErrorRoute
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
+  ApiCronOverdueAlertsRoute: typeof ApiCronOverdueAlertsRoute
   ShareBorrowerContactIdRoute: typeof ShareBorrowerContactIdRoute
   ShareLenderUserIdRoute: typeof ShareLenderUserIdRoute
   ShareRecapLoanIdRoute: typeof ShareRecapLoanIdRoute
@@ -1015,6 +1028,13 @@ declare module '@tanstack/react-router' {
       path: '/share/borrower/$contactId'
       fullPath: '/share/borrower/$contactId'
       preLoaderRoute: typeof ShareBorrowerContactIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/overdue-alerts': {
+      id: '/api/cron/overdue-alerts'
+      path: '/api/cron/overdue-alerts'
+      fullPath: '/api/cron/overdue-alerts'
+      preLoaderRoute: typeof ApiCronOverdueAlertsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/overdue': {
@@ -1379,6 +1399,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthErrorRoute: ApiAuthErrorRoute,
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
+  ApiCronOverdueAlertsRoute: ApiCronOverdueAlertsRoute,
   ShareBorrowerContactIdRoute: ShareBorrowerContactIdRoute,
   ShareLenderUserIdRoute: ShareLenderUserIdRoute,
   ShareRecapLoanIdRoute: ShareRecapLoanIdRoute,

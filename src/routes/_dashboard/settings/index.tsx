@@ -33,7 +33,9 @@ import {
   LinkSimple,
   Copy,
   GearSix,
+  Bell,
 } from "@phosphor-icons/react"
+import { Switch } from "@/components/ui/switch"
 import { getLenderSettings, saveLenderSettings } from "@/server/lender-settings"
 import { getLenderProfileLinks, saveLenderProfileLinks } from "@/server/lender-profile"
 import { hasRole, ROLES } from "@/lib/constants/roles"
@@ -114,6 +116,11 @@ function SettingsPage() {
   const [capitalInput, setCapitalInput] = useState("")
   const [isSavingCapital, setIsSavingCapital] = useState(false)
   const [currentCapital, setCurrentCapital] = useState(lenderConfig?.initialCapital ?? 0)
+
+  // Notification toggles
+  const [paymentReceiptsEnabled, setPaymentReceiptsEnabled] = useState(lenderConfig?.paymentReceiptsEnabled ?? false)
+  const [overdueAlertsEnabled, setOverdueAlertsEnabled] = useState(lenderConfig?.overdueAlertsEnabled ?? false)
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false)
 
   // Profile links state
   const [isEditingWebsite, setIsEditingWebsite] = useState(false)
@@ -224,7 +231,7 @@ function SettingsPage() {
     }
     setIsSavingCapital(true)
     try {
-      await saveLenderSettings({ data: { initialCapital: amount } })
+      await saveLenderSettings({ data: { initialCapital: amount, paymentReceiptsEnabled, overdueAlertsEnabled } })
       setCurrentCapital(amount)
       setIsEditingCapital(false)
       toast.success("Starting capital updated")
@@ -232,6 +239,35 @@ function SettingsPage() {
       toast.error("Failed to save capital")
     } finally {
       setIsSavingCapital(false)
+    }
+  }
+
+  const handleToggleNotification = async (
+    field: "paymentReceiptsEnabled" | "overdueAlertsEnabled",
+    value: boolean
+  ) => {
+    const newReceipts = field === "paymentReceiptsEnabled" ? value : paymentReceiptsEnabled
+    const newAlerts = field === "overdueAlertsEnabled" ? value : overdueAlertsEnabled
+
+    if (field === "paymentReceiptsEnabled") setPaymentReceiptsEnabled(value)
+    else setOverdueAlertsEnabled(value)
+
+    setIsSavingNotifications(true)
+    try {
+      await saveLenderSettings({
+        data: {
+          initialCapital: currentCapital,
+          paymentReceiptsEnabled: newReceipts,
+          overdueAlertsEnabled: newAlerts,
+        },
+      })
+    } catch {
+      // Revert on error
+      if (field === "paymentReceiptsEnabled") setPaymentReceiptsEnabled(!value)
+      else setOverdueAlertsEnabled(!value)
+      toast.error("Failed to save setting")
+    } finally {
+      setIsSavingNotifications(false)
     }
   }
 
@@ -661,6 +697,46 @@ function SettingsPage() {
                   <p className="text-xs text-muted-foreground">
                     This is used to calculate your cash position on the dashboard.
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications */}
+          {isLender && (
+            <div className="rounded-xl border shadow-sm">
+              <div className="p-5 pb-3">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-base font-semibold">Notifications</h3>
+                </div>
+              </div>
+              <div className="p-5 pt-0 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Payment Receipts</p>
+                    <p className="text-xs text-muted-foreground">
+                      Email borrowers a receipt after each payment
+                    </p>
+                  </div>
+                  <Switch
+                    checked={paymentReceiptsEnabled}
+                    onCheckedChange={(v) => handleToggleNotification("paymentReceiptsEnabled", v)}
+                    disabled={isSavingNotifications}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Overdue Alerts</p>
+                    <p className="text-xs text-muted-foreground">
+                      Remind borrowers 3 days before, on, and after due date
+                    </p>
+                  </div>
+                  <Switch
+                    checked={overdueAlertsEnabled}
+                    onCheckedChange={(v) => handleToggleNotification("overdueAlertsEnabled", v)}
+                    disabled={isSavingNotifications}
+                  />
                 </div>
               </div>
             </div>

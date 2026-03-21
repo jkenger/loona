@@ -6,6 +6,8 @@ import { z } from "zod"
 
 export interface LenderConfig {
   initialCapital: number
+  paymentReceiptsEnabled: boolean
+  overdueAlertsEnabled: boolean
 }
 
 // ============================================================================
@@ -14,6 +16,8 @@ export interface LenderConfig {
 
 export const lenderConfigSchema = z.object({
   initialCapital: z.number().min(0).max(999_999_999),
+  paymentReceiptsEnabled: z.boolean().default(false),
+  overdueAlertsEnabled: z.boolean().default(false),
 })
 
 // ============================================================================
@@ -22,6 +26,8 @@ export const lenderConfigSchema = z.object({
 
 export const DEFAULT_LENDER_CONFIG: LenderConfig = {
   initialCapital: 0,
+  paymentReceiptsEnabled: false,
+  overdueAlertsEnabled: false,
 }
 
 // ============================================================================
@@ -33,7 +39,7 @@ export function parseLenderConfig(json: string | null): LenderConfig {
   try {
     const parsed = JSON.parse(json)
     const result = lenderConfigSchema.safeParse(parsed)
-    if (result.success) return result.data
+    if (result.success) return { ...DEFAULT_LENDER_CONFIG, ...result.data }
     return DEFAULT_LENDER_CONFIG
   } catch {
     return DEFAULT_LENDER_CONFIG

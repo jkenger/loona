@@ -658,3 +658,185 @@ If you were not expecting this, you can ignore this email.
 
   return { subject, html, text }
 }
+
+export function paymentReceiptEmail(params: {
+  borrowerName: string
+  lenderName: string
+  amount: string
+  method: string
+  paidAt: string
+  remainingBalance: string
+  loanReference: string
+}) {
+  const { borrowerName, lenderName, amount, method, paidAt, remainingBalance, loanReference } = params
+  const subject = `Payment Receipt — ₱${amount} received`
+  const isFullyPaid = parseFloat(remainingBalance) <= 0
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+    <p style="color: #666; margin: 8px 0 0 0;">Payment Receipt</p>
+  </div>
+
+  <p>Hi ${borrowerName},</p>
+  <p>Your payment has been received and recorded. Here are the details:</p>
+
+  <div style="background-color: #f9fafb; border-radius: 12px; padding: 24px; margin: 24px 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 8px 0; color: #555; font-size: 14px;">Amount Paid</td>
+        <td style="padding: 8px 0; font-weight: 700; font-size: 18px; color: #16a34a; text-align: right;">₱${amount}</td>
+      </tr>
+      <tr style="border-top: 1px solid #e5e7eb;">
+        <td style="padding: 8px 0; color: #555; font-size: 14px;">Payment Method</td>
+        <td style="padding: 8px 0; font-weight: 500; text-align: right;">${method}</td>
+      </tr>
+      <tr style="border-top: 1px solid #e5e7eb;">
+        <td style="padding: 8px 0; color: #555; font-size: 14px;">Date</td>
+        <td style="padding: 8px 0; font-weight: 500; text-align: right;">${paidAt}</td>
+      </tr>
+      <tr style="border-top: 1px solid #e5e7eb;">
+        <td style="padding: 8px 0; color: #555; font-size: 14px;">Loan Reference</td>
+        <td style="padding: 8px 0; font-weight: 500; text-align: right;">${loanReference}</td>
+      </tr>
+      <tr style="border-top: 1px solid #e5e7eb;">
+        <td style="padding: 8px 0; color: #555; font-size: 14px;">Remaining Balance</td>
+        <td style="padding: 8px 0; font-weight: 700; text-align: right; color: ${isFullyPaid ? '#16a34a' : '#1a1a1a'};">${isFullyPaid ? 'FULLY PAID' : '₱' + remainingBalance}</td>
+      </tr>
+    </table>
+  </div>
+
+  ${isFullyPaid ? `
+  <div style="background-color: #f0fdf4; border: 2px solid #16a34a; border-radius: 12px; padding: 16px; text-align: center; margin: 24px 0;">
+    <p style="margin: 0; color: #15803d; font-weight: 600;">Congratulations! Your loan has been fully paid. 🎉</p>
+  </div>
+  ` : ''}
+
+  <p style="color: #555; font-size: 14px;">This receipt was issued by <strong>${lenderName}</strong> via Loona.</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">Please keep this email for your records.</p>
+</body>
+</html>
+  `
+
+  const text = `
+Payment Receipt
+
+Hi ${borrowerName},
+
+Your payment of ₱${amount} has been received.
+
+Amount Paid: ₱${amount}
+Payment Method: ${method}
+Date: ${paidAt}
+Loan Reference: ${loanReference}
+Remaining Balance: ${isFullyPaid ? 'FULLY PAID' : '₱' + remainingBalance}
+
+${isFullyPaid ? 'Congratulations! Your loan has been fully paid.' : ''}
+
+Issued by ${lenderName} via Loona.
+  `
+
+  return { subject, html, text }
+}
+
+export function overdueAlertEmail(params: {
+  borrowerName: string
+  lenderName: string
+  dueDate: string
+  amountDue: string
+  loanReference: string
+  daysRelative: number // negative = days before, 0 = due today, positive = days overdue
+}) {
+  const { borrowerName, lenderName, dueDate, amountDue, loanReference, daysRelative } = params
+
+  let subject: string
+  let urgencyText: string
+  let urgencyColor: string
+
+  if (daysRelative < 0) {
+    const days = Math.abs(daysRelative)
+    subject = `Reminder: Payment due in ${days} day${days !== 1 ? 's' : ''} — ${loanReference}`
+    urgencyText = `Your payment is due in <strong>${days} day${days !== 1 ? 's' : ''}</strong>.`
+    urgencyColor = '#f59e0b'
+  } else if (daysRelative === 0) {
+    subject = `Payment due today — ${loanReference}`
+    urgencyText = `Your payment is <strong>due today</strong>.`
+    urgencyColor = '#ef4444'
+  } else {
+    subject = `Overdue: Payment ${daysRelative} day${daysRelative !== 1 ? 's' : ''} past due — ${loanReference}`
+    urgencyText = `Your payment is <strong>${daysRelative} day${daysRelative !== 1 ? 's' : ''} overdue</strong>.`
+    urgencyColor = '#dc2626'
+  }
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+  </div>
+
+  <div style="border-left: 4px solid ${urgencyColor}; padding-left: 16px; margin-bottom: 24px;">
+    <h2 style="color: ${urgencyColor}; margin: 0 0 4px;">Payment Reminder</h2>
+    <p style="margin: 0; color: #555;">${urgencyText}</p>
+  </div>
+
+  <p>Hi ${borrowerName},</p>
+  <p>This is a reminder about your upcoming loan payment to <strong>${lenderName}</strong>.</p>
+
+  <div style="background-color: #f9fafb; border-radius: 12px; padding: 24px; margin: 24px 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 8px 0; color: #555; font-size: 14px;">Amount Due</td>
+        <td style="padding: 8px 0; font-weight: 700; font-size: 18px; text-align: right;">₱${amountDue}</td>
+      </tr>
+      <tr style="border-top: 1px solid #e5e7eb;">
+        <td style="padding: 8px 0; color: #555; font-size: 14px;">Due Date</td>
+        <td style="padding: 8px 0; font-weight: 500; text-align: right; color: ${urgencyColor};">${dueDate}</td>
+      </tr>
+      <tr style="border-top: 1px solid #e5e7eb;">
+        <td style="padding: 8px 0; color: #555; font-size: 14px;">Loan Reference</td>
+        <td style="padding: 8px 0; font-weight: 500; text-align: right;">${loanReference}</td>
+      </tr>
+    </table>
+  </div>
+
+  <p style="color: #555; font-size: 14px;">Please coordinate with <strong>${lenderName}</strong> to arrange your payment at your earliest convenience.</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">This reminder was sent via Loona on behalf of ${lenderName}.</p>
+</body>
+</html>
+  `
+
+  const text = `
+Payment Reminder
+
+Hi ${borrowerName},
+
+${daysRelative < 0 ? `Your payment is due in ${Math.abs(daysRelative)} days.` : daysRelative === 0 ? 'Your payment is due today.' : `Your payment is ${daysRelative} days overdue.`}
+
+Amount Due: ₱${amountDue}
+Due Date: ${dueDate}
+Loan Reference: ${loanReference}
+
+Please coordinate with ${lenderName} to arrange your payment.
+
+Sent via Loona on behalf of ${lenderName}.
+  `
+
+  return { subject, html, text }
+}

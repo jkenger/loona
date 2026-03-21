@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { getLoan, deleteLoan, approveLoan, rejectLoan } from "@/server/loans"
+import { restructureLoan } from "@/server/restructure"
 import { getLoanSigningStatus } from "@/server/signatures"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
 import { PenaltyItems } from "@/components/penalty-items"
@@ -68,6 +69,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
+import { Input } from "@/components/ui/input"
 
 export const Route = createFileRoute("/_dashboard/loans/$loanId/")({
   loader: async ({ params, context }) => {
@@ -137,6 +139,13 @@ function LoanDetailPage() {
 
   // Regenerate schedule dialog state
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
+
+  // Restructure dialog state
+  const [showRestructureDialog, setShowRestructureDialog] = useState(false)
+  const [restructureAdditionalMonths, setRestructureAdditionalMonths] = useState("")
+  const [restructureBalanceReduction, setRestructureBalanceReduction] = useState("")
+  const [restructureReason, setRestructureReason] = useState("")
+  const [isRestructuring, setIsRestructuring] = useState(false)
 
   // Edit payment date dialog state
   const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState<{
@@ -312,6 +321,17 @@ function LoanDetailPage() {
                   <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
                     <ArrowsClockwise className="h-4 w-4" />
                     Regenerate Schedule
+                  </DropdownMenuItem>
+                )}
+                {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                  <DropdownMenuItem onClick={() => {
+                    setRestructureAdditionalMonths("")
+                    setRestructureBalanceReduction("")
+                    setRestructureReason("")
+                    setShowRestructureDialog(true)
+                  }}>
+                    <ArrowCounterClockwise className="h-4 w-4" />
+                    Restructure Loan
                   </DropdownMenuItem>
                 )}
                 {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
@@ -1143,6 +1163,108 @@ function LoanDetailPage() {
           />
         )
       })()}
+
+      {/* Restructure Loan Dialog */}
+      <Dialog open={showRestructureDialog} onOpenChange={setShowRestructureDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Restructure Loan</DialogTitle>
+            <DialogDescription>
+              Extend the term or reduce the balance. Pending installments will be recalculated.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Remaining Balance</span>
+                <span className="font-medium">
+                  ₱{parseFloat(loan.remainingBalance).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Current Term</span>
+                <span className="font-medium">{loan.termMonths} months</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Additional Months (term extension)</Label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="0"
+                value={restructureAdditionalMonths}
+                onChange={(e) => setRestructureAdditionalMonths(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Balance Reduction (₱)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={restructureBalanceReduction}
+                onChange={(e) => setRestructureBalanceReduction(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Amount to waive from the remaining balance</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Reason (optional)</Label>
+              <Textarea
+                placeholder="e.g. Borrower requested extension due to financial hardship"
+                value={restructureReason}
+                onChange={(e) => setRestructureReason(e.target.value)}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRestructureDialog(false)} disabled={isRestructuring}>
+              Cancel
+            </Button>
+            <Button
+              disabled={isRestructuring || (!restructureAdditionalMonths && !restructureBalanceReduction)}
+              onClick={async () => {
+                const additionalMonths = parseInt(restructureAdditionalMonths || "0")
+                const balanceReduction = parseFloat(restructureBalanceReduction || "0")
+                if (isNaN(additionalMonths) || additionalMonths < 0) {
+                  toast.error("Invalid additional months")
+                  return
+                }
+                if (isNaN(balanceReduction) || balanceReduction < 0) {
+                  toast.error("Invalid balance reduction")
+                  return
+                }
+                setIsRestructuring(true)
+                try {
+                  await restructureLoan({ data: {
+                    loanId: loan.id,
+                    additionalMonths,
+                    balanceReduction,
+                    reason: restructureReason || undefined,
+                  }})
+                  toast.success("Loan restructured successfully")
+                  setShowRestructureDialog(false)
+                  router.invalidate()
+                } catch (err: any) {
+                  toast.error(err.message || "Failed to restructure loan")
+                } finally {
+                  setIsRestructuring(false)
+                }
+              }}
+            >
+              {isRestructuring ? (
+                <><Spinner className="h-4 w-4 animate-spin mr-2" />Restructuring...</>
+              ) : (
+                "Restructure"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Approve Loan Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>

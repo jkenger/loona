@@ -239,6 +239,13 @@
       "when": 1774005251750,
       "tag": "0033_otp_signing",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1774097931050,
+      "tag": "0034_sloppy_harrier",
+      "breakpoints": true
     }
   ]
 }

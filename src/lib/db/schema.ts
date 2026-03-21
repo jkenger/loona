@@ -222,6 +222,9 @@ export const loans = pgTable("loans", {
   createdByAgentId: text("created_by_agent_id").references(() => agents.id),
   assignedAgentId: text("assigned_agent_id").references(() => agents.id),
 
+  // Restructuring
+  restructureCount: integer("restructure_count").notNull().default(0),
+
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
@@ -239,6 +242,14 @@ export const paymentSchedule = pgTable("payment_schedule", {
 
   paidAmount: decimal("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
   paidAt: timestamp("paid_at"),
+
+  // Overdue reminders
+  reminderBeforeSentAt: timestamp("reminder_before_sent_at"),
+  reminderOnSentAt: timestamp("reminder_on_sent_at"),
+  reminderAfterSentAt: timestamp("reminder_after_sent_at"),
+
+  // Restructuring — set when this item is superseded
+  restructuredAt: timestamp("restructured_at"),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
@@ -270,6 +281,26 @@ export const payments = pgTable("payments", {
   reversedAt: timestamp("reversed_at"),
   reversedBy: text("reversed_by").references(() => user.id),
   reversalReason: text("reversal_reason"),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+// Loan Restructures — audit log of each restructure event
+export const loanRestructures = pgTable("loan_restructures", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  loanId: text("loan_id")
+    .notNull()
+    .references(() => loans.id, { onDelete: "cascade" }),
+  createdById: text("created_by_id")
+    .notNull()
+    .references(() => user.id),
+
+  previousRemainingBalance: decimal("previous_remaining_balance", { precision: 12, scale: 2 }).notNull(),
+  balanceReduction: decimal("balance_reduction", { precision: 12, scale: 2 }).notNull().default("0"),
+  newRemainingBalance: decimal("new_remaining_balance", { precision: 12, scale: 2 }).notNull(),
+  additionalMonths: integer("additional_months").notNull().default(0),
+  newPaymentAmount: decimal("new_payment_amount", { precision: 12, scale: 2 }).notNull(),
+  reason: text("reason"),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
@@ -629,6 +660,7 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
   payments: many(payments),
   penalties: many(penalties),
   documentSignatures: many(documentSignatures),
+  restructures: many(loanRestructures),
 }))
 
 export const paymentScheduleRelations = relations(paymentSchedule, ({ one, many }) => ({
@@ -780,6 +812,11 @@ export const advisorAlertsRelations = relations(advisorAlerts, ({ one }) => ({
   lender: one(user, { fields: [advisorAlerts.lenderId], references: [user.id] }),
 }))
 
+export const loanRestructuresRelations = relations(loanRestructures, ({ one }) => ({
+  loan: one(loans, { fields: [loanRestructures.loanId], references: [loans.id] }),
+  createdBy: one(user, { fields: [loanRestructures.createdById], references: [user.id] }),
+}))
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -792,6 +829,9 @@ export type NewContact = typeof contacts.$inferInsert
 
 export type Loan = typeof loans.$inferSelect
 export type NewLoan = typeof loans.$inferInsert
+
+export type LoanRestructure = typeof loanRestructures.$inferSelect
+export type NewLoanRestructure = typeof loanRestructures.$inferInsert
 
 export type PaymentScheduleItem = typeof paymentSchedule.$inferSelect
 export type NewPaymentScheduleItem = typeof paymentSchedule.$inferInsert

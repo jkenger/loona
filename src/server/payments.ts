@@ -9,6 +9,7 @@ import {
   agents,
   commissionSettings,
   penalties,
+  lenderSettings,
 } from "@/lib/db"
 import { eq, desc, and, sql, lte, gte, ne } from "drizzle-orm"
 import { requireAuth } from "./session"
@@ -19,6 +20,8 @@ import { parseCommissionConfig, calculateTierCommission } from "@/lib/constants/
 import { getEffectivePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
 import { revertPenaltyCore } from "./penalties"
+import { parseLenderConfig } from "@/lib/constants/lender-defaults"
+import { sendEmail, paymentReceiptEmail } from "@/lib/email"
 
 // Validation schemas
 const recordPaymentSchema = z.object({
@@ -198,6 +201,7 @@ export const recordPayment = createServerFn()
     where: eq(loans.id, data.loanId),
     with: {
       assignedAgent: true,
+      contact: true,
     },
   })
 
@@ -416,6 +420,27 @@ export const recordPayment = createServerFn()
     isAgent: !!agentId,
     loanCompleted: isCompleted,
   })
+
+  // Fire-and-forget payment receipt email (opt-in per lender)
+  const settingsRow = await db.query.lenderSettings.findFirst({
+    where: eq(lenderSettings.lenderId, loan.lenderId),
+  })
+  const lenderConfig = parseLenderConfig(settingsRow?.config ?? null)
+  if (lenderConfig.paymentReceiptsEnabled && loan.contact?.email) {
+    const paidAtFormatted = paymentDate.toLocaleDateString("en-PH", {
+      year: "numeric", month: "long", day: "numeric",
+    })
+    const { subject, html, text } = paymentReceiptEmail({
+      borrowerName: loan.contact.name,
+      lenderName: session.user.name,
+      amount: data.amount.toFixed(2),
+      method: data.method,
+      paidAt: paidAtFormatted,
+      remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
+      loanReference: loan.id.slice(0, 8).toUpperCase(),
+    })
+    sendEmail({ to: loan.contact.email, subject, html, text }).catch(() => {})
+  }
 
   return {
     ...payment,
