@@ -120,6 +120,8 @@ function SettingsPage() {
   // Notification toggles
   const [paymentReceiptsEnabled, setPaymentReceiptsEnabled] = useState(lenderConfig?.paymentReceiptsEnabled ?? false)
   const [overdueAlertsEnabled, setOverdueAlertsEnabled] = useState(lenderConfig?.overdueAlertsEnabled ?? false)
+  const [overdueAlertDaysBefore, setOverdueAlertDaysBefore] = useState(String(lenderConfig?.overdueAlertDaysBefore ?? 3))
+  const [overdueAlertDaysAfter, setOverdueAlertDaysAfter] = useState(String(lenderConfig?.overdueAlertDaysAfter ?? 3))
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
 
   // Profile links state
@@ -231,7 +233,7 @@ function SettingsPage() {
     }
     setIsSavingCapital(true)
     try {
-      await saveLenderSettings({ data: { initialCapital: amount, paymentReceiptsEnabled, overdueAlertsEnabled } })
+      await saveLenderSettings({ data: buildNotificationPayload({ initialCapital: amount }) })
       setCurrentCapital(amount)
       setIsEditingCapital(false)
       toast.success("Starting capital updated")
@@ -242,30 +244,53 @@ function SettingsPage() {
     }
   }
 
+  const buildNotificationPayload = (overrides: Partial<{
+    initialCapital: number
+    paymentReceiptsEnabled: boolean
+    overdueAlertsEnabled: boolean
+    overdueAlertDaysBefore: number
+    overdueAlertDaysAfter: number
+  }>) => ({
+    initialCapital: currentCapital,
+    paymentReceiptsEnabled,
+    overdueAlertsEnabled,
+    overdueAlertDaysBefore: parseInt(overdueAlertDaysBefore) || 3,
+    overdueAlertDaysAfter: parseInt(overdueAlertDaysAfter) || 3,
+    ...overrides,
+  })
+
   const handleToggleNotification = async (
     field: "paymentReceiptsEnabled" | "overdueAlertsEnabled",
     value: boolean
   ) => {
-    const newReceipts = field === "paymentReceiptsEnabled" ? value : paymentReceiptsEnabled
-    const newAlerts = field === "overdueAlertsEnabled" ? value : overdueAlertsEnabled
-
     if (field === "paymentReceiptsEnabled") setPaymentReceiptsEnabled(value)
     else setOverdueAlertsEnabled(value)
 
     setIsSavingNotifications(true)
     try {
-      await saveLenderSettings({
-        data: {
-          initialCapital: currentCapital,
-          paymentReceiptsEnabled: newReceipts,
-          overdueAlertsEnabled: newAlerts,
-        },
-      })
+      await saveLenderSettings({ data: buildNotificationPayload({ [field]: value }) })
     } catch {
-      // Revert on error
       if (field === "paymentReceiptsEnabled") setPaymentReceiptsEnabled(!value)
       else setOverdueAlertsEnabled(!value)
       toast.error("Failed to save setting")
+    } finally {
+      setIsSavingNotifications(false)
+    }
+  }
+
+  const handleSaveAlertDays = async () => {
+    const before = parseInt(overdueAlertDaysBefore)
+    const after = parseInt(overdueAlertDaysAfter)
+    if (isNaN(before) || before < 1 || before > 30 || isNaN(after) || after < 1 || after > 30) {
+      toast.error("Days must be between 1 and 30")
+      return
+    }
+    setIsSavingNotifications(true)
+    try {
+      await saveLenderSettings({ data: buildNotificationPayload({ overdueAlertDaysBefore: before, overdueAlertDaysAfter: after }) })
+      toast.success("Alert schedule saved")
+    } catch {
+      toast.error("Failed to save")
     } finally {
       setIsSavingNotifications(false)
     }
@@ -725,18 +750,53 @@ function SettingsPage() {
                     disabled={isSavingNotifications}
                   />
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Overdue Alerts</p>
-                    <p className="text-xs text-muted-foreground">
-                      Remind borrowers 3 days before, on, and after due date
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Overdue Alerts</p>
+                      <p className="text-xs text-muted-foreground">
+                        Remind borrowers before, on, and after due date
+                      </p>
+                    </div>
+                    <Switch
+                      checked={overdueAlertsEnabled}
+                      onCheckedChange={(v) => handleToggleNotification("overdueAlertsEnabled", v)}
+                      disabled={isSavingNotifications}
+                    />
                   </div>
-                  <Switch
-                    checked={overdueAlertsEnabled}
-                    onCheckedChange={(v) => handleToggleNotification("overdueAlertsEnabled", v)}
-                    disabled={isSavingNotifications}
-                  />
+                  {overdueAlertsEnabled && (
+                    <div className="rounded-lg bg-muted/50 p-3 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Days before due</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={overdueAlertDaysBefore}
+                            onChange={(e) => setOverdueAlertDaysBefore(e.target.value)}
+                            onBlur={handleSaveAlertDays}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Days after due</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={overdueAlertDaysAfter}
+                            onChange={(e) => setOverdueAlertDaysAfter(e.target.value)}
+                            onBlur={handleSaveAlertDays}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Always sends on the due date too. Saves on blur.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
