@@ -8,6 +8,16 @@ import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
 import { getDashboardStats } from '@/server/dashboard'
 import { updateOverduePayments } from '@/server/payments'
+import { getLenderSettings, saveLenderSettings } from '@/server/lender-settings'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { toast } from 'sonner'
 import {
   CaretLeft,
   CaretRight,
@@ -41,19 +51,57 @@ export const Route = createFileRoute('/_dashboard/dashboard/')({
       session: { user: { name: string | null; role: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { stats: null, unauthorized: true, firstName: '' }
+      return { stats: null, unauthorized: true, firstName: '', lenderConfig: null }
     }
     await updateOverduePayments()
-    const stats = await getDashboardStats()
+    const [stats, lenderConfig] = await Promise.all([getDashboardStats(), getLenderSettings()])
     const firstName = session.user.name?.split(' ')[0] ?? ''
-    return { stats, unauthorized: false, firstName }
+    return { stats, unauthorized: false, firstName, lenderConfig }
   },
   pendingComponent: SkeletonDashboard,
   component: DashboardPage,
 })
 
 function DashboardPage() {
-  const { stats, unauthorized, firstName } = Route.useLoaderData()
+  const { stats, unauthorized, firstName, lenderConfig } = Route.useLoaderData()
+
+  const [showNotificationOnboarding, setShowNotificationOnboarding] = useState(
+    !!lenderConfig && !lenderConfig.notificationOnboardingSeen
+  )
+  const [isEnablingAll, setIsEnablingAll] = useState(false)
+
+  const handleEnableAll = async () => {
+    if (!lenderConfig) return
+    setIsEnablingAll(true)
+    try {
+      await saveLenderSettings({
+        data: {
+          ...lenderConfig,
+          paymentReceiptsEnabled: true,
+          overdueAlertsEnabled: true,
+          lenderPaymentNotificationsEnabled: true,
+          lenderDocumentNotificationsEnabled: true,
+          lenderPenaltyNotificationsEnabled: true,
+          lenderDailySummaryEnabled: true,
+          notificationOnboardingSeen: true,
+        },
+      })
+      toast.success("All notifications enabled")
+      setShowNotificationOnboarding(false)
+    } catch {
+      toast.error("Failed to save")
+    } finally {
+      setIsEnablingAll(false)
+    }
+  }
+
+  const handleDismissOnboarding = async () => {
+    if (!lenderConfig) return
+    setShowNotificationOnboarding(false)
+    await saveLenderSettings({
+      data: { ...lenderConfig, notificationOnboardingSeen: true },
+    }).catch(() => {})
+  }
 
   const [currentMonth, setCurrentMonth] = useState(
     stats ? new Date(stats.currentMonth) : new Date(),
@@ -603,6 +651,52 @@ function DashboardPage() {
           </Card>
         </div>
       </StaggerItem>
+
+      {/* Notification Onboarding Modal */}
+      <Dialog open={showNotificationOnboarding} onOpenChange={(open) => {
+        if (!open) handleDismissOnboarding()
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Stay in the Loop</DialogTitle>
+            <DialogDescription>
+              Get notified about important events via email — no need to check the dashboard constantly.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            {[
+              { label: "Payment Received", desc: "Know when borrowers pay" },
+              { label: "Loan Fully Paid", desc: "Celebrate completed loans" },
+              { label: "Document Signed", desc: "Borrower signed the contract" },
+              { label: "Overdue Reminders", desc: "Auto-remind borrowers before & after due dates" },
+              { label: "Penalty Generated", desc: "Late fees & daily interest alerts" },
+              { label: "Daily Summary", desc: "Portfolio overview + missed payment escalation" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-start gap-3 p-2 rounded-lg bg-muted/40">
+                <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            You can customize individual notifications anytime in Settings.
+          </p>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={handleDismissOnboarding} disabled={isEnablingAll} className="w-full sm:w-auto">
+              Not Now
+            </Button>
+            <Button onClick={handleEnableAll} disabled={isEnablingAll} className="w-full sm:w-auto">
+              {isEnablingAll ? "Enabling..." : "Enable All Notifications"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Stagger>
   )
 }
