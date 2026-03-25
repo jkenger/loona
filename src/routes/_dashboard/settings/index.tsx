@@ -18,28 +18,27 @@ import {
 } from "@/components/ui/dialog"
 import {
   User,
-  Envelope,
   Lock,
   Spinner,
   Check,
   Eye,
   EyeSlash,
   PencilSimple,
-  Warning,
   ArrowSquareOut,
   Wallet,
   GlobeSimple,
   FacebookLogo,
   LinkSimple,
   Copy,
-  GearSix,
   Bell,
 } from "@phosphor-icons/react"
+import type { Icon } from "@phosphor-icons/react"
 import { Switch } from "@/components/ui/switch"
 import { getLenderSettings, saveLenderSettings } from "@/server/lender-settings"
 import { getLenderProfileLinks, saveLenderProfileLinks } from "@/server/lender-profile"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
+import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/_dashboard/settings/")({
   loader: async ({ context }) => {
@@ -58,50 +57,75 @@ export const Route = createFileRoute("/_dashboard/settings/")({
 
 function SettingsSkeleton() {
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      <div>
-        <Skeleton className="h-9 w-32" />
-        <Skeleton className="h-4 w-56 mt-2" />
-      </div>
-      <div className="grid gap-5 lg:grid-cols-5">
-        <div className="lg:col-span-3 space-y-5">
-          <div className="rounded-xl border shadow-sm p-5 space-y-4">
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-          <div className="rounded-xl border shadow-sm p-5 space-y-4">
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        </div>
-        <div className="lg:col-span-2 space-y-5">
-          <div className="rounded-xl border shadow-sm p-5 space-y-4">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-          <div className="rounded-xl border shadow-sm p-5 space-y-4">
-            <Skeleton className="h-5 w-36" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-3xl mx-auto space-y-8">
+      <Skeleton className="h-9 w-32" />
+      <div className="space-y-6">
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     </div>
   )
 }
+
+// ============================================================================
+// Reusable section components
+// ============================================================================
+
+function Section({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <StaggerItem className={cn("rounded-xl border bg-card", className)}>{children}</StaggerItem>
+}
+
+function SectionHeader({ icon: IconComp, title, description }: {
+  icon: Icon
+  title: string
+  description?: string
+}) {
+  return (
+    <div className="flex items-center gap-3 px-5 pt-5 pb-4">
+      <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+        <IconComp className="h-4.5 w-4.5 text-muted-foreground" weight="bold" />
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      </div>
+    </div>
+  )
+}
+
+function SettingRow({ label, description, children, border = true }: {
+  label: string
+  description?: string
+  children: React.ReactNode
+  border?: boolean
+}) {
+  return (
+    <div className={cn("flex items-center justify-between gap-4 px-5 py-3.5", border && "border-t")}>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Main page
+// ============================================================================
 
 function SettingsPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const { lenderConfig, profileLinks } = Route.useLoaderData()
 
-  // Profile edit state
+  // Profile
   const [isEditingName, setIsEditingName] = useState(false)
   const [newName, setNewName] = useState("")
   const [isSavingName, setIsSavingName] = useState(false)
 
-  // Password change state
+  // Password
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -111,13 +135,13 @@ function SettingsPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState("")
 
-  // Capital state
+  // Capital
   const [isEditingCapital, setIsEditingCapital] = useState(false)
   const [capitalInput, setCapitalInput] = useState("")
   const [isSavingCapital, setIsSavingCapital] = useState(false)
   const [currentCapital, setCurrentCapital] = useState(lenderConfig?.initialCapital ?? 0)
 
-  // Notification toggles
+  // Notifications
   const [paymentReceiptsEnabled, setPaymentReceiptsEnabled] = useState(lenderConfig?.paymentReceiptsEnabled ?? false)
   const [overdueAlertsEnabled, setOverdueAlertsEnabled] = useState(lenderConfig?.overdueAlertsEnabled ?? false)
   const [overdueAlertDaysBefore, setOverdueAlertDaysBefore] = useState(String(lenderConfig?.overdueAlertDaysBefore ?? 3))
@@ -128,137 +152,71 @@ function SettingsPage() {
   const [lenderDailySummary, setLenderDailySummary] = useState(lenderConfig?.lenderDailySummaryEnabled ?? false)
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
 
-  // Profile links state
+  // Profile links
   const [isEditingWebsite, setIsEditingWebsite] = useState(false)
   const [websiteInput, setWebsiteInput] = useState("")
   const [isSavingWebsite, setIsSavingWebsite] = useState(false)
   const [currentWebsite, setCurrentWebsite] = useState(profileLinks?.websiteUrl ?? "")
-
   const [isEditingFacebook, setIsEditingFacebook] = useState(false)
   const [facebookInput, setFacebookInput] = useState("")
   const [isSavingFacebook, setIsSavingFacebook] = useState(false)
   const [currentFacebook, setCurrentFacebook] = useState(profileLinks?.facebookUrl ?? "")
 
   const user = session?.user
+  const isLender = hasRole(user?.role ?? null, ROLES.LENDER)
 
-  const handleEditName = () => {
-    setNewName(user?.name || "")
-    setIsEditingName(true)
-  }
+  // ---- Handlers ----
+
+  const handleEditName = () => { setNewName(user?.name || ""); setIsEditingName(true) }
+  const handleCancelEditName = () => { setIsEditingName(false); setNewName("") }
 
   const handleSaveName = async () => {
-    if (!newName.trim() || newName.trim().length < 2) {
-      toast.error("Name must be at least 2 characters")
-      return
-    }
-
+    if (!newName.trim() || newName.trim().length < 2) { toast.error("Name must be at least 2 characters"); return }
     setIsSavingName(true)
     try {
       const result = await updateUserName({ name: newName.trim() })
-      if (result.error) {
-        toast.error(result.error.message)
-      } else {
-        toast.success("Name updated successfully")
-        setIsEditingName(false)
-        router.invalidate()
-      }
-    } catch {
-      toast.error("Failed to update name")
-    } finally {
-      setIsSavingName(false)
-    }
-  }
-
-  const handleCancelEditName = () => {
-    setIsEditingName(false)
-    setNewName("")
+      if (result.error) { toast.error(result.error.message) }
+      else { toast.success("Name updated"); setIsEditingName(false); router.invalidate() }
+    } catch { toast.error("Failed to update name") }
+    finally { setIsSavingName(false) }
   }
 
   const openPasswordDialog = () => {
-    setCurrentPassword("")
-    setNewPassword("")
-    setConfirmPassword("")
-    setPasswordError("")
-    setShowCurrentPassword(false)
-    setShowNewPassword(false)
+    setCurrentPassword(""); setNewPassword(""); setConfirmPassword("")
+    setPasswordError(""); setShowCurrentPassword(false); setShowNewPassword(false)
     setShowPasswordDialog(true)
   }
 
   const handleChangePassword = async () => {
     setPasswordError("")
-
-    if (!currentPassword) {
-      setPasswordError("Current password is required")
-      return
-    }
-    if (!newPassword) {
-      setPasswordError("New password is required")
-      return
-    }
-    if (newPassword.length < 8) {
-      setPasswordError("New password must be at least 8 characters")
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match")
-      return
-    }
-    if (currentPassword === newPassword) {
-      setPasswordError("New password must be different from current password")
-      return
-    }
-
+    if (!currentPassword) { setPasswordError("Current password is required"); return }
+    if (!newPassword) { setPasswordError("New password is required"); return }
+    if (newPassword.length < 8) { setPasswordError("Must be at least 8 characters"); return }
+    if (newPassword !== confirmPassword) { setPasswordError("Passwords do not match"); return }
+    if (currentPassword === newPassword) { setPasswordError("Must be different from current"); return }
     setIsChangingPassword(true)
     try {
       const result = await changePassword({ currentPassword, newPassword })
-      if (result.error) {
-        setPasswordError(result.error.message)
-      } else {
-        toast.success("Password changed successfully")
-        setShowPasswordDialog(false)
-      }
-    } catch {
-      setPasswordError("Failed to change password")
-    } finally {
-      setIsChangingPassword(false)
-    }
+      if (result.error) { setPasswordError(result.error.message) }
+      else { toast.success("Password changed"); setShowPasswordDialog(false) }
+    } catch { setPasswordError("Failed to change password") }
+    finally { setIsChangingPassword(false) }
   }
 
-  const handleEditCapital = () => {
-    setCapitalInput(currentCapital > 0 ? currentCapital.toString() : "")
-    setIsEditingCapital(true)
-  }
+  const handleEditCapital = () => { setCapitalInput(currentCapital > 0 ? currentCapital.toString() : ""); setIsEditingCapital(true) }
 
   const handleSaveCapital = async () => {
     const amount = parseFloat(capitalInput)
-    if (isNaN(amount) || amount < 0) {
-      toast.error("Please enter a valid amount")
-      return
-    }
+    if (isNaN(amount) || amount < 0) { toast.error("Please enter a valid amount"); return }
     setIsSavingCapital(true)
     try {
-      await saveLenderSettings({ data: buildNotificationPayload({ initialCapital: amount }) })
-      setCurrentCapital(amount)
-      setIsEditingCapital(false)
-      toast.success("Starting capital updated")
-    } catch {
-      toast.error("Failed to save capital")
-    } finally {
-      setIsSavingCapital(false)
-    }
+      await saveLenderSettings({ data: buildPayload({ initialCapital: amount }) })
+      setCurrentCapital(amount); setIsEditingCapital(false); toast.success("Capital updated")
+    } catch { toast.error("Failed to save") }
+    finally { setIsSavingCapital(false) }
   }
 
-  const buildNotificationPayload = (overrides: Partial<{
-    initialCapital: number
-    paymentReceiptsEnabled: boolean
-    overdueAlertsEnabled: boolean
-    overdueAlertDaysBefore: number
-    overdueAlertDaysAfter: number
-    lenderPaymentNotificationsEnabled: boolean
-    lenderDocumentNotificationsEnabled: boolean
-    lenderPenaltyNotificationsEnabled: boolean
-    lenderDailySummaryEnabled: boolean
-  }>) => ({
+  const buildPayload = (overrides: Record<string, any> = {}) => ({
     initialCapital: currentCapital,
     paymentReceiptsEnabled,
     overdueAlertsEnabled,
@@ -272,12 +230,9 @@ function SettingsPage() {
   })
 
   type NotificationField =
-    | "paymentReceiptsEnabled"
-    | "overdueAlertsEnabled"
-    | "lenderPaymentNotificationsEnabled"
-    | "lenderDocumentNotificationsEnabled"
-    | "lenderPenaltyNotificationsEnabled"
-    | "lenderDailySummaryEnabled"
+    | "paymentReceiptsEnabled" | "overdueAlertsEnabled"
+    | "lenderPaymentNotificationsEnabled" | "lenderDocumentNotificationsEnabled"
+    | "lenderPenaltyNotificationsEnabled" | "lenderDailySummaryEnabled"
 
   const notificationSetters: Record<NotificationField, (v: boolean) => void> = {
     paymentReceiptsEnabled: setPaymentReceiptsEnabled,
@@ -288,743 +243,315 @@ function SettingsPage() {
     lenderDailySummaryEnabled: setLenderDailySummary,
   }
 
-  const handleToggleNotification = async (
-    field: NotificationField,
-    value: boolean
-  ) => {
+  const handleToggle = async (field: NotificationField, value: boolean) => {
     notificationSetters[field](value)
-
     setIsSavingNotifications(true)
-    try {
-      await saveLenderSettings({ data: buildNotificationPayload({ [field]: value }) })
-    } catch {
-      notificationSetters[field](!value)
-      toast.error("Failed to save setting")
-    } finally {
-      setIsSavingNotifications(false)
-    }
+    try { await saveLenderSettings({ data: buildPayload({ [field]: value }) }) }
+    catch { notificationSetters[field](!value); toast.error("Failed to save") }
+    finally { setIsSavingNotifications(false) }
   }
 
   const handleSaveAlertDays = async () => {
-    const before = parseInt(overdueAlertDaysBefore)
-    const after = parseInt(overdueAlertDaysAfter)
-    if (isNaN(before) || before < 1 || before > 30 || isNaN(after) || after < 1 || after > 30) {
-      toast.error("Days must be between 1 and 30")
-      return
-    }
+    const before = parseInt(overdueAlertDaysBefore), after = parseInt(overdueAlertDaysAfter)
+    if (isNaN(before) || before < 1 || before > 30 || isNaN(after) || after < 1 || after > 30) { toast.error("1–30 days"); return }
     setIsSavingNotifications(true)
-    try {
-      await saveLenderSettings({ data: buildNotificationPayload({ overdueAlertDaysBefore: before, overdueAlertDaysAfter: after }) })
-      toast.success("Alert schedule saved")
-    } catch {
-      toast.error("Failed to save")
-    } finally {
-      setIsSavingNotifications(false)
-    }
+    try { await saveLenderSettings({ data: buildPayload({ overdueAlertDaysBefore: before, overdueAlertDaysAfter: after }) }) }
+    catch { toast.error("Failed to save") }
+    finally { setIsSavingNotifications(false) }
   }
 
-  const handleEditWebsite = () => {
-    setWebsiteInput(currentWebsite || "")
-    setIsEditingWebsite(true)
-  }
+  const handleEditWebsite = () => { setWebsiteInput(currentWebsite || ""); setIsEditingWebsite(true) }
+  const handleEditFacebook = () => { setFacebookInput(currentFacebook || ""); setIsEditingFacebook(true) }
 
   const handleSaveWebsite = async () => {
-    if (websiteInput && !websiteInput.startsWith("http")) {
-      toast.error("Please enter a valid URL starting with http:// or https://")
-      return
-    }
+    if (websiteInput && !websiteInput.startsWith("http")) { toast.error("Must start with http:// or https://"); return }
     setIsSavingWebsite(true)
     try {
       await saveLenderProfileLinks({ data: { websiteUrl: websiteInput || null, facebookUrl: currentFacebook || null } })
-      setCurrentWebsite(websiteInput || "")
-      setIsEditingWebsite(false)
-      toast.success("Website URL updated")
-    } catch {
-      toast.error("Failed to save URL")
-    } finally {
-      setIsSavingWebsite(false)
-    }
-  }
-
-  const handleEditFacebook = () => {
-    setFacebookInput(currentFacebook || "")
-    setIsEditingFacebook(true)
+      setCurrentWebsite(websiteInput || ""); setIsEditingWebsite(false); toast.success("Saved")
+    } catch { toast.error("Failed to save") }
+    finally { setIsSavingWebsite(false) }
   }
 
   const handleSaveFacebook = async () => {
-    if (facebookInput && !facebookInput.startsWith("http")) {
-      toast.error("Please enter a valid URL starting with http:// or https://")
-      return
-    }
+    if (facebookInput && !facebookInput.startsWith("http")) { toast.error("Must start with http:// or https://"); return }
     setIsSavingFacebook(true)
     try {
       await saveLenderProfileLinks({ data: { websiteUrl: currentWebsite || null, facebookUrl: facebookInput || null } })
-      setCurrentFacebook(facebookInput || "")
-      setIsEditingFacebook(false)
-      toast.success("Facebook URL updated")
-    } catch {
-      toast.error("Failed to save URL")
-    } finally {
-      setIsSavingFacebook(false)
-    }
+      setCurrentFacebook(facebookInput || ""); setIsEditingFacebook(false); toast.success("Saved")
+    } catch { toast.error("Failed to save") }
+    finally { setIsSavingFacebook(false) }
   }
 
   const handleCopyShareLink = () => {
-    const shareUrl = `${window.location.origin}/share/lender/${user?.id}`
-    navigator.clipboard.writeText(shareUrl)
-    toast.success("Share link copied to clipboard")
+    navigator.clipboard.writeText(`${window.location.origin}/share/lender/${user?.id}`)
+    toast.success("Link copied")
   }
 
-  const isLender = hasRole(user?.role ?? null, ROLES.LENDER)
+  if (!user) return null
 
-  if (!user) {
-    return null
-  }
+  const formatCapital = (v: number) => v > 0
+    ? new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v)
+    : "Not set"
+
+  // ---- Render ----
 
   return (
-    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 max-w-3xl mx-auto space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your account and preferences</p>
+        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage your account, notifications, and preferences.</p>
       </div>
 
-      {/* Bento Grid */}
-      <StaggerItem className="grid gap-5 lg:grid-cols-5">
-        {/* Left Column — Account */}
-        <div className="lg:col-span-3 space-y-5">
-          {/* Profile */}
-          <div className="rounded-xl border shadow-sm">
-            <div className="p-5 pb-3">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold">Profile</h3>
-              </div>
-            </div>
-            <div className="p-5 pt-0 space-y-4">
-              {/* Name */}
-              <div className="space-y-2">
-                <Label>Name</Label>
-                {isEditingName ? (
-                  <div className="flex gap-2">
-                    <Input
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      placeholder="Your name"
-                      className="flex-1"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={handleSaveName}
-                      disabled={isSavingName}
-                    >
-                      {isSavingName ? (
-                        <Spinner className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleCancelEditName}
-                      disabled={isSavingName}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-medium text-primary">
-                          {user.name?.charAt(0).toUpperCase() || "U"}
-                        </span>
-                      </div>
-                      <span className="font-medium">{user.name || "—"}</span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleEditName}
-                      className="gap-1"
-                    >
-                      <PencilSimple className="h-4 w-4" />
-                      Edit
-                    </Button>
-                  </div>
-                )}
-              </div>
+      {/* ============ ACCOUNT ============ */}
+      <Section>
+        <SectionHeader icon={User} title="Account" description="Your profile and login details" />
 
-              {/* Email (read-only) */}
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <div className="flex items-center gap-3 p-3 rounded border bg-muted/30">
-                  <Envelope className="h-5 w-5 text-muted-foreground" />
-                  <span>{user.email}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Email cannot be changed
-                </p>
-              </div>
-
-              {/* Account created */}
-              <div className="text-sm text-muted-foreground pt-2 border-t">
-                Account created: {user.createdAt ? format(new Date(user.createdAt), "MMMM d, yyyy") : "—"}
-              </div>
+        {/* Name */}
+        <SettingRow label="Name">
+          {isEditingName ? (
+            <div className="flex gap-2">
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Your name" className="h-8 w-48 text-sm" autoFocus onKeyDown={(e) => { if (e.key === "Enter") handleSaveName() }} />
+              <Button size="sm" variant="default" onClick={handleSaveName} disabled={isSavingName} className="h-8 px-3">
+                {isSavingName ? <Spinner className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleCancelEditName} disabled={isSavingName} className="h-8 px-2 text-xs">Cancel</Button>
             </div>
+          ) : (
+            <button onClick={handleEditName} className="flex items-center gap-2 text-sm hover:text-primary transition-colors group">
+              <span className="font-medium">{user.name || "—"}</span>
+              <PencilSimple className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
+            </button>
+          )}
+        </SettingRow>
+
+        {/* Email */}
+        <SettingRow label="Email" description="Cannot be changed">
+          <span className="text-sm text-muted-foreground">{user.email}</span>
+        </SettingRow>
+
+        {/* Password */}
+        <SettingRow label="Password" border>
+          <Button size="sm" variant="outline" onClick={openPasswordDialog} className="h-8 text-xs gap-1.5">
+            <Lock className="h-3.5 w-3.5" />
+            Change
+          </Button>
+        </SettingRow>
+
+        {/* Member since */}
+        <div className="px-5 pb-4 pt-2">
+          <p className="text-xs text-muted-foreground">
+            Member since {user.createdAt ? format(new Date(user.createdAt), "MMMM yyyy") : "—"}
+          </p>
+        </div>
+      </Section>
+
+      {/* ============ NOTIFICATIONS ============ */}
+      {isLender && (
+        <Section>
+          <SectionHeader icon={Bell} title="Notifications" description="Control what emails you and your borrowers receive" />
+
+          {/* Borrower emails */}
+          <div className="px-5 pb-1">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Borrower emails</p>
           </div>
 
-          {/* Security */}
-          <div className="rounded-xl border shadow-sm">
-            <div className="p-5 pb-3">
-              <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold">Security</h3>
-              </div>
-            </div>
-            <div className="p-5 pt-0">
-              <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Password</p>
-                    <p className="text-sm text-muted-foreground">
-                      Last changed: Unknown
-                    </p>
-                  </div>
+          <SettingRow label="Payment Receipts" description="Email borrowers after each payment" border={false}>
+            <Switch checked={paymentReceiptsEnabled} onCheckedChange={(v) => handleToggle("paymentReceiptsEnabled", v)} disabled={isSavingNotifications} />
+          </SettingRow>
+
+          <SettingRow label="Overdue Reminders" description="Before, on, and after due date">
+            <Switch checked={overdueAlertsEnabled} onCheckedChange={(v) => handleToggle("overdueAlertsEnabled", v)} disabled={isSavingNotifications} />
+          </SettingRow>
+
+          {overdueAlertsEnabled && (
+            <div className="mx-5 mb-3 rounded-lg bg-muted/40 p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Days before</Label>
+                  <Input type="number" min={1} max={30} value={overdueAlertDaysBefore} onChange={(e) => setOverdueAlertDaysBefore(e.target.value)} onBlur={handleSaveAlertDays} className="h-8 text-sm" />
                 </div>
-                <Button variant="outline" size="sm" onClick={openPasswordDialog}>
-                  Change Password
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Days after</Label>
+                  <Input type="number" min={1} max={30} value={overdueAlertDaysAfter} onChange={(e) => setOverdueAlertDaysAfter(e.target.value)} onBlur={handleSaveAlertDays} className="h-8 text-sm" />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">Always notifies on the due date. Saves on blur.</p>
+            </div>
+          )}
+
+          {/* Lender emails */}
+          <div className="px-5 pt-3 pb-1 border-t">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Your email notifications</p>
+          </div>
+
+          <SettingRow label="Payment Received" description="When a payment is recorded" border={false}>
+            <Switch checked={lenderPaymentNotifications} onCheckedChange={(v) => handleToggle("lenderPaymentNotificationsEnabled", v)} disabled={isSavingNotifications} />
+          </SettingRow>
+
+          <SettingRow label="Document Signed" description="When a borrower or co-maker signs">
+            <Switch checked={lenderDocumentNotifications} onCheckedChange={(v) => handleToggle("lenderDocumentNotificationsEnabled", v)} disabled={isSavingNotifications} />
+          </SettingRow>
+
+          <SettingRow label="Penalty Generated" description="Late fees & daily interest alerts">
+            <Switch checked={lenderPenaltyNotifications} onCheckedChange={(v) => handleToggle("lenderPenaltyNotificationsEnabled", v)} disabled={isSavingNotifications} />
+          </SettingRow>
+
+          <SettingRow label="Daily Summary" description="Portfolio digest + missed payment alerts">
+            <Switch checked={lenderDailySummary} onCheckedChange={(v) => handleToggle("lenderDailySummaryEnabled", v)} disabled={isSavingNotifications} />
+          </SettingRow>
+
+          <div className="h-3" />
+        </Section>
+      )}
+
+      {/* ============ BUSINESS ============ */}
+      {isLender && (
+        <Section>
+          <SectionHeader icon={Wallet} title="Business" description="Financial settings and lending configuration" />
+
+          {/* Starting Capital */}
+          <SettingRow label="Starting Capital" description="Used to calculate your cash position">
+            {isEditingCapital ? (
+              <div className="flex gap-2">
+                <CurrencyInput value={capitalInput} onValueChange={setCapitalInput} placeholder="500,000" className="h-8 w-40 text-sm" onKeyDown={(e) => { if (e.key === "Enter") handleSaveCapital() }} />
+                <Button size="sm" onClick={handleSaveCapital} disabled={isSavingCapital} className="h-8 px-3">
+                  {isSavingCapital ? <Spinner className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 </Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsEditingCapital(false)} className="h-8 px-2 text-xs">Cancel</Button>
               </div>
-            </div>
-          </div>
+            ) : (
+              <button onClick={handleEditCapital} className="flex items-center gap-2 text-sm hover:text-primary transition-colors group">
+                <span className="font-medium">{formatCapital(currentCapital)}</span>
+                <PencilSimple className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
+              </button>
+            )}
+          </SettingRow>
 
           {/* Penalty Rules */}
-          <div className="rounded-xl border shadow-sm">
-            <div className="p-5 pb-3">
-              <div className="flex items-center gap-2">
-                <Warning className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold">Penalty Rules</h3>
-              </div>
-            </div>
-            <div className="p-5 pt-0">
-              <Link
-                to="/settings/penalty-settings"
-                className="group flex items-center justify-between p-3 rounded border bg-muted/30 hover:bg-muted/50 transition-colors"
-              >
-                <div>
-                  <p className="font-medium text-sm">Late Fees & Penalties</p>
-                  <p className="text-xs text-muted-foreground">
-                    Set up late fees, daily penalty interest, and caps
-                  </p>
-                </div>
-                <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </Link>
-            </div>
-          </div>
-        </div>
+          <SettingRow label="Penalty Rules" description="Late fees, daily interest, and caps">
+            <Link to="/settings/penalty-settings">
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5">
+                Configure
+                <ArrowSquareOut className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </SettingRow>
 
-        {/* Right Column — Lender Settings */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Public Profile */}
-          {isLender && (
-            <div className="rounded-xl border shadow-sm">
-              <div className="p-5 pb-3">
-                <div className="flex items-center gap-2">
-                  <LinkSimple className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-base font-semibold">Public Profile</h3>
-                </div>
-              </div>
-              <div className="p-5 pt-0 space-y-4">
-                {/* Website URL */}
-                <div className="space-y-2">
-                  <Label className="text-xs">Website URL</Label>
-                  {isEditingWebsite ? (
-                    <div className="flex gap-2">
-                      <Input
-                        value={websiteInput}
-                        onChange={(e) => setWebsiteInput(e.target.value)}
-                        placeholder="https://example.com"
-                        className="flex-1"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveWebsite()
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleSaveWebsite}
-                        disabled={isSavingWebsite}
-                      >
-                        {isSavingWebsite ? (
-                          <Spinner className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsEditingWebsite(false)}
-                        disabled={isSavingWebsite}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <GlobeSimple className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <span className="font-medium truncate text-sm">
-                          {currentWebsite || "Not set"}
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleEditWebsite}
-                        className="gap-1 shrink-0"
-                      >
-                        <PencilSimple className="h-4 w-4" />
-                        Edit
-                      </Button>
-                    </div>
-                  )}
-                </div>
+          {/* Commission Settings */}
+          <SettingRow label="Commission Settings" description="Agent commission tiers & rules">
+            <Link to="/agents/commission-settings" search={{ tab: undefined }}>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5">
+                Configure
+                <ArrowSquareOut className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </SettingRow>
 
-                {/* Facebook URL */}
-                <div className="space-y-2">
-                  <Label className="text-xs">Facebook URL</Label>
-                  {isEditingFacebook ? (
-                    <div className="flex gap-2">
-                      <Input
-                        value={facebookInput}
-                        onChange={(e) => setFacebookInput(e.target.value)}
-                        placeholder="https://facebook.com/your-page"
-                        className="flex-1"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveFacebook()
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleSaveFacebook}
-                        disabled={isSavingFacebook}
-                      >
-                        {isSavingFacebook ? (
-                          <Spinner className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsEditingFacebook(false)}
-                        disabled={isSavingFacebook}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <FacebookLogo className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <span className="font-medium truncate text-sm">
-                          {currentFacebook || "Not set"}
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleEditFacebook}
-                        className="gap-1 shrink-0"
-                      >
-                        <PencilSimple className="h-4 w-4" />
-                        Edit
-                      </Button>
-                    </div>
-                  )}
-                </div>
+          <div className="h-3" />
+        </Section>
+      )}
 
-                {/* Share Link */}
-                <div className="space-y-2">
-                  <Label className="text-xs">Share Link</Label>
-                  <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <LinkSimple className="h-5 w-5 text-muted-foreground shrink-0" />
-                      <span className="text-xs truncate text-muted-foreground">
-                        {typeof window !== "undefined"
-                          ? `${window.location.origin}/share/lender/${user?.id}`
-                          : `/share/lender/${user?.id}`}
-                      </span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleCopyShareLink}
-                      className="gap-1 shrink-0"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Share this link with potential borrowers to show your lender profile.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* ============ PUBLIC PROFILE ============ */}
+      {isLender && (
+        <Section>
+          <SectionHeader icon={LinkSimple} title="Public Profile" description="Visible to borrowers on your share page" />
 
-          {/* Financial Settings */}
-          {isLender && (
-            <div className="rounded-xl border shadow-sm">
-              <div className="p-5 pb-3">
-                <div className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-base font-semibold">Financial</h3>
-                </div>
+          {/* Website */}
+          <SettingRow label="Website">
+            {isEditingWebsite ? (
+              <div className="flex gap-2">
+                <Input value={websiteInput} onChange={(e) => setWebsiteInput(e.target.value)} placeholder="https://..." className="h-8 w-52 text-sm" onKeyDown={(e) => { if (e.key === "Enter") handleSaveWebsite() }} />
+                <Button size="sm" onClick={handleSaveWebsite} disabled={isSavingWebsite} className="h-8 px-3">
+                  {isSavingWebsite ? <Spinner className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsEditingWebsite(false)} className="h-8 px-2 text-xs">Cancel</Button>
               </div>
-              <div className="p-5 pt-0">
-                <div className="space-y-2">
-                  <Label className="text-xs">Starting Capital</Label>
-                  {isEditingCapital ? (
-                    <div className="flex gap-2">
-                      <CurrencyInput
-                        value={capitalInput}
-                        onValueChange={setCapitalInput}
-                        placeholder="500,000"
-                        className="flex-1"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveCapital()
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleSaveCapital}
-                        disabled={isSavingCapital}
-                      >
-                        {isSavingCapital ? (
-                          <Spinner className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsEditingCapital(false)}
-                        disabled={isSavingCapital}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-3 rounded border bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <Wallet className="h-5 w-5 text-muted-foreground" />
-                        <span className="font-medium text-sm">
-                          {currentCapital > 0
-                            ? new Intl.NumberFormat("en-PH", {
-                                style: "currency",
-                                currency: "PHP",
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0,
-                              }).format(currentCapital)
-                            : "Not set"}
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleEditCapital}
-                        className="gap-1"
-                      >
-                        <PencilSimple className="h-4 w-4" />
-                        Edit
-                      </Button>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    This is used to calculate your cash position on the dashboard.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+            ) : (
+              <button onClick={handleEditWebsite} className="flex items-center gap-2 text-sm hover:text-primary transition-colors group">
+                <GlobeSimple className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className={cn("font-medium truncate max-w-[200px]", !currentWebsite && "text-muted-foreground")}>{currentWebsite || "Not set"}</span>
+                <PencilSimple className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
+              </button>
+            )}
+          </SettingRow>
 
-          {/* Notifications */}
-          {isLender && (
-            <div className="rounded-xl border shadow-sm">
-              <div className="p-5 pb-3">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-base font-semibold">Notifications</h3>
-                </div>
+          {/* Facebook */}
+          <SettingRow label="Facebook">
+            {isEditingFacebook ? (
+              <div className="flex gap-2">
+                <Input value={facebookInput} onChange={(e) => setFacebookInput(e.target.value)} placeholder="https://facebook.com/..." className="h-8 w-52 text-sm" onKeyDown={(e) => { if (e.key === "Enter") handleSaveFacebook() }} />
+                <Button size="sm" onClick={handleSaveFacebook} disabled={isSavingFacebook} className="h-8 px-3">
+                  {isSavingFacebook ? <Spinner className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsEditingFacebook(false)} className="h-8 px-2 text-xs">Cancel</Button>
               </div>
-              <div className="p-5 pt-0 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Payment Receipts</p>
-                    <p className="text-xs text-muted-foreground">
-                      Email borrowers a receipt after each payment
-                    </p>
-                  </div>
-                  <Switch
-                    checked={paymentReceiptsEnabled}
-                    onCheckedChange={(v) => handleToggleNotification("paymentReceiptsEnabled", v)}
-                    disabled={isSavingNotifications}
-                  />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">Overdue Alerts</p>
-                      <p className="text-xs text-muted-foreground">
-                        Remind borrowers before, on, and after due date
-                      </p>
-                    </div>
-                    <Switch
-                      checked={overdueAlertsEnabled}
-                      onCheckedChange={(v) => handleToggleNotification("overdueAlertsEnabled", v)}
-                      disabled={isSavingNotifications}
-                    />
-                  </div>
-                  {overdueAlertsEnabled && (
-                    <div className="rounded-lg bg-muted/50 p-3 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Days before due</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={30}
-                            value={overdueAlertDaysBefore}
-                            onChange={(e) => setOverdueAlertDaysBefore(e.target.value)}
-                            onBlur={handleSaveAlertDays}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Days after due</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={30}
-                            value={overdueAlertDaysAfter}
-                            onChange={(e) => setOverdueAlertDaysAfter(e.target.value)}
-                            onBlur={handleSaveAlertDays}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Always sends on the due date too. Saves on blur.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+            ) : (
+              <button onClick={handleEditFacebook} className="flex items-center gap-2 text-sm hover:text-primary transition-colors group">
+                <FacebookLogo className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className={cn("font-medium truncate max-w-[200px]", !currentFacebook && "text-muted-foreground")}>{currentFacebook || "Not set"}</span>
+                <PencilSimple className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
+              </button>
+            )}
+          </SettingRow>
 
-              <div className="border-t mx-5" />
+          {/* Share Link */}
+          <SettingRow label="Share Link" description="Send this to potential borrowers">
+            <Button size="sm" variant="outline" onClick={handleCopyShareLink} className="h-8 text-xs gap-1.5">
+              <Copy className="h-3.5 w-3.5" />
+              Copy Link
+            </Button>
+          </SettingRow>
 
-              <div className="p-5 pt-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Notify me when</p>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">Payment Received</p>
-                      <p className="text-xs text-muted-foreground">Get notified when a payment is recorded</p>
-                    </div>
-                    <Switch
-                      checked={lenderPaymentNotifications}
-                      onCheckedChange={(v) => handleToggleNotification("lenderPaymentNotificationsEnabled", v)}
-                      disabled={isSavingNotifications}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">Document Signed</p>
-                      <p className="text-xs text-muted-foreground">When a borrower or co-maker signs</p>
-                    </div>
-                    <Switch
-                      checked={lenderDocumentNotifications}
-                      onCheckedChange={(v) => handleToggleNotification("lenderDocumentNotificationsEnabled", v)}
-                      disabled={isSavingNotifications}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">Penalty Generated</p>
-                      <p className="text-xs text-muted-foreground">When a late fee or daily interest is created</p>
-                    </div>
-                    <Switch
-                      checked={lenderPenaltyNotifications}
-                      onCheckedChange={(v) => handleToggleNotification("lenderPenaltyNotificationsEnabled", v)}
-                      disabled={isSavingNotifications}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">Daily Summary</p>
-                      <p className="text-xs text-muted-foreground">Portfolio overview + missed payment escalation</p>
-                    </div>
-                    <Switch
-                      checked={lenderDailySummary}
-                      onCheckedChange={(v) => handleToggleNotification("lenderDailySummaryEnabled", v)}
-                      disabled={isSavingNotifications}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="h-3" />
+        </Section>
+      )}
 
-          {/* Quick Links */}
-          <div className="rounded-xl border shadow-sm">
-            <div className="p-5 pb-3">
-              <div className="flex items-center gap-2">
-                <GearSix className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold">More Settings</h3>
-              </div>
-            </div>
-            <div className="p-5 pt-0 space-y-0">
-              <Link
-                to="/settings/penalty-settings"
-                className="flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors"
-              >
-                <span className="h-2 w-2 rounded-full shrink-0 bg-destructive" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Penalty Settings</p>
-                  <p className="text-xs text-muted-foreground">Late fees & daily interest</p>
-                </div>
-                <ArrowSquareOut className="h-4 w-4 text-muted-foreground" />
-              </Link>
-              {isLender && (
-                <Link
-                  to="/agents/commission-settings"
-                  search={{ tab: undefined }}
-                  className="flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors"
-                >
-                  <span className="h-2 w-2 rounded-full shrink-0 bg-primary" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Commission Settings</p>
-                    <p className="text-xs text-muted-foreground">Agent commission tiers & rules</p>
-                  </div>
-                  <ArrowSquareOut className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </StaggerItem>
-
-      {/* Change Password Dialog */}
+      {/* ============ CHANGE PASSWORD DIALOG ============ */}
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>
-              Enter your current password and choose a new one.
-            </DialogDescription>
+            <DialogDescription>Enter your current password and choose a new one.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Current Password */}
             <div className="space-y-2">
               <Label htmlFor="currentPassword">Current Password</Label>
               <div className="relative">
-                <Input
-                  id="currentPassword"
-                  type={showCurrentPassword ? "text" : "password"}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showCurrentPassword ? (
-                    <EyeSlash className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                <Input id="currentPassword" type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter current password" className="pr-10" />
+                <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showCurrentPassword ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
 
-            {/* New Password */}
             <div className="space-y-2">
               <Label htmlFor="newPassword">New Password</Label>
               <div className="relative">
-                <Input
-                  id="newPassword"
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showNewPassword ? (
-                    <EyeSlash className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                <Input id="newPassword" type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" className="pr-10" />
+                <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showNewPassword ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters
-              </p>
+              <p className="text-xs text-muted-foreground">At least 8 characters</p>
             </div>
 
-            {/* Confirm Password */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
-              />
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
             </div>
 
             {passwordError && (
-              <div className="p-3 rounded bg-destructive/10 text-destructive text-sm">
-                {passwordError}
-              </div>
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{passwordError}</div>
             )}
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowPasswordDialog(false)}
-              disabled={isChangingPassword}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleChangePassword}
-              disabled={isChangingPassword}
-            >
-              {isChangingPassword ? (
-                <>
-                  <Spinner className="h-4 w-4 animate-spin mr-2" />
-                  Changing...
-                </>
-              ) : (
-                "Change Password"
-              )}
+            <Button variant="outline" onClick={() => setShowPasswordDialog(false)} disabled={isChangingPassword}>Cancel</Button>
+            <Button onClick={handleChangePassword} disabled={isChangingPassword}>
+              {isChangingPassword ? <><Spinner className="h-4 w-4 animate-spin mr-2" />Changing...</> : "Change Password"}
             </Button>
           </DialogFooter>
         </DialogContent>

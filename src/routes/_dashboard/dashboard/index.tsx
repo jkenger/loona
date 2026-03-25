@@ -31,6 +31,12 @@ import {
   Receipt,
   Users,
   CurrencyCircleDollar,
+  Bell,
+  CurrencyDollar,
+  FileText,
+  Warning,
+  ChartLineUp,
+  EnvelopeSimple,
 } from '@phosphor-icons/react'
 import {
   format,
@@ -656,45 +662,67 @@ function DashboardPage() {
       <Dialog open={showNotificationOnboarding} onOpenChange={(open) => {
         if (!open) handleDismissOnboarding()
       }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg">Stay in the Loop</DialogTitle>
-            <DialogDescription>
-              Get notified about important events via email — no need to check the dashboard constantly.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2">
-            {[
-              { label: "Payment Received", desc: "Know when borrowers pay" },
-              { label: "Loan Fully Paid", desc: "Celebrate completed loans" },
-              { label: "Document Signed", desc: "Borrower signed the contract" },
-              { label: "Overdue Reminders", desc: "Auto-remind borrowers before & after due dates" },
-              { label: "Penalty Generated", desc: "Late fees & daily interest alerts" },
-              { label: "Daily Summary", desc: "Portfolio overview + missed payment escalation" },
-            ].map((item) => (
-              <div key={item.label} className="flex items-start gap-3 p-2 rounded-lg bg-muted/40">
-                <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
-                </div>
+        <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+          {/* Header with gradient */}
+          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center">
+                <Bell className="h-5 w-5 text-primary" weight="fill" />
               </div>
-            ))}
+              <div>
+                <DialogHeader className="p-0 space-y-0">
+                  <DialogTitle className="text-lg font-bold">Never Miss a Beat</DialogTitle>
+                  <DialogDescription className="text-sm">
+                    Get real-time email updates on your lending activity.
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+            </div>
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            You can customize individual notifications anytime in Settings.
-          </p>
+          {/* Feature grid */}
+          <div className="px-6 pb-2">
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { icon: CurrencyDollar, label: "Payments", desc: "Every collection", color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50" },
+                { icon: CheckCircle, label: "Loans Paid Off", desc: "Completion alerts", color: "text-green-600 bg-green-50 dark:bg-green-950/50" },
+                { icon: FileText, label: "Signatures", desc: "Document signed", color: "text-blue-600 bg-blue-50 dark:bg-blue-950/50" },
+                { icon: CalendarDots, label: "Due Reminders", desc: "Before & after", color: "text-amber-600 bg-amber-50 dark:bg-amber-950/50" },
+                { icon: Warning, label: "Penalties", desc: "Late fees & interest", color: "text-red-600 bg-red-50 dark:bg-red-950/50" },
+                { icon: ChartLineUp, label: "Daily Summary", desc: "Portfolio digest", color: "text-violet-600 bg-violet-50 dark:bg-violet-950/50" },
+              ] as const).map((item) => (
+                <div key={item.label} className="flex items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/30">
+                  <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", item.color)}>
+                    <item.icon className="h-4.5 w-4.5" weight="bold" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold leading-tight">{item.label}</p>
+                    <p className="text-xs text-muted-foreground leading-tight">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={handleDismissOnboarding} disabled={isEnablingAll} className="w-full sm:w-auto">
-              Not Now
-            </Button>
-            <Button onClick={handleEnableAll} disabled={isEnablingAll} className="w-full sm:w-auto">
+          {/* Footer */}
+          <div className="px-6 pb-6 pt-3 space-y-3">
+            <Button onClick={handleEnableAll} disabled={isEnablingAll} className="w-full h-11 text-sm font-semibold gap-2">
+              <EnvelopeSimple className="h-4 w-4" weight="bold" />
               {isEnablingAll ? "Enabling..." : "Enable All Notifications"}
             </Button>
-          </DialogFooter>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Customize anytime in Settings
+              </p>
+              <button
+                onClick={handleDismissOnboarding}
+                disabled={isEnablingAll}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </Stagger>
