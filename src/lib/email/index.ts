@@ -840,3 +840,223 @@ Sent via Loona on behalf of ${lenderName}.
 
   return { subject, html, text }
 }
+
+// ============================================
+// Lender Notification Templates
+// ============================================
+
+export function lenderPaymentReceivedEmail(params: {
+  lenderName: string
+  borrowerName: string
+  amount: string
+  method: string
+  remainingBalance: string
+  loanReference: string
+  isCompleted: boolean
+  isAgent: boolean
+  agentName?: string
+}) {
+  const { lenderName, borrowerName, amount, method, remainingBalance, loanReference, isCompleted, isAgent, agentName } = params
+  const subject = isCompleted
+    ? `Loan ${loanReference} fully paid — ₱${amount} received`
+    : `Payment received — ₱${amount} from ${borrowerName}`
+
+  const recordedBy = isAgent && agentName ? `Recorded by agent <strong>${agentName}</strong>` : "Recorded directly"
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+  </div>
+
+  <h2 style="color: #1a1a1a; margin-bottom: 8px;">${isCompleted ? 'Loan Fully Paid' : 'Payment Received'}</h2>
+  <p>Hi ${lenderName},</p>
+  <p>A payment of <strong>₱${amount}</strong> has been received from <strong>${borrowerName}</strong>.</p>
+
+  <div style="background-color: #f9fafb; border-radius: 12px; padding: 24px; margin: 24px 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 8px 0; color: #555; font-size: 14px;">Borrower</td><td style="padding: 8px 0; font-weight: 600; text-align: right;">${borrowerName}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Amount</td><td style="padding: 8px 0; font-weight: 700; font-size: 18px; color: #16a34a; text-align: right;">₱${amount}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Method</td><td style="padding: 8px 0; text-align: right;">${method}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Loan</td><td style="padding: 8px 0; text-align: right;">${loanReference}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Remaining</td><td style="padding: 8px 0; font-weight: 600; text-align: right; color: ${isCompleted ? '#16a34a' : '#1a1a1a'};">${isCompleted ? 'FULLY PAID' : '₱' + remainingBalance}</td></tr>
+    </table>
+    <p style="margin: 12px 0 0; color: #888; font-size: 12px;">${recordedBy}</p>
+  </div>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">Loona — Loan Management</p>
+</body>
+</html>`
+
+  const text = `${isCompleted ? 'Loan Fully Paid' : 'Payment Received'}\n\nHi ${lenderName},\n\n₱${amount} received from ${borrowerName} (${method}).\nLoan: ${loanReference}\nRemaining: ${isCompleted ? 'FULLY PAID' : '₱' + remainingBalance}`
+
+  return { subject, html, text }
+}
+
+export function lenderDocumentSignedEmail(params: {
+  lenderName: string
+  signerName: string
+  signerRole: string
+  documentType: string
+  loanReference: string
+  dashboardUrl: string
+}) {
+  const { lenderName, signerName, signerRole, documentType, loanReference, dashboardUrl } = params
+  const docLabel = documentType === "disclosure" ? "Disclosure Statement" : "Promissory Note"
+  const subject = `${signerName} signed the ${docLabel} — ${loanReference}`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+  </div>
+
+  <h2 style="color: #16a34a; margin-bottom: 8px;">Document Signed</h2>
+  <p>Hi ${lenderName},</p>
+  <p><strong>${signerName}</strong> (${signerRole}) has signed the <strong>${docLabel}</strong> for loan <strong>${loanReference}</strong>.</p>
+
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${dashboardUrl}" style="display: inline-block; background-color: #1a8cff; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600;">View Loan</a>
+  </div>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">Loona — Loan Management</p>
+</body>
+</html>`
+
+  const text = `Document Signed\n\nHi ${lenderName},\n\n${signerName} (${signerRole}) signed the ${docLabel} for loan ${loanReference}.\n\nView: ${dashboardUrl}`
+
+  return { subject, html, text }
+}
+
+export function lenderPenaltyAppliedEmail(params: {
+  lenderName: string
+  borrowerName: string
+  penaltyType: string
+  amount: string
+  loanReference: string
+  daysOverdue: number
+}) {
+  const { lenderName, borrowerName, penaltyType, amount, loanReference, daysOverdue } = params
+  const typeLabel = penaltyType === "late_fee" ? "Late Fee" : "Daily Interest"
+  const subject = `${typeLabel} of ₱${amount} generated — ${borrowerName}`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+  </div>
+
+  <div style="border-left: 4px solid #f59e0b; padding-left: 16px; margin-bottom: 24px;">
+    <h2 style="color: #92400e; margin: 0 0 4px;">Penalty Generated</h2>
+  </div>
+
+  <p>Hi ${lenderName},</p>
+
+  <div style="background-color: #f9fafb; border-radius: 12px; padding: 24px; margin: 24px 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 8px 0; color: #555; font-size: 14px;">Borrower</td><td style="padding: 8px 0; font-weight: 600; text-align: right;">${borrowerName}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Penalty Type</td><td style="padding: 8px 0; text-align: right;">${typeLabel}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Amount</td><td style="padding: 8px 0; font-weight: 700; color: #dc2626; text-align: right;">₱${amount}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Days Overdue</td><td style="padding: 8px 0; text-align: right;">${daysOverdue}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Loan</td><td style="padding: 8px 0; text-align: right;">${loanReference}</td></tr>
+    </table>
+  </div>
+
+  <p style="color: #555; font-size: 14px;">Review in your dashboard to apply, waive, or collect.</p>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">Loona — Loan Management</p>
+</body>
+</html>`
+
+  const text = `Penalty Generated\n\nHi ${lenderName},\n\n${typeLabel} of ₱${amount} for ${borrowerName} (${daysOverdue} days overdue).\nLoan: ${loanReference}`
+
+  return { subject, html, text }
+}
+
+export function lenderDailySummaryEmail(params: {
+  lenderName: string
+  date: string
+  collectionsToday: string
+  loansCompleted: number
+  upcomingDueCount: number
+  overdueCount: number
+  totalOutstanding: string
+  missedPaymentBorrowers: { name: string; consecutiveMissed: number; loanReference: string }[]
+  dashboardUrl: string
+}) {
+  const { lenderName, date, collectionsToday, loansCompleted, upcomingDueCount, overdueCount, totalOutstanding, missedPaymentBorrowers, dashboardUrl } = params
+  const subject = `Daily Summary — ${date}`
+
+  const escalationRows = missedPaymentBorrowers.length > 0
+    ? missedPaymentBorrowers.map(b =>
+      `<tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">${b.name}</td><td style="padding: 8px 0; text-align: center; color: #dc2626; font-weight: 600;">${b.consecutiveMissed}</td><td style="padding: 8px 0; text-align: right; font-size: 13px;">${b.loanReference}</td></tr>`
+    ).join('')
+    : ''
+
+  const escalationSection = missedPaymentBorrowers.length > 0
+    ? `
+  <div style="border-left: 4px solid #dc2626; padding-left: 16px; margin: 24px 0 8px;">
+    <h3 style="color: #dc2626; margin: 0;">Missed Payment Escalation</h3>
+    <p style="margin: 4px 0 0; color: #555; font-size: 13px;">${missedPaymentBorrowers.length} borrower${missedPaymentBorrowers.length !== 1 ? 's' : ''} with 2+ consecutive missed payments</p>
+  </div>
+  <div style="background-color: #fef2f2; border-radius: 12px; padding: 16px; margin: 8px 0 24px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><th style="padding: 6px 0; color: #888; font-size: 12px; text-align: left;">Borrower</th><th style="padding: 6px 0; color: #888; font-size: 12px; text-align: center;">Missed</th><th style="padding: 6px 0; color: #888; font-size: 12px; text-align: right;">Loan</th></tr>
+      ${escalationRows}
+    </table>
+  </div>`
+    : ''
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+    <p style="color: #666; margin: 8px 0 0 0;">Daily Portfolio Summary</p>
+  </div>
+
+  <p>Hi ${lenderName}, here's your portfolio for <strong>${date}</strong>.</p>
+
+  <div style="background-color: #f9fafb; border-radius: 12px; padding: 24px; margin: 24px 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 8px 0; color: #555; font-size: 14px;">Collections Today</td><td style="padding: 8px 0; font-weight: 700; font-size: 18px; color: #16a34a; text-align: right;">${collectionsToday}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Loans Completed</td><td style="padding: 8px 0; font-weight: 600; text-align: right;">${loansCompleted}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Due in Next 7 Days</td><td style="padding: 8px 0; font-weight: 600; text-align: right;">${upcomingDueCount}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Overdue Installments</td><td style="padding: 8px 0; font-weight: 600; text-align: right; color: ${overdueCount > 0 ? '#dc2626' : '#16a34a'};">${overdueCount}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Total Outstanding</td><td style="padding: 8px 0; font-weight: 600; text-align: right;">${totalOutstanding}</td></tr>
+    </table>
+  </div>
+
+  ${escalationSection}
+
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${dashboardUrl}" style="display: inline-block; background-color: #1a8cff; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600;">Open Dashboard</a>
+  </div>
+
+  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">Loona — Loan Management</p>
+</body>
+</html>`
+
+  const missedText = missedPaymentBorrowers.length > 0
+    ? `\nMISSED PAYMENT ESCALATION:\n${missedPaymentBorrowers.map(b => `- ${b.name}: ${b.consecutiveMissed} consecutive missed (${b.loanReference})`).join('\n')}\n`
+    : ''
+
+  const text = `Daily Summary — ${date}\n\nHi ${lenderName},\n\nCollections Today: ${collectionsToday}\nLoans Completed: ${loansCompleted}\nDue Next 7 Days: ${upcomingDueCount}\nOverdue: ${overdueCount}\nOutstanding: ${totalOutstanding}\n${missedText}\nDashboard: ${dashboardUrl}`
+
+  return { subject, html, text }
+}

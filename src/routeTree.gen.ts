@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as ApiTestEmailsRouteImport } from './routes/api/test-emails'
 import { Route as ApiSitemapRouteImport } from './routes/api/sitemap'
 import { Route as DashboardPlaybookRouteImport } from './routes/_dashboard/playbook'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
@@ -41,6 +42,7 @@ import { Route as ShareBorrowerContactIdRouteImport } from './routes/share/borro
 import { Route as ApiCronOverdueAlertsRouteImport } from './routes/api/cron/overdue-alerts'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
+import { Route as ApiCronDailySummaryRouteImport } from './routes/api/cron/daily-summary'
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAdvisorChatRouteImport } from './routes/api/advisor/chat'
@@ -115,6 +117,11 @@ const BlogIndexRoute = BlogIndexRouteImport.update({
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTestEmailsRoute = ApiTestEmailsRouteImport.update({
+  id: '/api/test-emails',
+  path: '/api/test-emails',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSitemapRoute = ApiSitemapRouteImport.update({
@@ -230,6 +237,11 @@ const ApiCronOverdueRoute = ApiCronOverdueRouteImport.update({
 const ApiCronDigestRoute = ApiCronDigestRouteImport.update({
   id: '/api/cron/digest',
   path: '/api/cron/digest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronDailySummaryRoute = ApiCronDailySummaryRouteImport.update({
+  id: '/api/cron/daily-summary',
+  path: '/api/cron/daily-summary',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthErrorRoute = ApiAuthErrorRouteImport.update({
@@ -419,6 +431,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof AuthResetPasswordRoute
   '/playbook': typeof DashboardPlaybookRoute
   '/api/sitemap': typeof ApiSitemapRoute
+  '/api/test-emails': typeof ApiTestEmailsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
@@ -441,6 +454,7 @@ export interface FileRoutesByFullPath {
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
+  '/api/cron/daily-summary': typeof ApiCronDailySummaryRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
@@ -483,6 +497,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof AuthResetPasswordRoute
   '/playbook': typeof DashboardPlaybookRoute
   '/api/sitemap': typeof ApiSitemapRoute
+  '/api/test-emails': typeof ApiTestEmailsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog': typeof BlogIndexRoute
   '/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
@@ -505,6 +520,7 @@ export interface FileRoutesByTo {
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
+  '/api/cron/daily-summary': typeof ApiCronDailySummaryRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
@@ -550,6 +566,7 @@ export interface FileRoutesById {
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_dashboard/playbook': typeof DashboardPlaybookRoute
   '/api/sitemap': typeof ApiSitemapRoute
+  '/api/test-emails': typeof ApiTestEmailsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/_dashboard/admin/audit-logs': typeof DashboardAdminAuditLogsRoute
@@ -572,6 +589,7 @@ export interface FileRoutesById {
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
+  '/api/cron/daily-summary': typeof ApiCronDailySummaryRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
@@ -616,6 +634,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/playbook'
     | '/api/sitemap'
+    | '/api/test-emails'
     | '/blog/$slug'
     | '/blog/'
     | '/admin/audit-logs'
@@ -638,6 +657,7 @@ export interface FileRouteTypes {
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
+    | '/api/cron/daily-summary'
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
@@ -680,6 +700,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/playbook'
     | '/api/sitemap'
+    | '/api/test-emails'
     | '/blog/$slug'
     | '/blog'
     | '/admin/audit-logs'
@@ -702,6 +723,7 @@ export interface FileRouteTypes {
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
+    | '/api/cron/daily-summary'
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
@@ -746,6 +768,7 @@ export interface FileRouteTypes {
     | '/_auth/reset-password'
     | '/_dashboard/playbook'
     | '/api/sitemap'
+    | '/api/test-emails'
     | '/blog/$slug'
     | '/blog/'
     | '/_dashboard/admin/audit-logs'
@@ -768,6 +791,7 @@ export interface FileRouteTypes {
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
+    | '/api/cron/daily-summary'
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
@@ -809,12 +833,14 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   WelcomeRoute: typeof WelcomeRoute
   ApiSitemapRoute: typeof ApiSitemapRoute
+  ApiTestEmailsRoute: typeof ApiTestEmailsRoute
   BlogSlugRoute: typeof BlogSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiAdvisorBriefingRoute: typeof ApiAdvisorBriefingRoute
   ApiAdvisorChatRoute: typeof ApiAdvisorChatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthErrorRoute: typeof ApiAuthErrorRoute
+  ApiCronDailySummaryRoute: typeof ApiCronDailySummaryRoute
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
   ApiCronOverdueAlertsRoute: typeof ApiCronOverdueAlertsRoute
@@ -888,6 +914,13 @@ declare module '@tanstack/react-router' {
       path: '/blog/$slug'
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/test-emails': {
+      id: '/api/test-emails'
+      path: '/api/test-emails'
+      fullPath: '/api/test-emails'
+      preLoaderRoute: typeof ApiTestEmailsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/sitemap': {
@@ -1049,6 +1082,13 @@ declare module '@tanstack/react-router' {
       path: '/api/cron/digest'
       fullPath: '/api/cron/digest'
       preLoaderRoute: typeof ApiCronDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/daily-summary': {
+      id: '/api/cron/daily-summary'
+      path: '/api/cron/daily-summary'
+      fullPath: '/api/cron/daily-summary'
+      preLoaderRoute: typeof ApiCronDailySummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/error': {
@@ -1391,12 +1431,14 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   WelcomeRoute: WelcomeRoute,
   ApiSitemapRoute: ApiSitemapRoute,
+  ApiTestEmailsRoute: ApiTestEmailsRoute,
   BlogSlugRoute: BlogSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiAdvisorBriefingRoute: ApiAdvisorBriefingRoute,
   ApiAdvisorChatRoute: ApiAdvisorChatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthErrorRoute: ApiAuthErrorRoute,
+  ApiCronDailySummaryRoute: ApiCronDailySummaryRoute,
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
   ApiCronOverdueAlertsRoute: ApiCronOverdueAlertsRoute,

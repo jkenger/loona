@@ -21,7 +21,7 @@ import { getEffectivePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/
 import { ensurePendingPenalties } from "./penalty-generation"
 import { revertPenaltyCore } from "./penalties"
 import { parseLenderConfig } from "@/lib/constants/lender-defaults"
-import { sendEmail, paymentReceiptEmail } from "@/lib/email"
+import { sendEmail, paymentReceiptEmail, lenderPaymentReceivedEmail } from "@/lib/email"
 
 // Validation schemas
 const recordPaymentSchema = z.object({
@@ -440,6 +440,23 @@ export const recordPayment = createServerFn()
       loanReference: loan.id.slice(0, 8).toUpperCase(),
     })
     sendEmail({ to: loan.contact.email, subject, html, text }).catch(() => {})
+  }
+
+  // Fire-and-forget lender notification (payment received + loan completed)
+  if (lenderConfig.lenderPaymentNotificationsEnabled) {
+    const lenderRef = loan.id.slice(0, 8).toUpperCase()
+    const { subject: lSubject, html: lHtml, text: lText } = lenderPaymentReceivedEmail({
+      lenderName: session.user.name,
+      borrowerName: loan.contact?.name ?? "Borrower",
+      amount: data.amount.toFixed(2),
+      method: data.method,
+      remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
+      loanReference: lenderRef,
+      isCompleted,
+      isAgent: !!agentId,
+      agentName: undefined, // agent name resolved on client side
+    })
+    sendEmail({ to: session.user.email, subject: lSubject, html: lHtml, text: lText }).catch(() => {})
   }
 
   return {

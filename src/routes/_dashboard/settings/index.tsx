@@ -122,6 +122,10 @@ function SettingsPage() {
   const [overdueAlertsEnabled, setOverdueAlertsEnabled] = useState(lenderConfig?.overdueAlertsEnabled ?? false)
   const [overdueAlertDaysBefore, setOverdueAlertDaysBefore] = useState(String(lenderConfig?.overdueAlertDaysBefore ?? 3))
   const [overdueAlertDaysAfter, setOverdueAlertDaysAfter] = useState(String(lenderConfig?.overdueAlertDaysAfter ?? 3))
+  const [lenderPaymentNotifications, setLenderPaymentNotifications] = useState(lenderConfig?.lenderPaymentNotificationsEnabled ?? false)
+  const [lenderDocumentNotifications, setLenderDocumentNotifications] = useState(lenderConfig?.lenderDocumentNotificationsEnabled ?? false)
+  const [lenderPenaltyNotifications, setLenderPenaltyNotifications] = useState(lenderConfig?.lenderPenaltyNotificationsEnabled ?? false)
+  const [lenderDailySummary, setLenderDailySummary] = useState(lenderConfig?.lenderDailySummaryEnabled ?? false)
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
 
   // Profile links state
@@ -250,28 +254,51 @@ function SettingsPage() {
     overdueAlertsEnabled: boolean
     overdueAlertDaysBefore: number
     overdueAlertDaysAfter: number
+    lenderPaymentNotificationsEnabled: boolean
+    lenderDocumentNotificationsEnabled: boolean
+    lenderPenaltyNotificationsEnabled: boolean
+    lenderDailySummaryEnabled: boolean
   }>) => ({
     initialCapital: currentCapital,
     paymentReceiptsEnabled,
     overdueAlertsEnabled,
     overdueAlertDaysBefore: parseInt(overdueAlertDaysBefore) || 3,
     overdueAlertDaysAfter: parseInt(overdueAlertDaysAfter) || 3,
+    lenderPaymentNotificationsEnabled: lenderPaymentNotifications,
+    lenderDocumentNotificationsEnabled: lenderDocumentNotifications,
+    lenderPenaltyNotificationsEnabled: lenderPenaltyNotifications,
+    lenderDailySummaryEnabled: lenderDailySummary,
     ...overrides,
   })
 
+  type NotificationField =
+    | "paymentReceiptsEnabled"
+    | "overdueAlertsEnabled"
+    | "lenderPaymentNotificationsEnabled"
+    | "lenderDocumentNotificationsEnabled"
+    | "lenderPenaltyNotificationsEnabled"
+    | "lenderDailySummaryEnabled"
+
+  const notificationSetters: Record<NotificationField, (v: boolean) => void> = {
+    paymentReceiptsEnabled: setPaymentReceiptsEnabled,
+    overdueAlertsEnabled: setOverdueAlertsEnabled,
+    lenderPaymentNotificationsEnabled: setLenderPaymentNotifications,
+    lenderDocumentNotificationsEnabled: setLenderDocumentNotifications,
+    lenderPenaltyNotificationsEnabled: setLenderPenaltyNotifications,
+    lenderDailySummaryEnabled: setLenderDailySummary,
+  }
+
   const handleToggleNotification = async (
-    field: "paymentReceiptsEnabled" | "overdueAlertsEnabled",
+    field: NotificationField,
     value: boolean
   ) => {
-    if (field === "paymentReceiptsEnabled") setPaymentReceiptsEnabled(value)
-    else setOverdueAlertsEnabled(value)
+    notificationSetters[field](value)
 
     setIsSavingNotifications(true)
     try {
       await saveLenderSettings({ data: buildNotificationPayload({ [field]: value }) })
     } catch {
-      if (field === "paymentReceiptsEnabled") setPaymentReceiptsEnabled(!value)
-      else setOverdueAlertsEnabled(!value)
+      notificationSetters[field](!value)
       toast.error("Failed to save setting")
     } finally {
       setIsSavingNotifications(false)
@@ -797,6 +824,58 @@ function SettingsPage() {
                       </p>
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div className="border-t mx-5" />
+
+              <div className="p-5 pt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Notify me when</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Payment Received</p>
+                      <p className="text-xs text-muted-foreground">Get notified when a payment is recorded</p>
+                    </div>
+                    <Switch
+                      checked={lenderPaymentNotifications}
+                      onCheckedChange={(v) => handleToggleNotification("lenderPaymentNotificationsEnabled", v)}
+                      disabled={isSavingNotifications}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Document Signed</p>
+                      <p className="text-xs text-muted-foreground">When a borrower or co-maker signs</p>
+                    </div>
+                    <Switch
+                      checked={lenderDocumentNotifications}
+                      onCheckedChange={(v) => handleToggleNotification("lenderDocumentNotificationsEnabled", v)}
+                      disabled={isSavingNotifications}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Penalty Generated</p>
+                      <p className="text-xs text-muted-foreground">When a late fee or daily interest is created</p>
+                    </div>
+                    <Switch
+                      checked={lenderPenaltyNotifications}
+                      onCheckedChange={(v) => handleToggleNotification("lenderPenaltyNotificationsEnabled", v)}
+                      disabled={isSavingNotifications}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Daily Summary</p>
+                      <p className="text-xs text-muted-foreground">Portfolio overview + missed payment escalation</p>
+                    </div>
+                    <Switch
+                      checked={lenderDailySummary}
+                      onCheckedChange={(v) => handleToggleNotification("lenderDailySummaryEnabled", v)}
+                      disabled={isSavingNotifications}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

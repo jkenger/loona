@@ -1,11 +1,12 @@
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
-import { db, documentSignatures, loans } from "@/lib/db"
+import { db, documentSignatures, loans, lenderSettings } from "@/lib/db"
 import { eq, and } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { z } from "zod"
 import { createHash } from "crypto"
-import { sendEmail, signingOtpEmail, signingRequestEmail } from "@/lib/email"
+import { sendEmail, signingOtpEmail, signingRequestEmail, lenderDocumentSignedEmail } from "@/lib/email"
+import { parseLenderConfig } from "@/lib/constants/lender-defaults"
 const OTP_EXPIRY_MINUTES = 10
 const SIGNING_REQUEST_OTP_HOURS = 48
 const OTP_MAX_ATTEMPTS = 5
@@ -591,8 +592,46 @@ export const verifyPublicOtp = createServerFn()
       .set({ otpVerifiedAt: now, signedAt: now, ipAddress, userAgent, otpHash: null })
       .where(eq(documentSignatures.id, sig.id))
 
+    // Fire-and-forget lender notification
+    notifyLenderDocumentSigned(sig.loanId, sig.signerRole, sig.documentType).catch(() => {})
+
     return { success: true, signedAt: now.toISOString() }
   })
+
+// ============================================================================
+// Lender document notification helper
+// ============================================================================
+
+async function notifyLenderDocumentSigned(loanId: string, signerRole: string, documentType: string) {
+  const loan = await db.query.loans.findFirst({
+    where: eq(loans.id, loanId),
+    with: { contact: true, lender: true },
+  })
+  if (!loan) return
+
+  const settingsRow = await db.query.lenderSettings.findFirst({
+    where: eq(lenderSettings.lenderId, loan.lenderId),
+  })
+  const config = parseLenderConfig(settingsRow?.config ?? null)
+  if (!config.lenderDocumentNotificationsEnabled) return
+
+  const signerName = signerRole === "borrower"
+    ? loan.contact?.name ?? "Borrower"
+    : signerRole === "co_maker"
+      ? (loan.coMakerName ?? "Co-Maker")
+      : loan.lender.name
+
+  const dashboardBase = process.env.BETTER_AUTH_URL || "https://loona.ph"
+  const { subject, html, text } = lenderDocumentSignedEmail({
+    lenderName: loan.lender.name,
+    signerName,
+    signerRole: signerRole === "co_maker" ? "Co-Maker" : signerRole.charAt(0).toUpperCase() + signerRole.slice(1),
+    documentType,
+    loanReference: loanId.slice(0, 8).toUpperCase(),
+    dashboardUrl: `${dashboardBase}/loans/${loanId}`,
+  })
+  await sendEmail({ to: loan.lender.email, subject, html, text })
+}
 
 // ============================================================================
 // Helpers

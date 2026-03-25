@@ -2,11 +2,12 @@
  * Shared overdue + penalty processing logic. Server-only — no session required.
  * Used by the cron endpoint and dashboard fallback (via updateOverduePayments).
  */
-import { db, paymentSchedule, loans, contacts, user } from "@/lib/db"
+import { db, paymentSchedule, loans, contacts, user, penalties, lenderSettings } from "@/lib/db"
 import { eq, and, lte } from "drizzle-orm"
-import { sendEmail, paymentReminderEmail } from "@/lib/email"
-import { getEffectivePenaltyConfig } from "@/lib/constants/penalty-defaults"
+import { sendEmail, paymentReminderEmail, lenderPenaltyAppliedEmail } from "@/lib/email"
+import { getEffectivePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/penalty-defaults"
 import { ensurePendingPenalties } from "./penalty-generation"
+import { parseLenderConfig } from "@/lib/constants/lender-defaults"
 
 /**
  * Mark overdue payments and generate penalties for ALL lenders.
@@ -71,9 +72,49 @@ export async function processOverdueAndPenalties() {
     },
   })
 
+  // Track penalties before and after to detect new ones
+  const penaltyCountsBefore = new Map<string, number>()
+  for (const loan of activeLoans) {
+    penaltyCountsBefore.set(loan.id, loan.penalties.length)
+  }
+
   for (const loan of activeLoans) {
     const config = getEffectivePenaltyConfig(loan.penaltyConfig)
     if (!config.enabled) continue
     await ensurePendingPenalties(loan, config, loan.penalties)
+  }
+
+  // Check for new penalties and notify lenders
+  for (const loan of activeLoans) {
+    const beforeCount = penaltyCountsBefore.get(loan.id) ?? 0
+    const currentPenalties = await db.query.penalties.findMany({
+      where: eq(penalties.loanId, loan.id),
+    })
+    if (currentPenalties.length <= beforeCount) continue
+
+    const newPenalties = currentPenalties.slice(beforeCount)
+    const settingsRow = await db.query.lenderSettings.findFirst({
+      where: eq(lenderSettings.lenderId, loan.lenderId),
+    })
+    const lenderConfig = parseLenderConfig(settingsRow?.config ?? null)
+    if (!lenderConfig.lenderPenaltyNotificationsEnabled) continue
+
+    const lender = await db.query.user.findFirst({ where: eq(user.id, loan.lenderId) })
+    const contact = await db.query.contacts.findFirst({ where: eq(contacts.id, loan.contactId) })
+    if (!lender?.email || !contact) continue
+
+    for (const penalty of newPenalties) {
+      const scheduleItem = loan.schedule.find((s) => s.id === penalty.scheduleItemId)
+      const daysOverdue = scheduleItem ? calendarDaysOverdue(new Date(scheduleItem.dueDate)) : 0
+      const { subject, html, text } = lenderPenaltyAppliedEmail({
+        lenderName: lender.name,
+        borrowerName: contact.name,
+        penaltyType: penalty.penaltyType,
+        amount: parseFloat(penalty.amount).toFixed(2),
+        loanReference: loan.id.slice(0, 8).toUpperCase(),
+        daysOverdue,
+      })
+      sendEmail({ to: lender.email, subject, html, text }).catch(() => {})
+    }
   }
 }

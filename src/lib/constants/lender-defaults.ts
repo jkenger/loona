@@ -6,10 +6,16 @@ import { z } from "zod"
 
 export interface LenderConfig {
   initialCapital: number
+  // Borrower notifications
   paymentReceiptsEnabled: boolean
   overdueAlertsEnabled: boolean
   overdueAlertDaysBefore: number
   overdueAlertDaysAfter: number
+  // Lender notifications
+  lenderPaymentNotificationsEnabled: boolean
+  lenderDocumentNotificationsEnabled: boolean
+  lenderPenaltyNotificationsEnabled: boolean
+  lenderDailySummaryEnabled: boolean
 }
 
 // ============================================================================
@@ -22,6 +28,10 @@ export const lenderConfigSchema = z.object({
   overdueAlertsEnabled: z.boolean().default(false),
   overdueAlertDaysBefore: z.number().int().min(1).max(30).default(3),
   overdueAlertDaysAfter: z.number().int().min(1).max(30).default(3),
+  lenderPaymentNotificationsEnabled: z.boolean().default(false),
+  lenderDocumentNotificationsEnabled: z.boolean().default(false),
+  lenderPenaltyNotificationsEnabled: z.boolean().default(false),
+  lenderDailySummaryEnabled: z.boolean().default(false),
 })
 
 // ============================================================================
@@ -34,6 +44,10 @@ export const DEFAULT_LENDER_CONFIG: LenderConfig = {
   overdueAlertsEnabled: false,
   overdueAlertDaysBefore: 3,
   overdueAlertDaysAfter: 3,
+  lenderPaymentNotificationsEnabled: false,
+  lenderDocumentNotificationsEnabled: false,
+  lenderPenaltyNotificationsEnabled: false,
+  lenderDailySummaryEnabled: false,
 }
 
 // ============================================================================
