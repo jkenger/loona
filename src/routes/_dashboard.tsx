@@ -38,6 +38,7 @@ import {
   Envelope,
   BookOpenText,
   Calculator,
+  ChartLineUp,
 } from "@phosphor-icons/react"
 import {
   Popover,
@@ -114,6 +115,7 @@ const lenderNavigation = [
   { name: "Payments", href: "/payments", icon: Receipt, exact: false },
   { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
   { name: "Estimator", href: "/tools/estimator", icon: Calculator, exact: false },
+  { name: "Reports", href: "/reports", icon: ChartLineUp, exact: false },
   { name: "Playbook", href: "/playbook", icon: BookOpenText, exact: true },
 ]
 

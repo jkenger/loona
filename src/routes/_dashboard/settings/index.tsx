@@ -150,6 +150,7 @@ function SettingsPage() {
   const [lenderDocumentNotifications, setLenderDocumentNotifications] = useState(lenderConfig?.lenderDocumentNotificationsEnabled ?? false)
   const [lenderPenaltyNotifications, setLenderPenaltyNotifications] = useState(lenderConfig?.lenderPenaltyNotificationsEnabled ?? false)
   const [lenderDailySummary, setLenderDailySummary] = useState(lenderConfig?.lenderDailySummaryEnabled ?? false)
+  const [agentNotifications, setAgentNotifications] = useState(lenderConfig?.agentNotificationsEnabled ?? false)
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
 
   // Profile links
@@ -226,6 +227,7 @@ function SettingsPage() {
     lenderDocumentNotificationsEnabled: lenderDocumentNotifications,
     lenderPenaltyNotificationsEnabled: lenderPenaltyNotifications,
     lenderDailySummaryEnabled: lenderDailySummary,
+    agentNotificationsEnabled: agentNotifications,
     ...overrides,
   })
 
@@ -233,6 +235,7 @@ function SettingsPage() {
     | "paymentReceiptsEnabled" | "overdueAlertsEnabled"
     | "lenderPaymentNotificationsEnabled" | "lenderDocumentNotificationsEnabled"
     | "lenderPenaltyNotificationsEnabled" | "lenderDailySummaryEnabled"
+    | "agentNotificationsEnabled"
 
   const notificationSetters: Record<NotificationField, (v: boolean) => void> = {
     paymentReceiptsEnabled: setPaymentReceiptsEnabled,
@@ -241,6 +244,7 @@ function SettingsPage() {
     lenderDocumentNotificationsEnabled: setLenderDocumentNotifications,
     lenderPenaltyNotificationsEnabled: setLenderPenaltyNotifications,
     lenderDailySummaryEnabled: setLenderDailySummary,
+    agentNotificationsEnabled: setAgentNotifications,
   }
 
   const handleToggle = async (field: NotificationField, value: boolean) => {
@@ -400,6 +404,14 @@ function SettingsPage() {
 
           <SettingRow label="Daily Summary" description="Portfolio digest + missed payment alerts">
             <Switch checked={lenderDailySummary} onCheckedChange={(v) => handleToggle("lenderDailySummaryEnabled", v)} disabled={isSavingNotifications} />
+          </SettingRow>
+
+          <div className="px-5 pt-4 pb-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Agent notifications</p>
+          </div>
+
+          <SettingRow label="Agent Alerts" description="Commission earned, overdue follow-ups & weekly summary">
+            <Switch checked={agentNotifications} onCheckedChange={(v) => handleToggle("agentNotificationsEnabled", v)} disabled={isSavingNotifications} />
           </SettingRow>
 
           <div className="h-3" />

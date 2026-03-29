@@ -21,7 +21,7 @@ import { getEffectivePenaltyConfig, calendarDaysOverdue } from "@/lib/constants/
 import { ensurePendingPenalties } from "./penalty-generation"
 import { revertPenaltyCore } from "./penalties"
 import { parseLenderConfig } from "@/lib/constants/lender-defaults"
-import { sendEmail, paymentReceiptEmail, lenderPaymentReceivedEmail } from "@/lib/email"
+import { sendEmail, paymentReceiptEmail, lenderPaymentReceivedEmail, agentCommissionEarnedEmail } from "@/lib/email"
 
 // Validation schemas
 const recordPaymentSchema = z.object({
@@ -457,6 +457,32 @@ export const recordPayment = createServerFn()
       agentName: undefined, // agent name resolved on client side
     })
     sendEmail({ to: session.user.email, subject: lSubject, html: lHtml, text: lText }).catch(() => {})
+  }
+
+  // Fire-and-forget commission earned email to agent
+  if (lenderConfig.agentNotificationsEnabled && agentId && commissionAmount !== null && effectiveRate !== null) {
+    ;(async () => {
+      try {
+        const agentWithUser = await db.query.agents.findFirst({
+          where: eq(agents.id, agentId!),
+          with: { agentUser: true },
+        })
+        if (!agentWithUser?.agentUser?.email) return
+        const { subject, html, text } = agentCommissionEarnedEmail({
+          agentName: agentWithUser.agentUser.name,
+          borrowerName: loan.contact?.name ?? "Borrower",
+          lenderName: session.user.name,
+          paymentAmount: data.amount.toFixed(2),
+          commissionAmount: commissionAmount.toFixed(2),
+          commissionRate: effectiveRate,
+          loanReference: loan.id.slice(0, 8).toUpperCase(),
+          totalCommissionEarned: (parseFloat(agentWithUser.totalCommissionEarned ?? "0") + commissionAmount).toFixed(2),
+        })
+        await sendEmail({ to: agentWithUser.agentUser.email, subject, html, text })
+      } catch {
+        // non-critical
+      }
+    })()
   }
 
   return {

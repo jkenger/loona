@@ -42,10 +42,7 @@ export const restructureLoan = createServerFn()
     const newBalance = prevBalance - data.balanceReduction
     const totalMonths = loan.termMonths + data.additionalMonths
 
-    // Recalculate payment amount on new balance for remaining term
     const frequency = loan.paymentFrequency as "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
-    const paymentsCount = calculatePaymentsCount(totalMonths, frequency)
-    const newPaymentAmount = paymentsCount > 0 ? newBalance / paymentsCount : newBalance
 
     // Cancel all pending schedule items
     const pending = await db.query.paymentSchedule.findMany({
@@ -60,6 +57,12 @@ export const restructureLoan = createServerFn()
       throw new Error("No pending installments to restructure")
     }
 
+    // New installment count = pending items + any extra from extension
+    // This correctly accounts for payments already made regardless of the original term
+    const extraPayments = data.additionalMonths > 0 ? calculatePaymentsCount(data.additionalMonths, frequency) : 0
+    const newPaymentsCount = pending.length + extraPayments
+    const newPaymentAmount = newPaymentsCount > 0 ? newBalance / newPaymentsCount : newBalance
+
     // Use the first pending item's due date as start for the new schedule
     const startDate = new Date(pending[0].dueDate)
     startDate.setDate(startDate.getDate() - 1) // generatePaymentSchedule advances by 1 period from startDate
@@ -67,7 +70,7 @@ export const restructureLoan = createServerFn()
     const newScheduleItems = generatePaymentSchedule(
       data.loanId,
       startDate,
-      pending.length + (data.additionalMonths > 0 ? calculatePaymentsCount(data.additionalMonths, frequency) : 0),
+      newPaymentsCount,
       newPaymentAmount,
       frequency,
       newBalance,

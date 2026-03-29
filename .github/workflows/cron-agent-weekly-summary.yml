@@ -1,0 +1,30 @@
+name: Weekly Agent Summary
+on:
+  schedule:
+    - cron: '0 23 * * 0' # 11 PM UTC Sunday (7 AM PHT Monday)
+  workflow_dispatch: {} # manual trigger
+
+# Required GitHub repository secrets:
+#   APP_URL      - deployed app URL, e.g. https://loona.example.com (no trailing slash)
+#   CRON_SECRET  - shared secret matching CRON_SECRET env var on the server
+
+jobs:
+  agent-weekly-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "::error::APP_URL secret is not set. Add it in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::CRON_SECRET secret is not set. Add it in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Send weekly summary to agents
+        run: |
+          curl -f -X GET \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/agent-weekly-summary"

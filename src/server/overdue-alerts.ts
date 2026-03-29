@@ -1,7 +1,7 @@
 import { db, paymentSchedule, loans } from "@/lib/db"
 import { eq, and, inArray, sql } from "drizzle-orm"
 import { parseLenderConfig } from "@/lib/constants/lender-defaults"
-import { sendEmail, overdueAlertEmail } from "@/lib/email"
+import { sendEmail, overdueAlertEmail, agentBorrowerOverdueEmail } from "@/lib/email"
 
 function toDateString(date: Date): string {
   return date.toISOString().slice(0, 10)
@@ -56,6 +56,9 @@ export async function sendOverdueAlerts() {
             with: {
               contact: true,
               lender: true,
+              assignedAgent: {
+                with: { agentUser: true },
+              },
             },
           },
         },
@@ -106,6 +109,26 @@ export async function sendOverdueAlerts() {
             .where(eq(paymentSchedule.id, item.id))
 
           sent++
+
+          // Notify assigned agent when borrower is overdue (days >= 0 only)
+          if (days >= 0 && config.agentNotificationsEnabled) {
+            const agent = item.loan.assignedAgent
+            const agentEmail = agent?.agentUser?.email
+            const agentName = agent?.agentUser?.name
+            if (agentEmail && agentName) {
+              const { subject: aSubject, html: aHtml, text: aText } = agentBorrowerOverdueEmail({
+                agentName,
+                borrowerName: contact.name,
+                borrowerPhone: contact.phone ?? undefined,
+                lenderName: lender.name,
+                dueDate: dueDateFormatted,
+                amountDue: parseFloat(item.amount).toFixed(2),
+                loanReference: item.loanId.slice(0, 8).toUpperCase(),
+                daysOverdue: days,
+              })
+              sendEmail({ to: agentEmail, subject: aSubject, html: aHtml, text: aText }).catch(() => {})
+            }
+          }
         } catch {
           skipped++
         }

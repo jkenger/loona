@@ -98,6 +98,9 @@ export const getLoan = createServerFn()
           orderBy: (payments, { desc }) => [desc(payments.paidAt), desc(payments.createdAt)],
         },
         penalties: true,
+        restructures: {
+          orderBy: (r, { desc }) => [desc(r.createdAt)],
+        },
         assignedAgent: {
           with: {
             agentUser: true,

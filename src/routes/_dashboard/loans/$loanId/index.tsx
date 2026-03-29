@@ -272,6 +272,13 @@ function LoanDetailPage() {
     overdue: { icon: Warning, className: "text-destructive bg-destructive/10" },
   }
 
+  const borrowerInitials = loan.contact.name
+    .split(" ")
+    .slice(0, 2)
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase()
+
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Back link */}
@@ -280,71 +287,101 @@ function LoanDetailPage() {
         Back to Loans
       </Link>
 
-      {/* Title Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">
-              {formatCurrency(loan.principal)}
-            </h1>
-            <Badge variant={statusConfig[loan.status].variant} className={statusConfig[loan.status].className || ""}>
-              {statusConfig[loan.status].label}
-            </Badge>
+      {/* Borrower Identity Hero + Loan Title Row */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        {/* Borrower strip */}
+        <div className="flex items-center justify-between gap-4 px-5 py-4 border-b bg-muted/30">
+          <Link
+            to="/contacts/$contactId"
+            params={{ contactId: loan.contact.id }}
+            className="flex items-center gap-3 group"
+          >
+            <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm border border-primary/20">
+              {borrowerInitials}
+            </div>
+            <div>
+              <p className="font-semibold text-sm group-hover:text-primary transition-colors leading-tight">
+                {loan.contact.name}
+              </p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                {loan.contact.phone && <span>{loan.contact.phone}</span>}
+                {loan.contact.phone && loan.contact.city && <span>·</span>}
+                {loan.contact.city && <span>{loan.contact.city}</span>}
+              </div>
+            </div>
+          </Link>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-full px-3 py-1 bg-background shrink-0">
+            <User className="h-3 w-3" />
+            Borrower
           </div>
-          <p className="text-muted-foreground">
-            {loan.contact.name} · {loan.interestRate}% for {loan.termMonths} months
-          </p>
         </div>
-        {loan.isLender && (
-          <div className="flex gap-2">
-            {loan.status === "completed" && (
-              <Link
-                to="/loans/new-wizard"
-                search={{ renewFromLoanId: loan.id }}
-              >
-                <Button variant="outline" className="gap-2">
-                  <ArrowClockwise className="h-4 w-4" weight="bold" />
-                  Renew
-                </Button>
-              </Link>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={(props) => (
-                  <Button {...props} variant="ghost" size="icon">
-                    <DotsThreeVertical className="h-5 w-5" weight="bold" />
-                  </Button>
-                )}
-              />
-              <DropdownMenuContent align="end">
-                {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                  <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
-                    <ArrowsClockwise className="h-4 w-4" />
-                    Regenerate Schedule
-                  </DropdownMenuItem>
-                )}
-                {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                  <DropdownMenuItem onClick={() => {
-                    setRestructureAdditionalMonths("")
-                    setRestructureBalanceReduction("")
-                    setRestructureReason("")
-                    setShowRestructureDialog(true)
-                  }}>
-                    <ArrowCounterClockwise className="h-4 w-4" />
-                    Restructure Loan
-                  </DropdownMenuItem>
-                )}
-                {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                  <DropdownMenuSeparator />
-                )}
-                <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-                  <Trash className="h-4 w-4" />
-                  Delete Loan
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+
+        {/* Loan title row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 py-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {formatCurrency(loan.principal)}
+              </h1>
+              <Badge variant={statusConfig[loan.status].variant} className={statusConfig[loan.status].className || ""}>
+                {statusConfig[loan.status].label}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {loan.interestRate}% / mo · {loan.termMonths} months · {loan.paymentFrequency === "semimonthly" ? "Semi-monthly" : loan.paymentFrequency} payments
+            </p>
           </div>
-        )}
+          {loan.isLender && (
+            <div className="flex gap-2">
+              {loan.status === "completed" && (
+                <Link
+                  to="/loans/new-wizard"
+                  search={{ renewFromLoanId: loan.id }}
+                >
+                  <Button variant="outline" className="gap-2">
+                    <ArrowClockwise className="h-4 w-4" weight="bold" />
+                    Renew
+                  </Button>
+                </Link>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={(props) => (
+                    <Button {...props} variant="ghost" size="icon">
+                      <DotsThreeVertical className="h-5 w-5" weight="bold" />
+                    </Button>
+                  )}
+                />
+                <DropdownMenuContent align="end">
+                  {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                    <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
+                      <ArrowsClockwise className="h-4 w-4" />
+                      Regenerate Schedule
+                    </DropdownMenuItem>
+                  )}
+                  {import.meta.env.DEV && loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                    <DropdownMenuItem onClick={() => {
+                      setRestructureAdditionalMonths("")
+                      setRestructureBalanceReduction("")
+                      setRestructureReason("")
+                      setShowRestructureDialog(true)
+                    }}>
+                      <ArrowCounterClockwise className="h-4 w-4" />
+                      Restructure Loan
+                    </DropdownMenuItem>
+                  )}
+                  {import.meta.env.DEV && loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                    <DropdownMenuSeparator />
+                  )}
+                  <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+                    <Trash className="h-4 w-4" />
+                    Delete Loan
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Pending Approval Banner */}
@@ -434,7 +471,7 @@ function LoanDetailPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Loan Summary */}
         <Card className="shadow-sm rounded-xl">
           <CardHeader className="p-4 pb-2">
@@ -514,32 +551,7 @@ function LoanDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Borrower */}
-        <Card className="shadow-sm rounded-xl">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Borrower
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <Link
-              to="/contacts/$contactId"
-              params={{ contactId: loan.contact.id }}
-              className="block hover:text-primary"
-            >
-              <p className="font-semibold text-lg">{loan.contact.name}</p>
-              {loan.contact.phone && (
-                <p className="text-muted-foreground">{loan.contact.phone}</p>
-              )}
-              {loan.contact.city && (
-                <p className="text-sm text-muted-foreground">{loan.contact.city}</p>
-              )}
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Dates */}
+        {/* Timeline */}
         <Card className="shadow-sm rounded-xl">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2">
@@ -930,6 +942,60 @@ function LoanDetailPage() {
         </Card>
       )}
 
+      {/* Restructure History */}
+      {loan.restructures && loan.restructures.length > 0 && (
+        <Card className="shadow-sm">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <ArrowCounterClockwise className="h-5 w-5 text-primary" />
+              Restructure History
+            </CardTitle>
+            <CardDescription>
+              {loan.restructures.length} restructure{loan.restructures.length > 1 ? "s" : ""} on record
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="space-y-3">
+              {loan.restructures.map((r, i) => (
+                <div key={r.id} className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Restructure #{loan.restructures!.length - i}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(r.createdAt), "MMM d, yyyy")}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <span className="text-muted-foreground">Balance before</span>
+                    <span className="font-medium text-right">{formatCurrency(r.previousRemainingBalance)}</span>
+                    {parseFloat(r.balanceReduction) > 0 && (
+                      <>
+                        <span className="text-muted-foreground">Balance waived</span>
+                        <span className="font-medium text-right text-amber-600 dark:text-amber-400">−{formatCurrency(r.balanceReduction)}</span>
+                      </>
+                    )}
+                    <span className="text-muted-foreground">New balance</span>
+                    <span className="font-medium text-right">{formatCurrency(r.newRemainingBalance)}</span>
+                    {r.additionalMonths > 0 && (
+                      <>
+                        <span className="text-muted-foreground">Term extended</span>
+                        <span className="font-medium text-right">+{r.additionalMonths} months</span>
+                      </>
+                    )}
+                    <span className="text-muted-foreground">New installment</span>
+                    <span className="font-bold text-right text-primary">{formatCurrency(r.newPaymentAmount)}</span>
+                  </div>
+                  {r.reason && (
+                    <p className="text-xs text-muted-foreground border-t pt-2 mt-1">"{r.reason}"</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Documents */}
       {loan.isLender && (
         <Card className="shadow-sm">
@@ -1170,20 +1236,24 @@ function LoanDetailPage() {
           <DialogHeader>
             <DialogTitle>Restructure Loan</DialogTitle>
             <DialogDescription>
-              Extend the term or reduce the balance. Pending installments will be recalculated.
+              Extend the term or reduce the balance. All pending installments will be replaced with a new schedule.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
+            {/* Current snapshot */}
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Current</p>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Remaining Balance</span>
-                <span className="font-medium">
-                  ₱{parseFloat(loan.remainingBalance).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
+                <span className="font-medium">{formatCurrency(loan.remainingBalance)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Current Term</span>
-                <span className="font-medium">{loan.termMonths} months</span>
+                <span className="text-muted-foreground">Pending Installments</span>
+                <span className="font-medium">{loan.schedule.filter((s) => s.status !== "paid").length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Current Payment</span>
+                <span className="font-medium">{formatCurrency(loan.paymentAmount)}</span>
               </div>
             </div>
 
@@ -1203,6 +1273,7 @@ function LoanDetailPage() {
               <Input
                 type="number"
                 min="0"
+                max={parseFloat(loan.remainingBalance)}
                 step="0.01"
                 placeholder="0.00"
                 value={restructureBalanceReduction}
@@ -1210,6 +1281,39 @@ function LoanDetailPage() {
               />
               <p className="text-xs text-muted-foreground">Amount to waive from the remaining balance</p>
             </div>
+
+            {/* Live preview */}
+            {(restructureAdditionalMonths || restructureBalanceReduction) && (() => {
+              const addMonths = parseInt(restructureAdditionalMonths || "0") || 0
+              const reduction = parseFloat(restructureBalanceReduction || "0") || 0
+              const pendingCount = loan.schedule.filter((s) => s.status !== "paid").length
+              const freqMap: Record<string, number> = { daily: 30, weekly: 4, biweekly: 2, semimonthly: 2, monthly: 1 }
+              const extraPayments = addMonths * (freqMap[loan.paymentFrequency] ?? 1)
+              const newCount = pendingCount + extraPayments
+              const newBalance = Math.max(0, parseFloat(loan.remainingBalance) - reduction)
+              const newPayment = newCount > 0 ? newBalance / newCount : newBalance
+              const isInvalid = reduction > parseFloat(loan.remainingBalance)
+              return (
+                <div className={`rounded-lg border p-3 text-sm space-y-1.5 ${isInvalid ? "border-destructive/40 bg-destructive/5" : "border-primary/20 bg-primary/5"}`}>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">After Restructure</p>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">New Balance</span>
+                    <span className={`font-medium ${isInvalid ? "text-destructive" : ""}`}>{formatCurrency(newBalance.toFixed(2))}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">New Installments</span>
+                    <span className="font-medium">{newCount}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-1.5 mt-1.5">
+                    <span className="font-medium">New Payment Amount</span>
+                    <span className={`font-bold ${isInvalid ? "text-destructive" : "text-primary"}`}>{formatCurrency(newPayment.toFixed(2))}</span>
+                  </div>
+                  {isInvalid && (
+                    <p className="text-xs text-destructive pt-1">Balance reduction exceeds remaining balance</p>
+                  )}
+                </div>
+              )
+            })()}
 
             <div className="space-y-2">
               <Label>Reason (optional)</Label>
@@ -1238,6 +1342,10 @@ function LoanDetailPage() {
                   toast.error("Invalid balance reduction")
                   return
                 }
+                if (balanceReduction > parseFloat(loan.remainingBalance)) {
+                  toast.error("Balance reduction exceeds remaining balance")
+                  return
+                }
                 setIsRestructuring(true)
                 try {
                   await restructureLoan({ data: {
@@ -1259,7 +1367,7 @@ function LoanDetailPage() {
               {isRestructuring ? (
                 <><Spinner className="h-4 w-4 animate-spin mr-2" />Restructuring...</>
               ) : (
-                "Restructure"
+                "Confirm Restructure"
               )}
             </Button>
           </DialogFooter>

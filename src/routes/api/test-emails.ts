@@ -5,6 +5,9 @@ import {
   lenderDocumentSignedEmail,
   lenderPenaltyAppliedEmail,
   lenderDailySummaryEmail,
+  agentCommissionEarnedEmail,
+  agentBorrowerOverdueEmail,
+  agentWeeklySummaryEmail,
 } from '@/lib/email'
 
 export const Route = createFileRoute('/api/test-emails')({
@@ -13,7 +16,7 @@ export const Route = createFileRoute('/api/test-emails')({
       GET: async ({ request }: { request: Request }) => {
         const url = new URL(request.url)
         const to = url.searchParams.get('to')
-        const type = url.searchParams.get('type') // payment, completed, document, penalty, summary, all
+        const type = url.searchParams.get('type') // payment, completed, document, penalty, summary, agent-commission, agent-overdue, agent-weekly, all
 
         if (!to) {
           return new Response(
@@ -111,6 +114,59 @@ export const Route = createFileRoute('/api/test-emails')({
           })
           await sendEmail({ to, ...email })
           sent.push('summary')
+        }
+
+        // 6. Agent: Commission Earned
+        if (!type || type === 'all' || type === 'agent-commission') {
+          const email = agentCommissionEarnedEmail({
+            agentName: 'Pedro Agent',
+            borrowerName: 'Maria Borrower',
+            lenderName: 'Juan Lender',
+            paymentAmount: '5,000.00',
+            commissionAmount: '250.00',
+            commissionRate: '5.00',
+            loanReference: 'A1B2C3D4',
+            totalCommissionEarned: '12,750.00',
+          })
+          await sendEmail({ to, ...email })
+          sent.push('agent-commission')
+        }
+
+        // 7. Agent: Borrower Overdue Alert
+        if (!type || type === 'all' || type === 'agent-overdue') {
+          const email = agentBorrowerOverdueEmail({
+            agentName: 'Pedro Agent',
+            borrowerName: 'Maria Borrower',
+            borrowerPhone: '09171234567',
+            lenderName: 'Juan Lender',
+            dueDate: new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }),
+            amountDue: '5,000.00',
+            loanReference: 'A1B2C3D4',
+            daysOverdue: 3,
+          })
+          await sendEmail({ to, ...email })
+          sent.push('agent-overdue')
+        }
+
+        // 8. Agent: Weekly Summary
+        if (!type || type === 'all' || type === 'agent-weekly') {
+          const email = agentWeeklySummaryEmail({
+            agentName: 'Pedro Agent',
+            lenderName: 'Juan Lender',
+            weekLabel: 'Mar 20 – Mar 26, 2026',
+            totalCollected: '32,500.00',
+            paymentCount: 14,
+            commissionEarned: '1,625.00',
+            overdueCount: 2,
+            assignedLoansCount: 18,
+            topBorrowers: [
+              { name: 'Maria Borrower', amount: '10,000.00' },
+              { name: 'Pedro Santos', amount: '7,500.00' },
+              { name: 'Ana Reyes', amount: '5,000.00' },
+            ],
+          })
+          await sendEmail({ to, ...email })
+          sent.push('agent-weekly')
         }
 
         return new Response(

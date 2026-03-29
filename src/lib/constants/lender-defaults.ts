@@ -16,6 +16,8 @@ export interface LenderConfig {
   lenderDocumentNotificationsEnabled: boolean
   lenderPenaltyNotificationsEnabled: boolean
   lenderDailySummaryEnabled: boolean
+  // Agent notifications
+  agentNotificationsEnabled: boolean
   // Onboarding
   notificationOnboardingSeen: boolean
 }
@@ -34,6 +36,7 @@ export const lenderConfigSchema = z.object({
   lenderDocumentNotificationsEnabled: z.boolean().default(false),
   lenderPenaltyNotificationsEnabled: z.boolean().default(false),
   lenderDailySummaryEnabled: z.boolean().default(false),
+  agentNotificationsEnabled: z.boolean().default(false),
   notificationOnboardingSeen: z.boolean().default(false),
 })
 
@@ -51,6 +54,7 @@ export const DEFAULT_LENDER_CONFIG: LenderConfig = {
   lenderDocumentNotificationsEnabled: false,
   lenderPenaltyNotificationsEnabled: false,
   lenderDailySummaryEnabled: false,
+  agentNotificationsEnabled: false,
   notificationOnboardingSeen: false,
 }
 

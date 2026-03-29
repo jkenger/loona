@@ -9,6 +9,7 @@ import { hasRole, ROLES } from '@/lib/constants/roles'
 import { getDashboardStats } from '@/server/dashboard'
 import { updateOverduePayments } from '@/server/payments'
 import { getLenderSettings, saveLenderSettings } from '@/server/lender-settings'
+import { getRenewalSuggestions } from '@/server/reports'
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ import {
   Warning,
   ChartLineUp,
   EnvelopeSimple,
+  ArrowClockwise,
 } from '@phosphor-icons/react'
 import {
   format,
@@ -57,19 +59,23 @@ export const Route = createFileRoute('/_dashboard/dashboard/')({
       session: { user: { name: string | null; role: string | null } }
     }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
-      return { stats: null, unauthorized: true, firstName: '', lenderConfig: null }
+      return { stats: null, unauthorized: true, firstName: '', lenderConfig: null, renewals: [] }
     }
     await updateOverduePayments()
-    const [stats, lenderConfig] = await Promise.all([getDashboardStats(), getLenderSettings()])
+    const [stats, lenderConfig, renewalData] = await Promise.all([
+      getDashboardStats(),
+      getLenderSettings(),
+      getRenewalSuggestions({ data: undefined }).catch(() => ({ suggestions: [] })),
+    ])
     const firstName = session.user.name?.split(' ')[0] ?? ''
-    return { stats, unauthorized: false, firstName, lenderConfig }
+    return { stats, unauthorized: false, firstName, lenderConfig, renewals: renewalData.suggestions }
   },
   pendingComponent: SkeletonDashboard,
   component: DashboardPage,
 })
 
 function DashboardPage() {
-  const { stats, unauthorized, firstName, lenderConfig } = Route.useLoaderData()
+  const { stats, unauthorized, firstName, lenderConfig, renewals } = Route.useLoaderData()
 
   const [showNotificationOnboarding, setShowNotificationOnboarding] = useState(
     !!lenderConfig && !lenderConfig.notificationOnboardingSeen
@@ -600,6 +606,44 @@ function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Renewal Opportunities */}
+          {renewals && renewals.length > 0 && (
+            <Card className="rounded-xl shadow-sm">
+              <CardHeader className="p-5 pb-3">
+                <div className="flex items-center gap-2">
+                  <ArrowClockwise className="h-4 w-4 text-primary" weight="bold" />
+                  <CardTitle className="text-base font-semibold">
+                    Renewal Opportunities
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 pt-0">
+                <div className="space-y-3">
+                  {renewals.slice(0, 5).map((r) => (
+                    <div key={r.loanId} className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{r.borrowerName}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{r.tier}</Badge>
+                          <span>{r.onTimeRate}% on-time</span>
+                        </div>
+                      </div>
+                      <Link
+                        to="/loans/new-wizard"
+                        search={{ renewFromLoanId: r.loanId }}
+                      >
+                        <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs">
+                          <ArrowClockwise className="h-3 w-3" weight="bold" />
+                          Renew
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Forecast */}
           <Card className="rounded-xl shadow-sm">

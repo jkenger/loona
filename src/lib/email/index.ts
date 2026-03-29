@@ -1060,3 +1060,168 @@ export function lenderDailySummaryEmail(params: {
 
   return { subject, html, text }
 }
+
+// ============================================================================
+// Agent: Commission Earned
+// ============================================================================
+
+export function agentCommissionEarnedEmail(params: {
+  agentName: string
+  borrowerName: string
+  lenderName: string
+  paymentAmount: string
+  commissionAmount: string
+  commissionRate: string
+  loanReference: string
+  totalCommissionEarned: string
+}) {
+  const { agentName, borrowerName, lenderName, paymentAmount, commissionAmount, commissionRate, loanReference, totalCommissionEarned } = params
+  const subject = `Commission Earned — ${borrowerName} paid ₱${paymentAmount}`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+    <p style="color: #666; margin: 8px 0 0 0;">Commission Earned</p>
+  </div>
+
+  <p>Hi ${agentName},</p>
+  <p>You earned a commission on a payment collected for <strong>${lenderName}</strong>.</p>
+
+  <div style="background-color: #f0fdf4; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #16a34a;">
+    <div style="font-size: 13px; color: #555; margin-bottom: 4px;">Commission Earned</div>
+    <div style="font-size: 32px; font-weight: 700; color: #16a34a;">₱${commissionAmount}</div>
+    <div style="font-size: 13px; color: #888; margin-top: 4px;">${commissionRate}% of ₱${paymentAmount} payment</div>
+  </div>
+
+  <div style="background-color: #f9fafb; border-radius: 12px; padding: 16px; margin: 16px 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 6px 0; color: #555; font-size: 14px;">Borrower</td><td style="padding: 6px 0; font-weight: 600; text-align: right;">${borrowerName}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 6px 0; color: #555; font-size: 14px;">Payment Amount</td><td style="padding: 6px 0; font-weight: 600; text-align: right;">₱${paymentAmount}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 6px 0; color: #555; font-size: 14px;">Loan Reference</td><td style="padding: 6px 0; font-weight: 600; text-align: right; font-family: monospace;">${loanReference}</td></tr>
+      <tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 6px 0; color: #555; font-size: 14px;">Total Earned (all time)</td><td style="padding: 6px 0; font-weight: 700; text-align: right; color: #16a34a;">₱${totalCommissionEarned}</td></tr>
+    </table>
+  </div>
+
+  <p style="color: #888; font-size: 13px; margin-top: 32px;">Loona · You're receiving this as an agent for ${lenderName}.</p>
+</body>
+</html>`
+
+  const text = `Commission Earned — ${borrowerName} paid ₱${paymentAmount}\n\nHi ${agentName},\n\nYou earned ₱${commissionAmount} (${commissionRate}% of ₱${paymentAmount}) from a payment by ${borrowerName}.\nLoan Reference: ${loanReference}\nTotal earned (all time): ₱${totalCommissionEarned}`
+
+  return { subject, html, text }
+}
+
+// ============================================================================
+// Agent: Borrower Overdue Alert
+// ============================================================================
+
+export function agentBorrowerOverdueEmail(params: {
+  agentName: string
+  borrowerName: string
+  borrowerPhone?: string
+  lenderName: string
+  dueDate: string
+  amountDue: string
+  loanReference: string
+  daysOverdue: number
+}) {
+  const { agentName, borrowerName, borrowerPhone, lenderName, dueDate, amountDue, loanReference, daysOverdue } = params
+  const subject = `Follow-up needed — ${borrowerName} is ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+    <p style="color: #666; margin: 8px 0 0 0;">Borrower Overdue Alert</p>
+  </div>
+
+  <p>Hi ${agentName},</p>
+  <p>A borrower on your assigned loan is overdue. Please follow up.</p>
+
+  <div style="background-color: #fef2f2; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #dc2626;">
+    <div style="font-size: 14px; color: #dc2626; font-weight: 600; margin-bottom: 12px;">⚠ ${daysOverdue} Day${daysOverdue !== 1 ? 's' : ''} Overdue</div>
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 6px 0; color: #555; font-size: 14px;">Borrower</td><td style="padding: 6px 0; font-weight: 600; text-align: right;">${borrowerName}</td></tr>
+      ${borrowerPhone ? `<tr style="border-top: 1px solid #fecaca;"><td style="padding: 6px 0; color: #555; font-size: 14px;">Phone</td><td style="padding: 6px 0; font-weight: 600; text-align: right;">${borrowerPhone}</td></tr>` : ''}
+      <tr style="border-top: 1px solid #fecaca;"><td style="padding: 6px 0; color: #555; font-size: 14px;">Due Date</td><td style="padding: 6px 0; font-weight: 600; text-align: right;">${dueDate}</td></tr>
+      <tr style="border-top: 1px solid #fecaca;"><td style="padding: 6px 0; color: #555; font-size: 14px;">Amount Due</td><td style="padding: 6px 0; font-weight: 700; text-align: right; color: #dc2626;">₱${amountDue}</td></tr>
+      <tr style="border-top: 1px solid #fecaca;"><td style="padding: 6px 0; color: #555; font-size: 14px;">Loan Reference</td><td style="padding: 6px 0; font-weight: 600; text-align: right; font-family: monospace;">${loanReference}</td></tr>
+    </table>
+  </div>
+
+  <p style="color: #888; font-size: 13px; margin-top: 32px;">Loona · You're receiving this as an agent for ${lenderName}.</p>
+</body>
+</html>`
+
+  const text = `Follow-up needed — ${borrowerName} is ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue\n\nHi ${agentName},\n\nBorrower: ${borrowerName}${borrowerPhone ? `\nPhone: ${borrowerPhone}` : ''}\nDue Date: ${dueDate}\nAmount Due: ₱${amountDue}\nLoan: ${loanReference}\n\nPlease follow up as soon as possible.`
+
+  return { subject, html, text }
+}
+
+// ============================================================================
+// Agent: Weekly Summary
+// ============================================================================
+
+export function agentWeeklySummaryEmail(params: {
+  agentName: string
+  lenderName: string
+  weekLabel: string
+  totalCollected: string
+  paymentCount: number
+  commissionEarned: string
+  overdueCount: number
+  assignedLoansCount: number
+  topBorrowers: { name: string; amount: string }[]
+}) {
+  const { agentName, lenderName, weekLabel, totalCollected, paymentCount, commissionEarned, overdueCount, assignedLoansCount, topBorrowers } = params
+  const subject = `Your Weekly Summary — ${weekLabel}`
+
+  const topBorrowerRows = topBorrowers.map(b =>
+    `<tr style="border-top: 1px solid #e5e7eb;"><td style="padding: 6px 0; color: #333; font-size: 14px;">${b.name}</td><td style="padding: 6px 0; font-weight: 600; text-align: right; color: #16a34a;">₱${b.amount}</td></tr>`
+  ).join('')
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 32px;">
+    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
+    <p style="color: #666; margin: 8px 0 0 0;">Weekly Agent Summary</p>
+  </div>
+
+  <p>Hi ${agentName}, here's your collection summary for <strong>${weekLabel}</strong>.</p>
+
+  <div style="background-color: #f0fdf4; border-radius: 12px; padding: 24px; margin: 24px 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 8px 0; color: #555; font-size: 14px;">Total Collected</td><td style="padding: 8px 0; font-weight: 700; font-size: 20px; color: #16a34a; text-align: right;">₱${totalCollected}</td></tr>
+      <tr style="border-top: 1px solid #dcfce7;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Payments Recorded</td><td style="padding: 8px 0; font-weight: 600; text-align: right;">${paymentCount}</td></tr>
+      <tr style="border-top: 1px solid #dcfce7;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Commission Earned</td><td style="padding: 8px 0; font-weight: 700; text-align: right; color: #1a8cff;">₱${commissionEarned}</td></tr>
+      <tr style="border-top: 1px solid #dcfce7;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Assigned Loans</td><td style="padding: 8px 0; font-weight: 600; text-align: right;">${assignedLoansCount}</td></tr>
+      <tr style="border-top: 1px solid #dcfce7;"><td style="padding: 8px 0; color: #555; font-size: 14px;">Overdue Accounts</td><td style="padding: 8px 0; font-weight: 600; text-align: right; color: ${overdueCount > 0 ? '#dc2626' : '#16a34a'};">${overdueCount}</td></tr>
+    </table>
+  </div>
+
+  ${topBorrowers.length > 0 ? `
+  <h3 style="color: #1a1a1a; margin-bottom: 8px;">Top Collections This Week</h3>
+  <div style="background-color: #f9fafb; border-radius: 12px; padding: 16px; margin: 0 0 24px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      ${topBorrowerRows}
+    </table>
+  </div>` : ''}
+
+  <p style="color: #888; font-size: 13px; margin-top: 32px;">Loona · You're receiving this as an agent for ${lenderName}.</p>
+</body>
+</html>`
+
+  const text = `Weekly Summary — ${weekLabel}\n\nHi ${agentName},\n\nTotal Collected: ₱${totalCollected}\nPayments Recorded: ${paymentCount}\nCommission Earned: ₱${commissionEarned}\nAssigned Loans: ${assignedLoansCount}\nOverdue Accounts: ${overdueCount}\n${topBorrowers.length > 0 ? `\nTop Collections:\n${topBorrowers.map(b => `- ${b.name}: ₱${b.amount}`).join('\n')}` : ''}`
+
+  return { subject, html, text }
+}

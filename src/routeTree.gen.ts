@@ -26,6 +26,7 @@ import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as DashboardToolsIndexRouteImport } from './routes/_dashboard/tools/index'
 import { Route as DashboardSettingsIndexRouteImport } from './routes/_dashboard/settings/index'
+import { Route as DashboardReportsIndexRouteImport } from './routes/_dashboard/reports/index'
 import { Route as DashboardPenaltiesIndexRouteImport } from './routes/_dashboard/penalties/index'
 import { Route as DashboardPaymentsIndexRouteImport } from './routes/_dashboard/payments/index'
 import { Route as DashboardLoansIndexRouteImport } from './routes/_dashboard/loans/index'
@@ -43,12 +44,17 @@ import { Route as ApiCronOverdueAlertsRouteImport } from './routes/api/cron/over
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
 import { Route as ApiCronDailySummaryRouteImport } from './routes/api/cron/daily-summary'
+import { Route as ApiCronAgentWeeklySummaryRouteImport } from './routes/api/cron/agent-weekly-summary'
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAdvisorChatRouteImport } from './routes/api/advisor/chat'
 import { Route as ApiAdvisorBriefingRouteImport } from './routes/api/advisor/briefing'
 import { Route as DashboardToolsEstimatorRouteImport } from './routes/_dashboard/tools/estimator'
 import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
+import { Route as DashboardReportsRiskRouteImport } from './routes/_dashboard/reports/risk'
+import { Route as DashboardReportsPortfolioRouteImport } from './routes/_dashboard/reports/portfolio'
+import { Route as DashboardReportsCashFlowRouteImport } from './routes/_dashboard/reports/cash-flow'
+import { Route as DashboardReportsAgentsRouteImport } from './routes/_dashboard/reports/agents'
 import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard/loans/new-wizard'
 import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans/new'
 import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/contacts/new'
@@ -159,6 +165,11 @@ const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
   path: '/settings/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardReportsIndexRoute = DashboardReportsIndexRouteImport.update({
+  id: '/reports/',
+  path: '/reports/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardPenaltiesIndexRoute = DashboardPenaltiesIndexRouteImport.update({
   id: '/penalties/',
   path: '/penalties/',
@@ -244,6 +255,12 @@ const ApiCronDailySummaryRoute = ApiCronDailySummaryRouteImport.update({
   path: '/api/cron/daily-summary',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronAgentWeeklySummaryRoute =
+  ApiCronAgentWeeklySummaryRouteImport.update({
+    id: '/api/cron/agent-weekly-summary',
+    path: '/api/cron/agent-weekly-summary',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAuthErrorRoute = ApiAuthErrorRouteImport.update({
   id: '/api/auth/error',
   path: '/api/auth/error',
@@ -275,6 +292,28 @@ const DashboardSettingsPenaltySettingsRoute =
     path: '/settings/penalty-settings',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardReportsRiskRoute = DashboardReportsRiskRouteImport.update({
+  id: '/reports/risk',
+  path: '/reports/risk',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardReportsPortfolioRoute =
+  DashboardReportsPortfolioRouteImport.update({
+    id: '/reports/portfolio',
+    path: '/reports/portfolio',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardReportsCashFlowRoute =
+  DashboardReportsCashFlowRouteImport.update({
+    id: '/reports/cash-flow',
+    path: '/reports/cash-flow',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardReportsAgentsRoute = DashboardReportsAgentsRouteImport.update({
+  id: '/reports/agents',
+  path: '/reports/agents',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardLoansNewWizardRoute = DashboardLoansNewWizardRouteImport.update({
   id: '/loans/new-wizard',
   path: '/loans/new-wizard',
@@ -448,12 +487,17 @@ export interface FileRoutesByFullPath {
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/reports/agents': typeof DashboardReportsAgentsRoute
+  '/reports/cash-flow': typeof DashboardReportsCashFlowRoute
+  '/reports/portfolio': typeof DashboardReportsPortfolioRoute
+  '/reports/risk': typeof DashboardReportsRiskRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
+  '/api/cron/agent-weekly-summary': typeof ApiCronAgentWeeklySummaryRoute
   '/api/cron/daily-summary': typeof ApiCronDailySummaryRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
@@ -471,6 +515,7 @@ export interface FileRoutesByFullPath {
   '/loans/': typeof DashboardLoansIndexRoute
   '/payments/': typeof DashboardPaymentsIndexRoute
   '/penalties/': typeof DashboardPenaltiesIndexRoute
+  '/reports/': typeof DashboardReportsIndexRoute
   '/settings/': typeof DashboardSettingsIndexRoute
   '/tools/': typeof DashboardToolsIndexRoute
   '/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
@@ -514,12 +559,17 @@ export interface FileRoutesByTo {
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/reports/agents': typeof DashboardReportsAgentsRoute
+  '/reports/cash-flow': typeof DashboardReportsCashFlowRoute
+  '/reports/portfolio': typeof DashboardReportsPortfolioRoute
+  '/reports/risk': typeof DashboardReportsRiskRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
+  '/api/cron/agent-weekly-summary': typeof ApiCronAgentWeeklySummaryRoute
   '/api/cron/daily-summary': typeof ApiCronDailySummaryRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
@@ -537,6 +587,7 @@ export interface FileRoutesByTo {
   '/loans': typeof DashboardLoansIndexRoute
   '/payments': typeof DashboardPaymentsIndexRoute
   '/penalties': typeof DashboardPenaltiesIndexRoute
+  '/reports': typeof DashboardReportsIndexRoute
   '/settings': typeof DashboardSettingsIndexRoute
   '/tools': typeof DashboardToolsIndexRoute
   '/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
@@ -583,12 +634,17 @@ export interface FileRoutesById {
   '/_dashboard/contacts/new': typeof DashboardContactsNewRoute
   '/_dashboard/loans/new': typeof DashboardLoansNewRoute
   '/_dashboard/loans/new-wizard': typeof DashboardLoansNewWizardRoute
+  '/_dashboard/reports/agents': typeof DashboardReportsAgentsRoute
+  '/_dashboard/reports/cash-flow': typeof DashboardReportsCashFlowRoute
+  '/_dashboard/reports/portfolio': typeof DashboardReportsPortfolioRoute
+  '/_dashboard/reports/risk': typeof DashboardReportsRiskRoute
   '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/_dashboard/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
   '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
+  '/api/cron/agent-weekly-summary': typeof ApiCronAgentWeeklySummaryRoute
   '/api/cron/daily-summary': typeof ApiCronDailySummaryRoute
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
@@ -606,6 +662,7 @@ export interface FileRoutesById {
   '/_dashboard/loans/': typeof DashboardLoansIndexRoute
   '/_dashboard/payments/': typeof DashboardPaymentsIndexRoute
   '/_dashboard/penalties/': typeof DashboardPenaltiesIndexRoute
+  '/_dashboard/reports/': typeof DashboardReportsIndexRoute
   '/_dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/_dashboard/tools/': typeof DashboardToolsIndexRoute
   '/_dashboard/admin/blog/$postId': typeof DashboardAdminBlogPostIdRoute
@@ -651,12 +708,17 @@ export interface FileRouteTypes {
     | '/contacts/new'
     | '/loans/new'
     | '/loans/new-wizard'
+    | '/reports/agents'
+    | '/reports/cash-flow'
+    | '/reports/portfolio'
+    | '/reports/risk'
     | '/settings/penalty-settings'
     | '/tools/estimator'
     | '/api/advisor/briefing'
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
+    | '/api/cron/agent-weekly-summary'
     | '/api/cron/daily-summary'
     | '/api/cron/digest'
     | '/api/cron/overdue'
@@ -674,6 +736,7 @@ export interface FileRouteTypes {
     | '/loans/'
     | '/payments/'
     | '/penalties/'
+    | '/reports/'
     | '/settings/'
     | '/tools/'
     | '/admin/blog/$postId'
@@ -717,12 +780,17 @@ export interface FileRouteTypes {
     | '/contacts/new'
     | '/loans/new'
     | '/loans/new-wizard'
+    | '/reports/agents'
+    | '/reports/cash-flow'
+    | '/reports/portfolio'
+    | '/reports/risk'
     | '/settings/penalty-settings'
     | '/tools/estimator'
     | '/api/advisor/briefing'
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
+    | '/api/cron/agent-weekly-summary'
     | '/api/cron/daily-summary'
     | '/api/cron/digest'
     | '/api/cron/overdue'
@@ -740,6 +808,7 @@ export interface FileRouteTypes {
     | '/loans'
     | '/payments'
     | '/penalties'
+    | '/reports'
     | '/settings'
     | '/tools'
     | '/admin/blog/$postId'
@@ -785,12 +854,17 @@ export interface FileRouteTypes {
     | '/_dashboard/contacts/new'
     | '/_dashboard/loans/new'
     | '/_dashboard/loans/new-wizard'
+    | '/_dashboard/reports/agents'
+    | '/_dashboard/reports/cash-flow'
+    | '/_dashboard/reports/portfolio'
+    | '/_dashboard/reports/risk'
     | '/_dashboard/settings/penalty-settings'
     | '/_dashboard/tools/estimator'
     | '/api/advisor/briefing'
     | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
+    | '/api/cron/agent-weekly-summary'
     | '/api/cron/daily-summary'
     | '/api/cron/digest'
     | '/api/cron/overdue'
@@ -808,6 +882,7 @@ export interface FileRouteTypes {
     | '/_dashboard/loans/'
     | '/_dashboard/payments/'
     | '/_dashboard/penalties/'
+    | '/_dashboard/reports/'
     | '/_dashboard/settings/'
     | '/_dashboard/tools/'
     | '/_dashboard/admin/blog/$postId'
@@ -840,6 +915,7 @@ export interface RootRouteChildren {
   ApiAdvisorChatRoute: typeof ApiAdvisorChatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthErrorRoute: typeof ApiAuthErrorRoute
+  ApiCronAgentWeeklySummaryRoute: typeof ApiCronAgentWeeklySummaryRoute
   ApiCronDailySummaryRoute: typeof ApiCronDailySummaryRoute
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
@@ -972,6 +1048,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSettingsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/reports/': {
+      id: '/_dashboard/reports/'
+      path: '/reports'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof DashboardReportsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/penalties/': {
       id: '/_dashboard/penalties/'
       path: '/penalties'
@@ -1091,6 +1174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronDailySummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/agent-weekly-summary': {
+      id: '/api/cron/agent-weekly-summary'
+      path: '/api/cron/agent-weekly-summary'
+      fullPath: '/api/cron/agent-weekly-summary'
+      preLoaderRoute: typeof ApiCronAgentWeeklySummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/error': {
       id: '/api/auth/error'
       path: '/api/auth/error'
@@ -1131,6 +1221,34 @@ declare module '@tanstack/react-router' {
       path: '/settings/penalty-settings'
       fullPath: '/settings/penalty-settings'
       preLoaderRoute: typeof DashboardSettingsPenaltySettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/reports/risk': {
+      id: '/_dashboard/reports/risk'
+      path: '/reports/risk'
+      fullPath: '/reports/risk'
+      preLoaderRoute: typeof DashboardReportsRiskRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/reports/portfolio': {
+      id: '/_dashboard/reports/portfolio'
+      path: '/reports/portfolio'
+      fullPath: '/reports/portfolio'
+      preLoaderRoute: typeof DashboardReportsPortfolioRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/reports/cash-flow': {
+      id: '/_dashboard/reports/cash-flow'
+      path: '/reports/cash-flow'
+      fullPath: '/reports/cash-flow'
+      preLoaderRoute: typeof DashboardReportsCashFlowRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/reports/agents': {
+      id: '/_dashboard/reports/agents'
+      path: '/reports/agents'
+      fullPath: '/reports/agents'
+      preLoaderRoute: typeof DashboardReportsAgentsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/loans/new-wizard': {
@@ -1348,6 +1466,10 @@ interface DashboardRouteChildren {
   DashboardContactsNewRoute: typeof DashboardContactsNewRoute
   DashboardLoansNewRoute: typeof DashboardLoansNewRoute
   DashboardLoansNewWizardRoute: typeof DashboardLoansNewWizardRoute
+  DashboardReportsAgentsRoute: typeof DashboardReportsAgentsRoute
+  DashboardReportsCashFlowRoute: typeof DashboardReportsCashFlowRoute
+  DashboardReportsPortfolioRoute: typeof DashboardReportsPortfolioRoute
+  DashboardReportsRiskRoute: typeof DashboardReportsRiskRoute
   DashboardSettingsPenaltySettingsRoute: typeof DashboardSettingsPenaltySettingsRoute
   DashboardToolsEstimatorRoute: typeof DashboardToolsEstimatorRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
@@ -1358,6 +1480,7 @@ interface DashboardRouteChildren {
   DashboardLoansIndexRoute: typeof DashboardLoansIndexRoute
   DashboardPaymentsIndexRoute: typeof DashboardPaymentsIndexRoute
   DashboardPenaltiesIndexRoute: typeof DashboardPenaltiesIndexRoute
+  DashboardReportsIndexRoute: typeof DashboardReportsIndexRoute
   DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
   DashboardToolsIndexRoute: typeof DashboardToolsIndexRoute
   DashboardAdminBlogPostIdRoute: typeof DashboardAdminBlogPostIdRoute
@@ -1391,6 +1514,10 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardContactsNewRoute: DashboardContactsNewRoute,
   DashboardLoansNewRoute: DashboardLoansNewRoute,
   DashboardLoansNewWizardRoute: DashboardLoansNewWizardRoute,
+  DashboardReportsAgentsRoute: DashboardReportsAgentsRoute,
+  DashboardReportsCashFlowRoute: DashboardReportsCashFlowRoute,
+  DashboardReportsPortfolioRoute: DashboardReportsPortfolioRoute,
+  DashboardReportsRiskRoute: DashboardReportsRiskRoute,
   DashboardSettingsPenaltySettingsRoute: DashboardSettingsPenaltySettingsRoute,
   DashboardToolsEstimatorRoute: DashboardToolsEstimatorRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
@@ -1401,6 +1528,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLoansIndexRoute: DashboardLoansIndexRoute,
   DashboardPaymentsIndexRoute: DashboardPaymentsIndexRoute,
   DashboardPenaltiesIndexRoute: DashboardPenaltiesIndexRoute,
+  DashboardReportsIndexRoute: DashboardReportsIndexRoute,
   DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
   DashboardToolsIndexRoute: DashboardToolsIndexRoute,
   DashboardAdminBlogPostIdRoute: DashboardAdminBlogPostIdRoute,
@@ -1438,6 +1566,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdvisorChatRoute: ApiAdvisorChatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthErrorRoute: ApiAuthErrorRoute,
+  ApiCronAgentWeeklySummaryRoute: ApiCronAgentWeeklySummaryRoute,
   ApiCronDailySummaryRoute: ApiCronDailySummaryRoute,
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
