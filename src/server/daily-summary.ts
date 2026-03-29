@@ -130,10 +130,14 @@ export async function sendDailySummaries() {
     })
 
     try {
-      await sendEmail({ to: lender.email, subject, html, text })
-      sent++
-    } catch {
-      // silently skip
+      const result = await sendEmail({ to: lender.email, subject, html, text })
+      if (result.success && !("skipped" in result)) {
+        sent++
+      } else {
+        console.error("[Daily Summary] Email failed for", lender.email, result)
+      }
+    } catch (err) {
+      console.error("[Daily Summary] Email error for", lender.email, err)
     }
   }
 

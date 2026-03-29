@@ -15,6 +15,7 @@ export type SendEmailParams = {
 
 export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
   if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email] RESEND_API_KEY not set, skipping:', subject, '->', to)
     return { success: true, skipped: true }
   }
 
@@ -28,13 +29,13 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
     })
 
     if (error) {
-      console.error('[Email] Send failed')
+      console.error('[Email] Send failed:', subject, '->', to, error)
       return { success: false, error }
     }
 
     return { success: true, id: data?.id }
   } catch (err) {
-    console.error('[Email] Send error')
+    console.error('[Email] Send error:', subject, '->', to, err)
     return { success: false, error: err }
   }
 }
