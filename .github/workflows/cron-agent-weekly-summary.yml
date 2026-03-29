@@ -11,6 +11,7 @@ on:
 jobs:
   agent-weekly-summary:
     runs-on: ubuntu-latest
+    environment: loona
     steps:
       - name: Validate secrets
         run: |
