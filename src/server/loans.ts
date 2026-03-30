@@ -305,6 +305,75 @@ export const getPublicLoanRecap = createServerFn()
     }
   })
 
+// Public — no auth. Returns loan data for the borrower portal via magic link token.
+export const getPublicLoanByToken = createServerFn()
+  .inputValidator(z.string())
+  .handler(async ({ data: token }) => {
+    const result = await db.query.loans.findFirst({
+      where: eq(loans.borrowerToken, token),
+      with: {
+        contact: true,
+        lender: true,
+        schedule: { orderBy: paymentSchedule.dueDate },
+        payments: {
+          orderBy: (p, { desc }) => [desc(p.paidAt)],
+        },
+        penalties: true,
+      },
+    })
+
+    if (!result) return null
+
+    const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig)
+    const totalPenalties = result.penalties
+      .filter((p) => p.status === "applied")
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0)
+
+    // Find next pending payment
+    const nextPayment = result.schedule.find((s) => s.status === "pending" || s.status === "overdue")
+    const overdueCount = result.schedule.filter((s) => s.status === "overdue").length
+    const paidCount = result.schedule.filter((s) => s.status === "paid").length
+
+    return {
+      id: result.id,
+      status: result.status,
+      lenderName: result.lender.name,
+      borrowerName: result.contact.name,
+      principal: result.principal,
+      totalToRepay: result.totalToRepay,
+      amountPaid: result.amountPaid,
+      remainingBalance: result.remainingBalance,
+      interestRate: result.interestRate,
+      termMonths: result.termMonths,
+      paymentFrequency: result.paymentFrequency,
+      startDate: result.startDate?.toISOString() ?? null,
+      maturityDate: result.maturityDate?.toISOString() ?? null,
+      gracePeriodDays: penaltyConfig.gracePeriodDays,
+      totalPenalties,
+      overdueCount,
+      paidCount,
+      totalScheduleItems: result.schedule.length,
+      nextPayment: nextPayment ? {
+        dueDate: nextPayment.dueDate.toISOString(),
+        amount: nextPayment.amount,
+        status: nextPayment.status,
+      } : null,
+      schedule: result.schedule.map((s) => ({
+        dueDate: s.dueDate.toISOString(),
+        amount: s.amount,
+        paidAmount: s.paidAmount,
+        paidAt: s.paidAt?.toISOString() ?? null,
+        status: s.status,
+      })),
+      payments: result.payments.slice(0, 10).map((p) => ({
+        amount: p.amount,
+        method: p.method,
+        paidAt: p.paidAt.toISOString(),
+        type: p.type,
+      })),
+    }
+  })
+
 export const createLoan = createServerFn()
   .inputValidator(createLoanSchema)
   .handler(async ({ data }) => {
@@ -365,6 +434,8 @@ export const createLoan = createServerFn()
       coMakerRelationship: data.coMakerRelationship || null,
       // Snapshot penalty config
       penaltyConfig: penaltySettingsRow?.config ?? null,
+      // Borrower portal magic link token
+      borrowerToken: crypto.randomUUID().replace(/-/g, "").slice(0, 24),
     })
     .returning()
 
@@ -651,6 +722,7 @@ export const createContactAndLoan = createServerFn()
         penaltyConfig: penaltyConfigSnapshot,
         processingFeePercent: data.processingFeePercent?.toString() || null,
         assignedAgentId: data.assignedAgentId || null,
+        borrowerToken: crypto.randomUUID().replace(/-/g, "").slice(0, 24),
       })
       .returning()
 
@@ -1057,6 +1129,7 @@ export const createLoanAsAgent = createServerFn()
         createdByAgentId: agent.id,
         assignedAgentId: agent.id,
         penaltyConfig: penaltySettingsRow?.config ?? null,
+        borrowerToken: crypto.randomUUID().replace(/-/g, "").slice(0, 24),
       })
       .returning()
 

@@ -1,4 +1,6 @@
 import { Resend } from 'resend'
+import { render } from '@react-email/render'
+import { PaymentReceiptTemplate } from './templates/payment-receipt'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -660,7 +662,7 @@ If you were not expecting this, you can ignore this email.
   return { subject, html, text }
 }
 
-export function paymentReceiptEmail(params: {
+export async function paymentReceiptEmail(params: {
   borrowerName: string
   lenderName: string
   amount: string
@@ -668,83 +670,30 @@ export function paymentReceiptEmail(params: {
   paidAt: string
   remainingBalance: string
   loanReference: string
+  loanPortalUrl?: string
 }) {
-  const { borrowerName, lenderName, amount, method, paidAt, remainingBalance, loanReference } = params
-  const subject = `Payment Receipt — ₱${amount} received`
+  const { borrowerName, lenderName, amount, method, paidAt, remainingBalance, loanReference, loanPortalUrl } = params
+  const subject = `Payment Received — ₱${amount}`
   const isFullyPaid = parseFloat(remainingBalance) <= 0
+  const firstName = borrowerName.split(' ')[0]
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; margin-bottom: 32px;">
-    <h1 style="color: #1a8cff; margin: 0; font-size: 28px;">Loona</h1>
-    <p style="color: #666; margin: 8px 0 0 0;">Payment Receipt</p>
-  </div>
+  const html = await render(PaymentReceiptTemplate({
+    borrowerName, lenderName, amount, method, paidAt, remainingBalance, loanReference, loanPortalUrl,
+  }))
 
-  <p>Hi ${borrowerName},</p>
-  <p>Your payment has been received and recorded. Here are the details:</p>
+  const text = `Payment Received — ₱${amount}
 
-  <div style="background-color: #f9fafb; border-radius: 12px; padding: 24px; margin: 24px 0;">
-    <table style="width: 100%; border-collapse: collapse;">
-      <tr>
-        <td style="padding: 8px 0; color: #555; font-size: 14px;">Amount Paid</td>
-        <td style="padding: 8px 0; font-weight: 700; font-size: 18px; color: #16a34a; text-align: right;">₱${amount}</td>
-      </tr>
-      <tr style="border-top: 1px solid #e5e7eb;">
-        <td style="padding: 8px 0; color: #555; font-size: 14px;">Payment Method</td>
-        <td style="padding: 8px 0; font-weight: 500; text-align: right;">${method}</td>
-      </tr>
-      <tr style="border-top: 1px solid #e5e7eb;">
-        <td style="padding: 8px 0; color: #555; font-size: 14px;">Date</td>
-        <td style="padding: 8px 0; font-weight: 500; text-align: right;">${paidAt}</td>
-      </tr>
-      <tr style="border-top: 1px solid #e5e7eb;">
-        <td style="padding: 8px 0; color: #555; font-size: 14px;">Loan Reference</td>
-        <td style="padding: 8px 0; font-weight: 500; text-align: right;">${loanReference}</td>
-      </tr>
-      <tr style="border-top: 1px solid #e5e7eb;">
-        <td style="padding: 8px 0; color: #555; font-size: 14px;">Remaining Balance</td>
-        <td style="padding: 8px 0; font-weight: 700; text-align: right; color: ${isFullyPaid ? '#16a34a' : '#1a1a1a'};">${isFullyPaid ? 'FULLY PAID' : '₱' + remainingBalance}</td>
-      </tr>
-    </table>
-  </div>
+Hi ${firstName},
 
-  ${isFullyPaid ? `
-  <div style="background-color: #f0fdf4; border: 2px solid #16a34a; border-radius: 12px; padding: 16px; text-align: center; margin: 24px 0;">
-    <p style="margin: 0; color: #15803d; font-weight: 600;">Congratulations! Your loan has been fully paid. 🎉</p>
-  </div>
-  ` : ''}
+Your payment of ₱${amount} has been recorded by ${lenderName}.
 
-  <p style="color: #555; font-size: 14px;">This receipt was issued by <strong>${lenderName}</strong> via Loona.</p>
-
-  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
-  <p style="color: #999; font-size: 12px; text-align: center;">Please keep this email for your records.</p>
-</body>
-</html>
-  `
-
-  const text = `
-Payment Receipt
-
-Hi ${borrowerName},
-
-Your payment of ₱${amount} has been received.
-
-Amount Paid: ₱${amount}
-Payment Method: ${method}
+Method: ${method}
 Date: ${paidAt}
 Loan Reference: ${loanReference}
 Remaining Balance: ${isFullyPaid ? 'FULLY PAID' : '₱' + remainingBalance}
+${isFullyPaid ? '\nCongratulations! Your loan has been fully paid.' : ''}${loanPortalUrl ? `\nView your loan: ${loanPortalUrl}` : ''}
 
-${isFullyPaid ? 'Congratulations! Your loan has been fully paid.' : ''}
-
-Issued by ${lenderName} via Loona.
-  `
+Issued by ${lenderName} · Powered by Loona`
 
   return { subject, html, text }
 }

@@ -430,7 +430,8 @@ export const recordPayment = createServerFn()
     const paidAtFormatted = paymentDate.toLocaleDateString("en-PH", {
       year: "numeric", month: "long", day: "numeric",
     })
-    const { subject, html, text } = paymentReceiptEmail({
+    const baseUrl = process.env.BETTER_AUTH_URL || "https://loona.ph"
+    const { subject, html, text } = await paymentReceiptEmail({
       borrowerName: loan.contact.name,
       lenderName: session.user.name,
       amount: data.amount.toFixed(2),
@@ -438,6 +439,7 @@ export const recordPayment = createServerFn()
       paidAt: paidAtFormatted,
       remainingBalance: Math.max(0, newRemainingBalance).toFixed(2),
       loanReference: loan.id.slice(0, 8).toUpperCase(),
+      loanPortalUrl: loan.borrowerToken ? `${baseUrl}/share/loan/${loan.borrowerToken}` : undefined,
     })
     sendEmail({ to: loan.contact.email, subject, html, text }).catch(() => {})
   }

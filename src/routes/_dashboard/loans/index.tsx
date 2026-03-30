@@ -16,6 +16,7 @@ import {
   Clock,
   CheckCircle,
   Funnel,
+  ClipboardText,
 } from "@phosphor-icons/react"
 import { useState, useMemo } from "react"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
@@ -176,12 +177,20 @@ function LoansPage() {
             <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
             <p className="text-muted-foreground">Manage your lending portfolio</p>
           </div>
-          <Link to="/loans/new-wizard">
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" weight="bold" />
-              New Loan
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/loans/applications">
+              <Button variant="outline" className="gap-2">
+                <ClipboardText className="h-4 w-4" weight="bold" />
+                Applications
+              </Button>
+            </Link>
+            <Link to="/loans/new-wizard">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" weight="bold" />
+                New Loan
+              </Button>
+            </Link>
+          </div>
         </div>
       </StaggerItem>
 

@@ -333,6 +333,20 @@ function LoanDetailPage() {
           </div>
           {loan.isLender && (
             <div className="flex gap-2">
+              {loan.borrowerToken && (
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    const url = `${window.location.origin}/share/loan/${loan.borrowerToken}`
+                    navigator.clipboard.writeText(url)
+                    toast.success("Borrower link copied!")
+                  }}
+                >
+                  <LinkSimple className="h-4 w-4" weight="bold" />
+                  Share
+                </Button>
+              )}
               {loan.status === "completed" && (
                 <Link
                   to="/loans/new-wizard"

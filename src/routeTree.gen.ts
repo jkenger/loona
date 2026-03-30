@@ -38,8 +38,10 @@ import { Route as DashboardAdminIndexRouteImport } from './routes/_dashboard/adm
 import { Route as ShareSignTokenRouteImport } from './routes/share/sign/$token'
 import { Route as ShareReceiptPaymentIdRouteImport } from './routes/share/receipt/$paymentId'
 import { Route as ShareRecapLoanIdRouteImport } from './routes/share/recap/$loanId'
+import { Route as ShareLoanTokenRouteImport } from './routes/share/loan/$token'
 import { Route as ShareLenderUserIdRouteImport } from './routes/share/lender/$userId'
 import { Route as ShareBorrowerContactIdRouteImport } from './routes/share/borrower/$contactId'
+import { Route as ShareApplyTokenRouteImport } from './routes/share/apply/$token'
 import { Route as ApiCronOverdueAlertsRouteImport } from './routes/api/cron/overdue-alerts'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
@@ -57,6 +59,7 @@ import { Route as DashboardReportsCashFlowRouteImport } from './routes/_dashboar
 import { Route as DashboardReportsAgentsRouteImport } from './routes/_dashboard/reports/agents'
 import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard/loans/new-wizard'
 import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans/new'
+import { Route as DashboardLoansApplicationsRouteImport } from './routes/_dashboard/loans/applications'
 import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/contacts/new'
 import { Route as DashboardContactsContactIdRouteImport } from './routes/_dashboard/contacts/$contactId'
 import { Route as DashboardAgentsCommissionSettingsRouteImport } from './routes/_dashboard/agents/commission-settings'
@@ -225,6 +228,11 @@ const ShareRecapLoanIdRoute = ShareRecapLoanIdRouteImport.update({
   path: '/share/recap/$loanId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareLoanTokenRoute = ShareLoanTokenRouteImport.update({
+  id: '/share/loan/$token',
+  path: '/share/loan/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareLenderUserIdRoute = ShareLenderUserIdRouteImport.update({
   id: '/share/lender/$userId',
   path: '/share/lender/$userId',
@@ -233,6 +241,11 @@ const ShareLenderUserIdRoute = ShareLenderUserIdRouteImport.update({
 const ShareBorrowerContactIdRoute = ShareBorrowerContactIdRouteImport.update({
   id: '/share/borrower/$contactId',
   path: '/share/borrower/$contactId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareApplyTokenRoute = ShareApplyTokenRouteImport.update({
+  id: '/share/apply/$token',
+  path: '/share/apply/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronOverdueAlertsRoute = ApiCronOverdueAlertsRouteImport.update({
@@ -324,6 +337,12 @@ const DashboardLoansNewRoute = DashboardLoansNewRouteImport.update({
   path: '/loans/new',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardLoansApplicationsRoute =
+  DashboardLoansApplicationsRouteImport.update({
+    id: '/loans/applications',
+    path: '/loans/applications',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardContactsNewRoute = DashboardContactsNewRouteImport.update({
   id: '/contacts/new',
   path: '/contacts/new',
@@ -485,6 +504,7 @@ export interface FileRoutesByFullPath {
   '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/contacts/new': typeof DashboardContactsNewRoute
+  '/loans/applications': typeof DashboardLoansApplicationsRoute
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/reports/agents': typeof DashboardReportsAgentsRoute
@@ -502,8 +522,10 @@ export interface FileRoutesByFullPath {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
+  '/share/apply/$token': typeof ShareApplyTokenRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
+  '/share/loan/$token': typeof ShareLoanTokenRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/share/receipt/$paymentId': typeof ShareReceiptPaymentIdRoute
   '/share/sign/$token': typeof ShareSignTokenRoute
@@ -557,6 +579,7 @@ export interface FileRoutesByTo {
   '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/contacts/new': typeof DashboardContactsNewRoute
+  '/loans/applications': typeof DashboardLoansApplicationsRoute
   '/loans/new': typeof DashboardLoansNewRoute
   '/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/reports/agents': typeof DashboardReportsAgentsRoute
@@ -574,8 +597,10 @@ export interface FileRoutesByTo {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
+  '/share/apply/$token': typeof ShareApplyTokenRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
+  '/share/loan/$token': typeof ShareLoanTokenRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/share/receipt/$paymentId': typeof ShareReceiptPaymentIdRoute
   '/share/sign/$token': typeof ShareSignTokenRoute
@@ -632,6 +657,7 @@ export interface FileRoutesById {
   '/_dashboard/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
   '/_dashboard/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/_dashboard/contacts/new': typeof DashboardContactsNewRoute
+  '/_dashboard/loans/applications': typeof DashboardLoansApplicationsRoute
   '/_dashboard/loans/new': typeof DashboardLoansNewRoute
   '/_dashboard/loans/new-wizard': typeof DashboardLoansNewWizardRoute
   '/_dashboard/reports/agents': typeof DashboardReportsAgentsRoute
@@ -649,8 +675,10 @@ export interface FileRoutesById {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
+  '/share/apply/$token': typeof ShareApplyTokenRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
+  '/share/loan/$token': typeof ShareLoanTokenRoute
   '/share/recap/$loanId': typeof ShareRecapLoanIdRoute
   '/share/receipt/$paymentId': typeof ShareReceiptPaymentIdRoute
   '/share/sign/$token': typeof ShareSignTokenRoute
@@ -706,6 +734,7 @@ export interface FileRouteTypes {
     | '/agents/commission-settings'
     | '/contacts/$contactId'
     | '/contacts/new'
+    | '/loans/applications'
     | '/loans/new'
     | '/loans/new-wizard'
     | '/reports/agents'
@@ -723,8 +752,10 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
+    | '/share/apply/$token'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
+    | '/share/loan/$token'
     | '/share/recap/$loanId'
     | '/share/receipt/$paymentId'
     | '/share/sign/$token'
@@ -778,6 +809,7 @@ export interface FileRouteTypes {
     | '/agents/commission-settings'
     | '/contacts/$contactId'
     | '/contacts/new'
+    | '/loans/applications'
     | '/loans/new'
     | '/loans/new-wizard'
     | '/reports/agents'
@@ -795,8 +827,10 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
+    | '/share/apply/$token'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
+    | '/share/loan/$token'
     | '/share/recap/$loanId'
     | '/share/receipt/$paymentId'
     | '/share/sign/$token'
@@ -852,6 +886,7 @@ export interface FileRouteTypes {
     | '/_dashboard/agents/commission-settings'
     | '/_dashboard/contacts/$contactId'
     | '/_dashboard/contacts/new'
+    | '/_dashboard/loans/applications'
     | '/_dashboard/loans/new'
     | '/_dashboard/loans/new-wizard'
     | '/_dashboard/reports/agents'
@@ -869,8 +904,10 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
+    | '/share/apply/$token'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
+    | '/share/loan/$token'
     | '/share/recap/$loanId'
     | '/share/receipt/$paymentId'
     | '/share/sign/$token'
@@ -920,8 +957,10 @@ export interface RootRouteChildren {
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
   ApiCronOverdueAlertsRoute: typeof ApiCronOverdueAlertsRoute
+  ShareApplyTokenRoute: typeof ShareApplyTokenRoute
   ShareBorrowerContactIdRoute: typeof ShareBorrowerContactIdRoute
   ShareLenderUserIdRoute: typeof ShareLenderUserIdRoute
+  ShareLoanTokenRoute: typeof ShareLoanTokenRoute
   ShareRecapLoanIdRoute: typeof ShareRecapLoanIdRoute
   ShareReceiptPaymentIdRoute: typeof ShareReceiptPaymentIdRoute
   ShareSignTokenRoute: typeof ShareSignTokenRoute
@@ -1132,6 +1171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareRecapLoanIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/loan/$token': {
+      id: '/share/loan/$token'
+      path: '/share/loan/$token'
+      fullPath: '/share/loan/$token'
+      preLoaderRoute: typeof ShareLoanTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share/lender/$userId': {
       id: '/share/lender/$userId'
       path: '/share/lender/$userId'
@@ -1144,6 +1190,13 @@ declare module '@tanstack/react-router' {
       path: '/share/borrower/$contactId'
       fullPath: '/share/borrower/$contactId'
       preLoaderRoute: typeof ShareBorrowerContactIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share/apply/$token': {
+      id: '/share/apply/$token'
+      path: '/share/apply/$token'
+      fullPath: '/share/apply/$token'
+      preLoaderRoute: typeof ShareApplyTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/overdue-alerts': {
@@ -1263,6 +1316,13 @@ declare module '@tanstack/react-router' {
       path: '/loans/new'
       fullPath: '/loans/new'
       preLoaderRoute: typeof DashboardLoansNewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/loans/applications': {
+      id: '/_dashboard/loans/applications'
+      path: '/loans/applications'
+      fullPath: '/loans/applications'
+      preLoaderRoute: typeof DashboardLoansApplicationsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/contacts/new': {
@@ -1464,6 +1524,7 @@ interface DashboardRouteChildren {
   DashboardAgentsCommissionSettingsRoute: typeof DashboardAgentsCommissionSettingsRoute
   DashboardContactsContactIdRoute: typeof DashboardContactsContactIdRoute
   DashboardContactsNewRoute: typeof DashboardContactsNewRoute
+  DashboardLoansApplicationsRoute: typeof DashboardLoansApplicationsRoute
   DashboardLoansNewRoute: typeof DashboardLoansNewRoute
   DashboardLoansNewWizardRoute: typeof DashboardLoansNewWizardRoute
   DashboardReportsAgentsRoute: typeof DashboardReportsAgentsRoute
@@ -1512,6 +1573,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
     DashboardAgentsCommissionSettingsRoute,
   DashboardContactsContactIdRoute: DashboardContactsContactIdRoute,
   DashboardContactsNewRoute: DashboardContactsNewRoute,
+  DashboardLoansApplicationsRoute: DashboardLoansApplicationsRoute,
   DashboardLoansNewRoute: DashboardLoansNewRoute,
   DashboardLoansNewWizardRoute: DashboardLoansNewWizardRoute,
   DashboardReportsAgentsRoute: DashboardReportsAgentsRoute,
@@ -1571,8 +1633,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
   ApiCronOverdueAlertsRoute: ApiCronOverdueAlertsRoute,
+  ShareApplyTokenRoute: ShareApplyTokenRoute,
   ShareBorrowerContactIdRoute: ShareBorrowerContactIdRoute,
   ShareLenderUserIdRoute: ShareLenderUserIdRoute,
+  ShareLoanTokenRoute: ShareLoanTokenRoute,
   ShareRecapLoanIdRoute: ShareRecapLoanIdRoute,
   ShareReceiptPaymentIdRoute: ShareReceiptPaymentIdRoute,
   ShareSignTokenRoute: ShareSignTokenRoute,

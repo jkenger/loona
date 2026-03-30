@@ -6,6 +6,8 @@ import {
   commissions,
   loans,
   contacts,
+  payments,
+  paymentSchedule,
 } from '@/lib/db'
 import { eq, desc, and, sql } from 'drizzle-orm'
 import { requireAuth } from './session'
@@ -81,14 +83,86 @@ export const getAgents = createServerFn().handler(async () => {
 
   const countMap = new Map(loanCounts.map((c) => [c.agentId, c.count]))
 
-  return result.map((a) => ({
-    ...a,
-    createdAt: a.createdAt.toISOString(),
-    pendingCommission: (
-      parseFloat(a.totalCommissionEarned) - parseFloat(a.totalCommissionPaid)
-    ).toFixed(2),
-    assignedLoansCount: countMap.get(a.id) || 0,
-  }))
+  // Get extended metrics per agent: last active, contacts managed, overdue count, collection stats
+  const extendedMetrics = agentIds.length > 0
+    ? await Promise.all(agentIds.map(async (agentId) => {
+        // Last payment date
+        const lastPayment = await db.query.payments.findFirst({
+          where: and(eq(payments.recordedByAgentId, agentId), eq(payments.type, "credit")),
+          orderBy: desc(payments.paidAt),
+        })
+        // Contacts created by this agent
+        const contactCount = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(contacts)
+          .where(eq(contacts.createdByAgentId, agentId))
+        // Overdue items on assigned loans
+        const overdueCount = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(paymentSchedule)
+          .innerJoin(loans, eq(paymentSchedule.loanId, loans.id))
+          .where(and(eq(loans.assignedAgentId, agentId), eq(paymentSchedule.status, "overdue")))
+        // Collection rate: paid vs total on assigned loans
+        const collectionStats = await db
+          .select({
+            expected: sql<string>`coalesce(sum(${paymentSchedule.amount}), 0)`,
+            collected: sql<string>`coalesce(sum(${paymentSchedule.paidAmount}), 0)`,
+            onTime: sql<number>`count(*) filter (where ${paymentSchedule.status} = 'paid' and ${paymentSchedule.paidAt} <= ${paymentSchedule.dueDate})::int`,
+            totalPaid: sql<number>`count(*) filter (where ${paymentSchedule.status} = 'paid')::int`,
+          })
+          .from(paymentSchedule)
+          .innerJoin(loans, eq(paymentSchedule.loanId, loans.id))
+          .where(eq(loans.assignedAgentId, agentId))
+        // This month's collections
+        const monthStart = new Date()
+        monthStart.setDate(1)
+        monthStart.setHours(0, 0, 0, 0)
+        const monthCollections = await db
+          .select({ total: sql<string>`coalesce(sum(${payments.amount}), 0)` })
+          .from(payments)
+          .where(and(
+            eq(payments.recordedByAgentId, agentId),
+            eq(payments.type, "credit"),
+            sql`${payments.reversedAt} IS NULL`,
+            sql`${payments.paidAt} >= ${monthStart}`,
+          ))
+
+        const exp = Number(collectionStats[0]?.expected ?? 0)
+        const col = Number(collectionStats[0]?.collected ?? 0)
+        const totalPaid = collectionStats[0]?.totalPaid ?? 0
+        const onTime = collectionStats[0]?.onTime ?? 0
+
+        return {
+          agentId,
+          lastActiveAt: lastPayment?.paidAt?.toISOString() ?? null,
+          contactsManaged: contactCount[0]?.count ?? 0,
+          overdueCount: overdueCount[0]?.count ?? 0,
+          collectionRate: exp > 0 ? Math.round((col / exp) * 100) : 0,
+          onTimeRate: totalPaid > 0 ? Math.round((onTime / totalPaid) * 100) : 0,
+          thisMonthCollected: Number(monthCollections[0]?.total ?? 0),
+        }
+      }))
+    : []
+
+  const metricsMap = new Map(extendedMetrics.map((m) => [m.agentId, m]))
+
+  return result.map((a) => {
+    const m = metricsMap.get(a.id)
+    return {
+      ...a,
+      createdAt: a.createdAt.toISOString(),
+      pendingCommission: (
+        parseFloat(a.totalCommissionEarned) - parseFloat(a.totalCommissionPaid)
+      ).toFixed(2),
+      assignedLoansCount: countMap.get(a.id) || 0,
+      lastActiveAt: m?.lastActiveAt ?? null,
+      contactsManaged: m?.contactsManaged ?? 0,
+      overdueCount: m?.overdueCount ?? 0,
+      collectionRate: m?.collectionRate ?? 0,
+      onTimeRate: m?.onTimeRate ?? 0,
+      thisMonthCollected: m?.thisMonthCollected ?? 0,
+    }
+  })
 })
 
 // Create a new agent

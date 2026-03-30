@@ -461,6 +461,31 @@ function SettingsPage() {
             </Link>
           </SettingRow>
 
+          {/* Loan Applications */}
+          <SettingRow label="Loan Application Link" description="Share this link so borrowers can apply directly">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => {
+                  const url = `${window.location.origin}/share/apply/${user?.id}`
+                  navigator.clipboard.writeText(url)
+                  toast.success("Application link copied!")
+                }}
+              >
+                Copy Link
+                <LinkSimple className="h-3.5 w-3.5" />
+              </Button>
+              <Link to="/loans/applications">
+                <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5">
+                  View Applications
+                  <ArrowSquareOut className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
+          </SettingRow>
+
           <div className="h-3" />
         </Section>
       )}

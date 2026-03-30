@@ -39,6 +39,12 @@ import {
   BookOpenText,
   Calculator,
   ChartLineUp,
+  SquaresFour,
+  Handshake,
+  AddressBook,
+  ArrowsLeftRight,
+  IdentificationBadge,
+  Notebook,
 } from "@phosphor-icons/react"
 import {
   Popover,
@@ -107,17 +113,21 @@ export const Route = createFileRoute("/_dashboard")({
   component: DashboardLayout,
 })
 
-// Navigation items for lenders
-const lenderNavigation = [
-  { name: "Dashboard", href: "/dashboard", icon: House, exact: true },
-  { name: "Contacts", href: "/contacts", icon: Users, exact: false },
-  { name: "Loans", href: "/loans", icon: CurrencyCircleDollar, exact: false },
-  { name: "Payments", href: "/payments", icon: Receipt, exact: false },
-  { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
-  { name: "Estimator", href: "/tools/estimator", icon: Calculator, exact: false },
-  { name: "Reports", href: "/reports", icon: ChartLineUp, exact: false },
-  { name: "Playbook", href: "/playbook", icon: BookOpenText, exact: true },
+// Navigation items for lenders — split into primary (always visible) and more (collapsible)
+const lenderPrimaryNav = [
+  { name: "Dashboard", href: "/dashboard", icon: SquaresFour, exact: true },
+  { name: "Loans", href: "/loans", icon: Handshake, exact: false },
+  { name: "Contacts", href: "/contacts", icon: AddressBook, exact: false },
+  { name: "Payments", href: "/payments", icon: ArrowsLeftRight, exact: false },
 ]
+const lenderMoreNav = [
+  { name: "Agents", href: "/agents", icon: IdentificationBadge, exact: false },
+  { name: "Reports", href: "/reports", icon: ChartLineUp, exact: false },
+  { name: "Estimator", href: "/tools/estimator", icon: Calculator, exact: false },
+  { name: "Playbook", href: "/playbook", icon: Notebook, exact: false },
+]
+// Combined for portal detection and mobile nav
+const lenderNavigation = [...lenderPrimaryNav, ...lenderMoreNav]
 
 // Navigation items for admin portal
 const adminNavigation = [
@@ -177,6 +187,15 @@ function DashboardLayout() {
         ? lenderNavigation
         : []
   const portal: "lender" | "agent" | "admin" = isOnAdminPortal && isAdmin ? "admin" : isOnAgentPortal && isAgent ? "agent" : "lender"
+
+  // Split nav into primary + more (lender only — other portals show all)
+  const primaryNav = portal === "lender" ? lenderPrimaryNav : navigation
+  const moreNav = portal === "lender" ? lenderMoreNav : []
+  // Auto-expand "more" if user is on a "more" route
+  const isOnMoreRoute = moreNav.some((item) =>
+    item.exact ? location.pathname === item.href : location.pathname.startsWith(item.href)
+  )
+  const [showMoreNav, setShowMoreNav] = useState(isOnMoreRoute)
 
   const homeLink = isOnAdminPortal && isAdmin
     ? "/admin"
@@ -305,8 +324,10 @@ function DashboardLayout() {
 
           {/* Nav links */}
           <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-            {navigation.map((item) => {
+            {/* Primary nav — always visible */}
+            {primaryNav.map((item) => {
               const forceActive = item.href === "/payments" && location.pathname.startsWith("/penalties")
+              const isActive = forceActive || (item.exact ? location.pathname === item.href : location.pathname.startsWith(item.href))
               return (
                 <Link
                   key={item.name}
@@ -314,11 +335,38 @@ function DashboardLayout() {
                   activeOptions={{ exact: item.exact }}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors [&.active]:bg-sidebar-primary/10 [&.active]:text-sidebar-primary [&.active]:font-semibold ${forceActive ? "bg-sidebar-primary/10 text-sidebar-primary font-semibold" : ""}`}
                 >
-                  <item.icon className="h-5 w-5 shrink-0" />
+                  <item.icon className="h-5 w-5 shrink-0" weight={isActive ? "fill" : "duotone"} />
                   {item.name}
                 </Link>
               )
             })}
+
+            {/* More section — collapsible */}
+            {moreNav.length > 0 && (
+              <>
+                <button
+                  onClick={() => setShowMoreNav(!showMoreNav)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors w-full text-left mt-2"
+                >
+                  <CaretDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showMoreNav ? "" : "-rotate-90"}`} />
+                  More
+                </button>
+                {showMoreNav && moreNav.map((item) => {
+                  const isActive = item.exact ? location.pathname === item.href : location.pathname.startsWith(item.href)
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      activeOptions={{ exact: item.exact }}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors [&.active]:bg-sidebar-primary/10 [&.active]:text-sidebar-primary [&.active]:font-semibold`}
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" weight={isActive ? "fill" : "duotone"} />
+                      {item.name}
+                    </Link>
+                  )
+                })}
+              </>
+            )}
           </nav>
 
           {/* Cash Position Card — lender portal only */}
@@ -430,7 +478,7 @@ function DashboardLayout() {
               activeOptions={{ exact: false }}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors [&.active]:bg-sidebar-primary/10 [&.active]:text-sidebar-primary [&.active]:font-semibold"
             >
-              <Gear className="h-5 w-5 shrink-0" />
+              <Gear className="h-5 w-5 shrink-0" weight={location.pathname.startsWith("/settings") ? "fill" : "duotone"} />
               Settings
             </Link>
 
@@ -440,7 +488,7 @@ function DashboardLayout() {
                 to="/admin"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
               >
-                <ShieldStar className="h-5 w-5 shrink-0" />
+                <ShieldStar className="h-5 w-5 shrink-0" weight="duotone" />
                 Admin Portal
               </Link>
             )}
@@ -449,7 +497,7 @@ function DashboardLayout() {
                 to="/agent"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
               >
-                <UsersThree className="h-5 w-5 shrink-0" />
+                <UsersThree className="h-5 w-5 shrink-0" weight="duotone" />
                 Agent Portal
               </Link>
             )}
@@ -458,7 +506,7 @@ function DashboardLayout() {
                 to="/dashboard"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
               >
-                <House className="h-5 w-5 shrink-0" />
+                <House className="h-5 w-5 shrink-0" weight="duotone" />
                 Back to Dashboard
               </Link>
             )}
@@ -467,7 +515,7 @@ function DashboardLayout() {
                 to={isLender ? "/dashboard" : "/admin"}
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
               >
-                <House className="h-5 w-5 shrink-0" />
+                <House className="h-5 w-5 shrink-0" weight="duotone" />
                 {isLender ? "Back to Dashboard" : "Back to Admin"}
               </Link>
             )}
@@ -477,7 +525,7 @@ function DashboardLayout() {
               <Popover onOpenChange={(open) => { if (open) markPostsSeen() }}>
                 <PopoverTrigger className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors w-full text-left">
                   <span className="relative">
-                    <Newspaper className="h-5 w-5 shrink-0" />
+                    <Newspaper className="h-5 w-5 shrink-0" weight="duotone" />
                     {hasNewPosts && (
                       <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
@@ -543,7 +591,7 @@ function DashboardLayout() {
               onClick={handleSignOut}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-destructive transition-colors w-full text-left"
             >
-              <SignOut className="h-5 w-5 shrink-0" />
+              <SignOut className="h-5 w-5 shrink-0" weight="duotone" />
               Sign out
             </button>
           </div>

@@ -246,6 +246,20 @@
       "when": 1774097931050,
       "tag": "0034_sloppy_harrier",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1774836761809,
+      "tag": "0035_true_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1774852502583,
+      "tag": "0036_silent_amazoness",
+      "breakpoints": true
     }
   ]
 }

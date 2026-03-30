@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter, Link } from '@tanstack/react-router'
-import { useState, Fragment } from 'react'
+import { useState } from 'react'
 import { format } from 'date-fns'
 import {
   UsersThree,
@@ -11,13 +11,10 @@ import {
   Check,
   Warning,
   Envelope,
-  NotePencil,
   Key,
   CalendarBlank,
-  CaretDown,
   GearSix,
   ChartBar,
-  CheckCircle,
   DotsThreeVertical,
   Prohibit,
 } from '@phosphor-icons/react'
@@ -351,577 +348,287 @@ function AgentsPage() {
   const totalPendingPayouts = agents.reduce((sum, a) => sum + parseFloat(a.pendingCommission), 0)
   const agentsWithPayouts = agents.filter((a) => parseFloat(a.pendingCommission) > 0)
 
+  const formatDate = (iso: string | null) => {
+    if (!iso) return "Never"
+    const d = new Date(iso)
+    const now = new Date()
+    const diff = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+    if (diff === 0) return "Today"
+    if (diff === 1) return "Yesterday"
+    if (diff < 7) return `${diff}d ago`
+    return format(d, "MMM d")
+  }
+
   return (
     <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Agents</h1>
-          <p className="text-muted-foreground">Manage your collection agents</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/agents/commission-settings" search={{ tab: undefined }}>
-            <Button variant="outline" size="icon" title="Commission Settings">
-              <GearSix className="h-4 w-4" />
+      {/* Header */}
+      <StaggerItem>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Agents</h1>
+            <p className="text-muted-foreground">Manage your collection agents and track performance</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link to="/agents/commission-settings" search={{ tab: undefined }}>
+              <Button variant="outline" size="icon" title="Commission Settings">
+                <GearSix className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" weight="bold" />
+              Add Agent
             </Button>
-          </Link>
-          <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4" weight="bold" />
-            Add Agent
-          </Button>
-        </div>
-      </div>
-
-      {/* Bento Grid */}
-      <StaggerItem className="grid gap-5 lg:grid-cols-5">
-        {/* Left Column */}
-        <div className="lg:col-span-3 space-y-5">
-          {/* Team Overview */}
-          <div className="rounded-xl border shadow-sm">
-            <div className="p-5 pb-3">
-              <div className="flex items-center gap-2">
-                <ChartBar className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold">Team Overview</h3>
-              </div>
-            </div>
-            <div className="p-5 pt-0">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Active Agents</p>
-                  <p className="text-lg font-bold">{activeAgents.length}</p>
-                  <p className="text-xs text-muted-foreground">of {agents.length} total</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Collected</p>
-                  <p className="text-lg font-bold text-primary">{formatCurrency(totalCollected)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Pending Payouts</p>
-                  <p className={cn("text-lg font-bold", totalPendingPayouts > 0 && "text-amber-600")}>
-                    {formatCurrency(totalPendingPayouts)}
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
+        </div>
+      </StaggerItem>
 
-          {/* Agent Roster */}
-          <div className="rounded-xl border shadow-sm">
-            <div className="p-5 pb-3">
-              <div className="flex items-center gap-2">
-                <UsersThree className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold">Agent Roster</h3>
-              </div>
+      {/* KPI Cards */}
+      <StaggerItem>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="rounded-xl border shadow-sm p-5 relative">
+            <div className="absolute top-4 right-4 h-9 w-9 rounded-lg bg-violet-100 dark:bg-violet-950/40 flex items-center justify-center">
+              <UsersThree className="h-4.5 w-4.5 text-violet-600 dark:text-violet-400" weight="bold" />
             </div>
-            <div className="p-5 pt-0">
-              {agents.length > 0 ? (
-                <div className="space-y-0">
-                  {agents.map((agent) => {
-                    const isSelected = currentSelected?.id === agent.id
-                    const tierConfig = commissionConfig?.tiers.find(
-                      (t) => t.tier === agent.tier,
-                    )
-                    return (
-                      <Fragment key={agent.id}>
-                        <div
-                          className={cn(
-                            "flex items-center gap-3 py-3 border-b last:border-0 -mx-5 px-5 cursor-pointer transition-colors",
-                            isSelected ? "bg-primary/5" : "hover:bg-muted/50"
-                          )}
-                          onClick={() => setSelectedAgent(isSelected ? null : agent)}
-                        >
-                          <CaretDown
-                            className={cn(
-                              "h-4 w-4 text-muted-foreground transition-transform duration-200 shrink-0",
-                              !isSelected && "-rotate-90"
-                            )}
-                          />
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <User className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{agent.agentName}</p>
-                            <p className="text-xs text-muted-foreground truncate">{agent.agentEmail}</p>
-                          </div>
-                          <div className="hidden md:flex items-center gap-3 shrink-0">
-                            {agent.tier === null ? (
-                              <span className="text-xs text-muted-foreground">{agent.commissionRate}%</span>
-                            ) : tierConfig ? (
-                              <span className="text-xs text-muted-foreground">Tier {tierConfig.tier}</span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Tier {agent.tier}</span>
-                            )}
-                            <span className="text-xs text-muted-foreground">{agent.assignedLoansCount} loans</span>
-                          </div>
-                          <div className="hidden lg:block shrink-0 text-right min-w-[80px]">
-                            <p className="text-sm font-semibold">{formatCurrency(agent.totalCollected)}</p>
-                            {parseFloat(agent.pendingCommission) > 0 && (
-                              <p className="text-xs text-primary">{formatCurrency(agent.pendingCommission)} pending</p>
-                            )}
-                          </div>
-                          <Badge
-                            variant={
-                              agent.status === 'active'
-                                ? 'secondary'
-                                : agent.status === 'terminated'
-                                  ? 'destructive'
-                                  : 'outline'
-                            }
-                            className={cn(
-                              "shrink-0 text-[10px]",
-                              agent.status === 'suspended' && 'border-amber-500/30 bg-amber-500/10 text-amber-600'
-                            )}
-                          >
-                            {agent.status}
-                          </Badge>
+            <p className="text-xs text-muted-foreground font-medium">Active Agents</p>
+            <p className="text-2xl font-bold mt-1">{activeAgents.length}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">of {agents.length} total</p>
+          </div>
+          <div className="rounded-xl border shadow-sm p-5 relative">
+            <div className="absolute top-4 right-4 h-9 w-9 rounded-lg bg-blue-100 dark:bg-blue-950/40 flex items-center justify-center">
+              <CurrencyCircleDollar className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" weight="bold" />
+            </div>
+            <p className="text-xs text-muted-foreground font-medium">Total Collected</p>
+            <p className="text-2xl font-bold mt-1 text-primary">{formatCurrency(totalCollected)}</p>
+          </div>
+          <div className="rounded-xl border shadow-sm p-5 relative">
+            <div className="absolute top-4 right-4 h-9 w-9 rounded-lg bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center">
+              <Warning className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400" weight="bold" />
+            </div>
+            <p className="text-xs text-muted-foreground font-medium">Pending Payouts</p>
+            <p className={cn("text-2xl font-bold mt-1", totalPendingPayouts > 0 ? "text-amber-600 dark:text-amber-400" : "")}>
+              {formatCurrency(totalPendingPayouts)}
+            </p>
+            {agentsWithPayouts.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-0.5">{agentsWithPayouts.length} agent{agentsWithPayouts.length > 1 ? "s" : ""}</p>
+            )}
+          </div>
+          <div className="rounded-xl border shadow-sm p-5 relative">
+            <div className="absolute top-4 right-4 h-9 w-9 rounded-lg bg-green-100 dark:bg-green-950/40 flex items-center justify-center">
+              <ChartBar className="h-4.5 w-4.5 text-green-600 dark:text-green-400" weight="bold" />
+            </div>
+            <p className="text-xs text-muted-foreground font-medium">Avg Collection Rate</p>
+            {(() => {
+              const rates = agents.filter(a => a.collectionRate > 0).map(a => a.collectionRate)
+              const avg = rates.length > 0 ? Math.round(rates.reduce((s, r) => s + r, 0) / rates.length) : 0
+              return <p className={cn("text-2xl font-bold mt-1", avg >= 80 ? "text-green-600 dark:text-green-400" : avg >= 50 ? "text-amber-600 dark:text-amber-400" : "text-destructive")}>{avg}%</p>
+            })()}
+          </div>
+        </div>
+      </StaggerItem>
+
+      {/* Agent Cards */}
+      <StaggerItem>
+        {agents.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {agents.map((agent) => {
+              const isSelected = currentSelected?.id === agent.id
+              const rateColor = agent.collectionRate >= 80 ? "text-green-600 dark:text-green-400" : agent.collectionRate >= 50 ? "text-amber-600 dark:text-amber-400" : "text-destructive"
+              const rateBg = agent.collectionRate >= 80 ? "#16a34a" : agent.collectionRate >= 50 ? "#f59e0b" : "#dc2626"
+              return (
+                <div
+                  key={agent.id}
+                  className={cn(
+                    "rounded-xl border shadow-sm overflow-hidden cursor-pointer transition-all hover:shadow-md",
+                    isSelected && "ring-2 ring-primary"
+                  )}
+                  onClick={() => setSelectedAgent(isSelected ? null : agent)}
+                >
+                  {/* Card Header */}
+                  <div className="p-4 pb-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-sm font-semibold text-primary">{agent.agentName.charAt(0).toUpperCase()}</span>
                         </div>
-
-                        {/* Expandable Detail Panel */}
-                        <AnimatePresence>
-                          {isSelected && currentSelected && (
-                            <motion.div
-                              key={`detail-${agent.id}`}
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden -mx-5"
-                            >
-                              <div
-                                className="p-5 bg-muted/30 border-b"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {currentSelected.status === 'active' ? (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Permissions & Tier */}
-                                    <div className="space-y-3">
-                                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                        Permissions
-                                      </p>
-                                      <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-2">
-                                            <CurrencyCircleDollar className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm">Record Payments</span>
-                                          </div>
-                                          <Switch
-                                            checked={currentSelected.canRecordPayments}
-                                            onCheckedChange={(checked) =>
-                                              handleToggleRecordPayments(
-                                                currentSelected.id,
-                                                checked,
-                                              )
-                                            }
-                                          />
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-2">
-                                            <NotePencil className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm">Create Loans</span>
-                                          </div>
-                                          <Switch
-                                            checked={currentSelected.canCreateLoans}
-                                            onCheckedChange={(checked) =>
-                                              handleToggleLoanCreation(
-                                                currentSelected.id,
-                                                checked,
-                                              )
-                                            }
-                                          />
-                                        </div>
-                                      </div>
-
-                                      {commissionConfig &&
-                                        commissionConfig.tiers.length > 0 && (
-                                          <div className="pt-3 border-t space-y-3">
-                                            <div className="flex items-center justify-between">
-                                              <span className="text-sm">
-                                                Tiered Commission
-                                              </span>
-                                              <Switch
-                                                checked={currentSelected.tier !== null}
-                                                onCheckedChange={(checked) =>
-                                                  handleChangeTier(
-                                                    currentSelected.id,
-                                                    checked ? 1 : null,
-                                                  )
-                                                }
-                                              />
-                                            </div>
-                                            {currentSelected.tier !== null && (
-                                              <Select
-                                                value={String(currentSelected.tier)}
-                                                onValueChange={(val) =>
-                                                  val &&
-                                                  handleChangeTier(
-                                                    currentSelected.id,
-                                                    parseInt(val),
-                                                  )
-                                                }
-                                              >
-                                                <SelectTrigger className="w-full">
-                                                  <SelectValue>
-                                                    {(value) => {
-                                                      const t =
-                                                        commissionConfig.tiers.find(
-                                                          (t) => String(t.tier) === value,
-                                                        )
-                                                      return t
-                                                        ? `Tier ${t.tier} — ${t.name}`
-                                                        : value
-                                                    }}
-                                                  </SelectValue>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                  {commissionConfig.tiers.map((t) => (
-                                                    <SelectItem
-                                                      key={t.tier}
-                                                      value={String(t.tier)}
-                                                    >
-                                                      Tier {t.tier} — {t.name}
-                                                    </SelectItem>
-                                                  ))}
-                                                  <div className="border-t mt-1 pt-1 px-2 pb-1">
-                                                    <Link
-                                                      to="/agents/commission-settings"
-                                                      search={{ tab: 'tiers' }}
-                                                      className="flex items-center gap-1.5 text-xs text-primary hover:underline py-1.5"
-                                                    >
-                                                      <Plus className="h-3 w-3" />
-                                                      Add more tiers
-                                                    </Link>
-                                                  </div>
-                                                </SelectContent>
-                                              </Select>
-                                            )}
-                                          </div>
-                                        )}
-                                    </div>
-
-                                    {/* Payout & Actions */}
-                                    <div className="space-y-3">
-                                      <div className="flex items-center justify-between">
-                                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                          Payout
-                                        </p>
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                              <DotsThreeVertical className="h-4 w-4" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                              onClick={() =>
-                                                setResetPasswordAgent(currentSelected)
-                                              }
-                                            >
-                                              <Key className="h-4 w-4 mr-2" />
-                                              Reset Password
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                              onClick={() =>
-                                                handleToggleStatus(currentSelected)
-                                              }
-                                              className="text-destructive focus:text-destructive"
-                                            >
-                                              <Prohibit className="h-4 w-4 mr-2" />
-                                              Suspend Agent
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </div>
-
-                                      <div className="flex items-baseline justify-between">
-                                        <span className="text-sm text-muted-foreground">
-                                          Pending
-                                        </span>
-                                        <span
-                                          className={cn(
-                                            "text-lg font-semibold",
-                                            parseFloat(currentSelected.pendingCommission) > 0 && 'text-primary'
-                                          )}
-                                        >
-                                          {formatCurrency(currentSelected.pendingCommission)}
-                                        </span>
-                                      </div>
-
-                                      {parseFloat(currentSelected.pendingCommission) > 0 && (
-                                        <Button
-                                          className="w-full gap-2"
-                                          size="sm"
-                                          onClick={() =>
-                                            setAgentToPayCommission(currentSelected)
-                                          }
-                                        >
-                                          <CurrencyCircleDollar className="h-4 w-4" />
-                                          Pay Commission
-                                        </Button>
-                                      )}
-
-                                      <div className="pt-3 border-t flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                          <CalendarBlank className="h-3.5 w-3.5" />
-                                          Joined{' '}
-                                          {format(
-                                            new Date(currentSelected.createdAt),
-                                            'MMMM d, yyyy',
-                                          )}
-                                        </div>
-                                        <Link
-                                          to="/agents/commission-settings"
-                                          search={{ tab: undefined }}
-                                          className="text-xs text-primary hover:underline"
-                                        >
-                                          Commission settings &rarr;
-                                        </Link>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-5">
-                                    {/* Suspended / Terminated banner */}
-                                    <div
-                                      className={cn(
-                                        "rounded-lg p-3 flex gap-2.5 border",
-                                        currentSelected.status === 'suspended'
-                                          ? 'bg-amber-500/10 border-amber-500/20'
-                                          : 'bg-destructive/10 border-destructive/20'
-                                      )}
-                                    >
-                                      <Warning
-                                        className={cn(
-                                          "h-4 w-4 shrink-0 mt-0.5",
-                                          currentSelected.status === 'suspended'
-                                            ? 'text-amber-600'
-                                            : 'text-destructive'
-                                        )}
-                                      />
-                                      <div className="text-sm">
-                                        <p
-                                          className={cn(
-                                            "font-medium",
-                                            currentSelected.status === 'suspended'
-                                              ? 'text-amber-600'
-                                              : 'text-destructive'
-                                          )}
-                                        >
-                                          {currentSelected.status === 'suspended'
-                                            ? 'Agent Suspended'
-                                            : 'Agent Terminated'}
-                                        </p>
-                                        <p className="text-muted-foreground text-xs mt-0.5">
-                                          {currentSelected.status === 'suspended'
-                                            ? 'This agent cannot collect payments or create loans while suspended.'
-                                            : 'This agent has been terminated and no longer has access.'}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                      {/* Performance (read-only) */}
-                                      <div className="space-y-3">
-                                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                          Performance
-                                        </p>
-                                        <div className="text-sm space-y-2">
-                                          <div className="flex justify-between">
-                                            <span className="text-muted-foreground">
-                                              Total Collected
-                                            </span>
-                                            <span className="font-medium">
-                                              {formatCurrency(currentSelected.totalCollected)}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span className="text-muted-foreground">
-                                              Pending Payout
-                                            </span>
-                                            <span
-                                              className={`font-medium ${parseFloat(currentSelected.pendingCommission) > 0 ? 'text-primary' : ''}`}
-                                            >
-                                              {formatCurrency(
-                                                currentSelected.pendingCommission,
-                                              )}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      {/* Actions */}
-                                      <div className="space-y-3">
-                                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                          Actions
-                                        </p>
-                                        <div className="space-y-2">
-                                          {parseFloat(currentSelected.pendingCommission) >
-                                            0 && (
-                                            <Button
-                                              className="w-full gap-2"
-                                              size="sm"
-                                              onClick={() =>
-                                                setAgentToPayCommission(currentSelected)
-                                              }
-                                            >
-                                              <CurrencyCircleDollar className="h-4 w-4" />
-                                              Pay Commission
-                                            </Button>
-                                          )}
-                                          {currentSelected.status === 'suspended' && (
-                                            <Button
-                                              className="w-full"
-                                              size="sm"
-                                              onClick={() =>
-                                                handleToggleStatus(currentSelected)
-                                              }
-                                            >
-                                              Activate Agent
-                                            </Button>
-                                          )}
-                                          <Button
-                                            variant="outline"
-                                            className="w-full gap-2"
-                                            size="sm"
-                                            onClick={() =>
-                                              setResetPasswordAgent(currentSelected)
-                                            }
-                                          >
-                                            <Key className="h-4 w-4" />
-                                            Reset Password
-                                          </Button>
-                                        </div>
-
-                                        <div className="pt-3 border-t">
-                                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                            <CalendarBlank className="h-3.5 w-3.5" />
-                                            Joined{' '}
-                                            {format(
-                                              new Date(currentSelected.createdAt),
-                                              'MMMM d, yyyy',
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </Fragment>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <UsersThree className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-muted-foreground font-medium">No agents yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Add agents to help you manage loan collections
-                  </p>
-                  <Button onClick={() => setShowAddDialog(true)} className="mt-4 gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Your First Agent
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Pending Payouts */}
-          <div className={cn("rounded-xl border shadow-sm", agentsWithPayouts.length > 0 && "border-amber-300/50")}>
-            <div className="p-5 pb-3">
-              <div className="flex items-center gap-2">
-                <CurrencyCircleDollar className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-base font-semibold">Pending Payouts</h3>
-              </div>
-            </div>
-            <div className="p-5 pt-0">
-              {agentsWithPayouts.length > 0 ? (
-                <div className="space-y-0">
-                  {agentsWithPayouts.map((agent) => (
-                    <div
-                      key={agent.id}
-                      className="flex items-center gap-3 py-3 border-b last:border-0 hover:bg-muted/50 -mx-5 px-5 transition-colors"
-                    >
-                      <span className="h-2 w-2 rounded-full shrink-0 bg-amber-500" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{agent.agentName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCurrency(agent.totalCollected)} collected
-                        </p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate">{agent.agentName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{agent.agentEmail}</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <p className="text-sm font-semibold text-amber-600">
-                          {formatCurrency(agent.pendingCommission)}
-                        </p>
-                        <Button
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => setAgentToPayCommission(agent)}
+                        <Badge
+                          variant={agent.status === "active" ? "secondary" : agent.status === "terminated" ? "destructive" : "outline"}
+                          className={cn("text-[10px]", agent.status === "suspended" && "border-amber-500/30 bg-amber-500/10 text-amber-600")}
                         >
-                          Pay
-                        </Button>
+                          {agent.status}
+                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={(props) => (
+                              <button {...props} onClick={(e) => e.stopPropagation()} className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                <DotsThreeVertical className="h-4 w-4" weight="bold" />
+                              </button>
+                            )}
+                          />
+                          <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                            <DropdownMenuItem onClick={() => setResetPasswordAgent(agent)}>
+                              <Key className="h-4 w-4" />
+                              Reset Password
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleStatus(agent)}>
+                              <Prohibit className="h-4 w-4" />
+                              {agent.status === "active" ? "Suspend" : "Activate"}
+                            </DropdownMenuItem>
+                            {parseFloat(agent.pendingCommission) > 0 && (
+                              <DropdownMenuItem onClick={() => setAgentToPayCommission(agent)}>
+                                <CurrencyCircleDollar className="h-4 w-4" />
+                                Pay Commission
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <p className="text-sm">All commissions paid!</p>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Top Performers */}
-          {agents.length > 0 && (
-            <div className="rounded-xl border shadow-sm">
-              <div className="p-5 pb-3">
-                <div className="flex items-center gap-2">
-                  <ChartBar className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-base font-semibold">Performance</h3>
-                </div>
-              </div>
-              <div className="p-5 pt-0">
-                <div className="space-y-0">
-                  {[...agents]
-                    .sort((a, b) => parseFloat(b.totalCollected) - parseFloat(a.totalCollected))
-                    .slice(0, 5)
-                    .map((agent, i) => {
-                      const collected = parseFloat(agent.totalCollected)
-                      const maxCollected = Math.max(...agents.map((a) => parseFloat(a.totalCollected)), 1)
-                      const barWidth = (collected / maxCollected) * 100
-                      return (
-                        <div
-                          key={agent.id}
-                          className="py-3 border-b last:border-0 -mx-5 px-5"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-xs text-muted-foreground w-4 shrink-0">{i + 1}.</span>
-                              <p className="text-sm font-medium truncate">{agent.agentName}</p>
+                    {/* Tier + permissions pills */}
+                    <div className="flex items-center gap-1.5 mt-2.5">
+                      {agent.tier !== null ? (
+                        <span className="text-[10px] font-medium rounded-full bg-primary/10 text-primary px-2 py-0.5">Tier {agent.tier}</span>
+                      ) : (
+                        <span className="text-[10px] font-medium rounded-full bg-muted text-muted-foreground px-2 py-0.5">{agent.commissionRate}%</span>
+                      )}
+                      {agent.canRecordPayments && (
+                        <span className="text-[10px] rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 px-2 py-0.5">Payments</span>
+                      )}
+                      {agent.canCreateLoans && (
+                        <span className="text-[10px] rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 px-2 py-0.5">Loans</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Collection rate bar */}
+                  <div className="px-4 pb-3">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Collection Rate</span>
+                      <span className={cn("font-bold", rateColor)}>{agent.collectionRate}%</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(agent.collectionRate, 100)}%`, background: rateBg }} />
+                    </div>
+                  </div>
+
+                  {/* Metrics grid */}
+                  <div className="grid grid-cols-2 gap-px bg-border">
+                    <div className="bg-card px-4 py-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Collected</p>
+                      <p className="text-sm font-bold mt-0.5">{formatCurrency(agent.totalCollected)}</p>
+                    </div>
+                    <div className="bg-card px-4 py-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">This Month</p>
+                      <p className="text-sm font-bold mt-0.5 text-primary">{formatCurrency(agent.thisMonthCollected)}</p>
+                    </div>
+                    <div className="bg-card px-4 py-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Loans</p>
+                      <p className="text-sm font-bold mt-0.5">{agent.assignedLoansCount}</p>
+                    </div>
+                    <div className="bg-card px-4 py-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Overdue</p>
+                      <p className={cn("text-sm font-bold mt-0.5", agent.overdueCount > 0 && "text-destructive")}>{agent.overdueCount}</p>
+                    </div>
+                    <div className="bg-card px-4 py-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">On-Time</p>
+                      <p className={cn("text-sm font-bold mt-0.5", agent.onTimeRate >= 80 ? "text-green-600 dark:text-green-400" : agent.onTimeRate >= 50 ? "text-amber-600" : "text-destructive")}>{agent.onTimeRate}%</p>
+                    </div>
+                    <div className="bg-card px-4 py-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Contacts</p>
+                      <p className="text-sm font-bold mt-0.5">{agent.contactsManaged}</p>
+                    </div>
+                  </div>
+
+                  {/* Footer: last active + pending commission */}
+                  <div className="px-4 py-3 border-t flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <CalendarBlank className="h-3 w-3" />
+                      Active {formatDate(agent.lastActiveAt)}
+                    </div>
+                    {parseFloat(agent.pendingCommission) > 0 && (
+                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                        {formatCurrency(agent.pendingCommission)} pending
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Expandable detail panel */}
+                  <AnimatePresence>
+                    {isSelected && currentSelected && (
+                      <motion.div
+                        key={`detail-${agent.id}`}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-4 bg-muted/30 border-t space-y-3" onClick={(e) => e.stopPropagation()}>
+                          {/* Permissions */}
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Permissions</p>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Record Payments</span>
+                              <Switch checked={currentSelected.canRecordPayments} onCheckedChange={(checked) => handleToggleRecordPayments(currentSelected.id, checked)} />
                             </div>
-                            <p className="text-sm font-semibold shrink-0 ml-2">{formatCurrency(collected)}</p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Create Loans</span>
+                              <Switch checked={currentSelected.canCreateLoans} onCheckedChange={(checked) => handleToggleLoanCreation(currentSelected.id, checked)} />
+                            </div>
                           </div>
-                          <div className="h-1.5 rounded-full bg-muted overflow-hidden ml-6">
-                            <div
-                              className="h-full bg-primary/60 rounded-full transition-all duration-500"
-                              style={{ width: `${barWidth}%` }}
-                            />
+                          {commissionConfig && commissionConfig.tiers.length > 0 && (
+                            <div className="pt-2 border-t space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm">Tiered Commission</span>
+                                <Switch checked={currentSelected.tier !== null} onCheckedChange={(checked) => handleChangeTier(currentSelected.id, checked ? 1 : null)} />
+                              </div>
+                              {currentSelected.tier !== null && (
+                                <Select value={String(currentSelected.tier)} onValueChange={(val) => val && handleChangeTier(currentSelected.id, parseInt(val))}>
+                                  <SelectTrigger className="w-full h-8 text-sm">
+                                    <SelectValue>{(value) => { const t = commissionConfig.tiers.find((t) => String(t.tier) === value); return t ? `Tier ${t.tier} — ${t.name}` : value }}</SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {commissionConfig.tiers.map((t) => (
+                                      <SelectItem key={t.tier} value={String(t.tier)}>Tier {t.tier} — {t.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                          )}
+                          <div className="pt-2 border-t text-xs text-muted-foreground flex items-center gap-1.5">
+                            <CalendarBlank className="h-3 w-3" />
+                            Joined {format(new Date(currentSelected.createdAt), "MMMM d, yyyy")}
                           </div>
                         </div>
-                      )
-                    })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border shadow-sm">
+            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+                <UsersThree className="h-6 w-6 text-muted-foreground" />
               </div>
+              <p className="text-sm font-medium">No agents yet</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs">Add agents to help you manage loan collections and track their performance.</p>
+              <Button onClick={() => setShowAddDialog(true)} className="mt-4 gap-2">
+                <Plus className="h-4 w-4" weight="bold" />
+                Add Your First Agent
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </StaggerItem>
 
       {/* Add Agent Dialog */}

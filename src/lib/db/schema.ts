@@ -225,6 +225,9 @@ export const loans = pgTable("loans", {
   // Restructuring
   restructureCount: integer("restructure_count").notNull().default(0),
 
+  // Public borrower portal token (magic link)
+  borrowerToken: text("borrower_token").unique(),
+
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
@@ -818,8 +821,53 @@ export const loanRestructuresRelations = relations(loanRestructures, ({ one }) =
 }))
 
 // ============================================================================
+// Loan Applications (public intake form)
+// ============================================================================
+
+export const loanApplicationStatusEnum = pgEnum("loan_application_status", [
+  "pending",
+  "approved",
+  "rejected",
+])
+
+export const loanApplications = pgTable("loan_applications", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  // Applicant info
+  applicantName: text("applicant_name").notNull(),
+  applicantPhone: text("applicant_phone"),
+  applicantEmail: text("applicant_email"),
+  applicantAddress: text("applicant_address"),
+  applicantCity: text("applicant_city"),
+  // Loan request
+  requestedAmount: decimal("requested_amount", { precision: 12, scale: 2 }).notNull(),
+  requestedTermMonths: integer("requested_term_months"),
+  purpose: text("purpose"),
+  monthlyIncome: decimal("monthly_income", { precision: 12, scale: 2 }),
+  otherIncome: decimal("other_income", { precision: 12, scale: 2 }),
+  // Status
+  status: loanApplicationStatusEnum("status").notNull().default("pending"),
+  reviewedAt: timestamp("reviewed_at"),
+  rejectionReason: text("rejection_reason"),
+  convertedLoanId: text("converted_loan_id").references(() => loans.id),
+  // Token for public access
+  formToken: text("form_token").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+export const loanApplicationsRelations = relations(loanApplications, ({ one }) => ({
+  lender: one(user, { fields: [loanApplications.lenderId], references: [user.id] }),
+  convertedLoan: one(loans, { fields: [loanApplications.convertedLoanId], references: [loans.id] }),
+}))
+
+// ============================================================================
 // Types
 // ============================================================================
+
+export type LoanApplication = typeof loanApplications.$inferSelect
+export type NewLoanApplication = typeof loanApplications.$inferInsert
 
 export type User = typeof user.$inferSelect
 export type NewUser = typeof user.$inferInsert
