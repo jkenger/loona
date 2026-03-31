@@ -172,9 +172,8 @@ export const payPenalty = createServerFn()
       .transform((s) => {
         if (!s) return undefined
         if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-          const now = new Date()
           const [y, m, d] = s.split("-").map(Number)
-          return new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
+          return new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
         }
         return new Date(s)
       })
@@ -182,7 +181,7 @@ export const payPenalty = createServerFn()
         if (!d) return true
         const phtNow = new Date(Date.now() + 8 * 3600_000)
         const todayPHT = `${phtNow.getUTCFullYear()}-${String(phtNow.getUTCMonth() + 1).padStart(2, "0")}-${String(phtNow.getUTCDate()).padStart(2, "0")}`
-        const input = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+        const input = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`
         return input <= todayPHT
       }, "Payment date cannot be in the future"),
     notes: z.string().optional(),

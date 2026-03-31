@@ -32,12 +32,11 @@ const recordPaymentSchema = z.object({
   paidAt: z.string().optional()
     .transform((s) => {
       if (!s) return undefined
-      // Date-only strings ("2026-02-16") parse as midnight UTC which shows as
-      // 8:00 AM in PHT. Attach current time so the timestamp reflects actual time.
+      // Date-only strings: use noon UTC so the date stays correct in both
+      // UTC and PHT (UTC+8) display — avoids day-shift at timezone boundaries.
       if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-        const now = new Date()
         const [y, m, d] = s.split("-").map(Number)
-        return new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
+        return new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
       }
       return new Date(s)
     })
@@ -48,7 +47,7 @@ const recordPaymentSchema = z.object({
       // causing the client's "today" to be rejected as future.
       const phtNow = new Date(Date.now() + 8 * 3600_000)
       const todayPHT = `${phtNow.getUTCFullYear()}-${String(phtNow.getUTCMonth() + 1).padStart(2, "0")}-${String(phtNow.getUTCDate()).padStart(2, "0")}`
-      const input = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      const input = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`
       return input <= todayPHT
     }, "Payment date cannot be in the future"),
   notes: z.string().optional(),
@@ -518,7 +517,7 @@ const editPaymentDateSchema = z.object({
     .refine((d) => {
       const phtNow = new Date(Date.now() + 8 * 3600_000)
       const todayPHT = `${phtNow.getUTCFullYear()}-${String(phtNow.getUTCMonth() + 1).padStart(2, "0")}-${String(phtNow.getUTCDate()).padStart(2, "0")}`
-      const input = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      const input = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`
       return input <= todayPHT
     }, "Payment date cannot be in the future"),
 })
