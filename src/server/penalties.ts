@@ -178,7 +178,13 @@ export const payPenalty = createServerFn()
         }
         return new Date(s)
       })
-      .refine((d) => !d || d <= new Date(), "Payment date cannot be in the future"),
+      .refine((d) => {
+        if (!d) return true
+        const phtNow = new Date(Date.now() + 8 * 3600_000)
+        const todayPHT = `${phtNow.getUTCFullYear()}-${String(phtNow.getUTCMonth() + 1).padStart(2, "0")}-${String(phtNow.getUTCDate()).padStart(2, "0")}`
+        const input = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+        return input <= todayPHT
+      }, "Payment date cannot be in the future"),
     notes: z.string().optional(),
   }))
   .handler(async ({ data }) => {

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, Link, useRouter, useNavigate, useLocation, Outlet } from "@tanstack/react-router"
+import { createFileRoute, redirect, Link, useRouter, useLocation, Outlet } from "@tanstack/react-router"
 import { useState, useEffect, useCallback } from "react"
 import { getServerSession } from "@/server/session"
 import { getOnboardingStatus } from "@/server/onboarding"
@@ -14,9 +14,7 @@ import { hasRole, ROLES } from "@/lib/constants/roles"
 import { useTheme } from "@/lib/theme"
 import {
   House,
-  Users,
   CurrencyCircleDollar,
-  Receipt,
   UsersThree,
   SignOut,
   Wallet,
@@ -45,6 +43,7 @@ import {
   ArrowsLeftRight,
   IdentificationBadge,
   Notebook,
+  Sparkle,
 } from "@phosphor-icons/react"
 import {
   Popover,
@@ -52,9 +51,6 @@ import {
   PopoverContent,
 } from "@/components/ui/popover"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
-import { AdvisorBubble } from "@/components/advisor-bubble"
-import { AdvisorChat } from "@/components/advisor-chat"
-import { triggerAlertEvaluation, getUnreadAlertCount } from "@/server/advisor-alerts"
 
 export const Route = createFileRoute("/_dashboard")({
   beforeLoad: async ({ location }) => {
@@ -121,6 +117,7 @@ const lenderPrimaryNav = [
   { name: "Payments", href: "/payments", icon: ArrowsLeftRight, exact: false },
 ]
 const lenderMoreNav = [
+  { name: "Luna AI", href: "/luna", icon: Sparkle, exact: false },
   { name: "Agents", href: "/agents", icon: IdentificationBadge, exact: false },
   { name: "Reports", href: "/reports", icon: ChartLineUp, exact: false },
   { name: "Estimator", href: "/tools/estimator", icon: Calculator, exact: false },
@@ -150,11 +147,8 @@ function DashboardLayout() {
   const { session, agentPermissions, cashPosition: initialCashPosition, latestPosts = [] } = Route.useRouteContext()
   const [cashPosition, setCashPosition] = useState(initialCashPosition)
   const router = useRouter()
-  const navigate = useNavigate()
   const location = useLocation()
   const { resolvedTheme, setTheme } = useTheme()
-  const [advisorOpen, setAdvisorOpen] = useState(false)
-  const [alertCount, setAlertCount] = useState(0)
 
   // Determine user roles
   const isAgent = hasRole(session.user.role, ROLES.AGENT)
@@ -165,13 +159,6 @@ function DashboardLayout() {
   const isOnAdminPortal = location.pathname.startsWith("/admin")
   const isOnAgentPortal = location.pathname === "/agent" || location.pathname.startsWith("/agent/")
 
-  // Evaluate alerts on mount (lender portal only)
-  useEffect(() => {
-    if (!isLender || isOnAgentPortal || isOnAdminPortal) return
-    triggerAlertEvaluation().then(() => {
-      getUnreadAlertCount().then(setAlertCount)
-    })
-  }, [isLender, isOnAgentPortal, isOnAdminPortal])
 
   // Check for agent permission restrictions
   const hasAgentRestrictions = agentPermissions && (
@@ -630,17 +617,6 @@ function DashboardLayout() {
       {/* Mobile bottom nav */}
       <MobileBottomNav portal={portal} />
 
-      {/* AI Advisor — lender portal only */}
-      {isLender && !isOnAgentPortal && !isOnAdminPortal && (
-        <>
-          {!advisorOpen && <AdvisorBubble onClick={() => setAdvisorOpen(true)} alertCount={alertCount} />}
-          <AdvisorChat
-            open={advisorOpen}
-            onClose={() => { setAdvisorOpen(false); getUnreadAlertCount().then(setAlertCount) }}
-            onNavigate={(href) => { setAdvisorOpen(false); navigate({ to: href }) }}
-          />
-        </>
-      )}
     </div>
   )
 }

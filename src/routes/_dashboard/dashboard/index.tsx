@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { LunaDashboardWidget } from '@/components/luna/dashboard-widget'
 import { SkeletonDashboard } from '@/components/ui/skeleton'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
@@ -399,6 +400,9 @@ function DashboardPage() {
 
         {/* Right Column */}
         <div className="lg:col-span-2 space-y-5">
+          {/* Luna AI */}
+          <LunaDashboardWidget />
+
           {/* Portfolio */}
           <Card className="rounded-xl shadow-sm">
             <CardHeader className="p-5 pb-3">

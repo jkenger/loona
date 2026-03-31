@@ -41,7 +41,16 @@ const recordPaymentSchema = z.object({
       }
       return new Date(s)
     })
-    .refine((d) => !d || d <= new Date(), "Payment date cannot be in the future"),
+    .refine((d) => {
+      if (!d) return true
+      // Compare date-only in PHT to avoid UTC/PHT timezone mismatch.
+      // Between 12–8 AM PHT the server's UTC date is one day behind,
+      // causing the client's "today" to be rejected as future.
+      const phtNow = new Date(Date.now() + 8 * 3600_000)
+      const todayPHT = `${phtNow.getUTCFullYear()}-${String(phtNow.getUTCMonth() + 1).padStart(2, "0")}-${String(phtNow.getUTCDate()).padStart(2, "0")}`
+      const input = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      return input <= todayPHT
+    }, "Payment date cannot be in the future"),
   notes: z.string().optional(),
 })
 
@@ -506,7 +515,12 @@ const editPaymentDateSchema = z.object({
       }
       return new Date(s)
     })
-    .refine((d) => d <= new Date(), "Payment date cannot be in the future"),
+    .refine((d) => {
+      const phtNow = new Date(Date.now() + 8 * 3600_000)
+      const todayPHT = `${phtNow.getUTCFullYear()}-${String(phtNow.getUTCMonth() + 1).padStart(2, "0")}-${String(phtNow.getUTCDate()).padStart(2, "0")}`
+      const input = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+      return input <= todayPHT
+    }, "Payment date cannot be in the future"),
 })
 
 export const editPaymentDate = createServerFn()

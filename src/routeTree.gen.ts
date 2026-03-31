@@ -29,6 +29,7 @@ import { Route as DashboardSettingsIndexRouteImport } from './routes/_dashboard/
 import { Route as DashboardReportsIndexRouteImport } from './routes/_dashboard/reports/index'
 import { Route as DashboardPenaltiesIndexRouteImport } from './routes/_dashboard/penalties/index'
 import { Route as DashboardPaymentsIndexRouteImport } from './routes/_dashboard/payments/index'
+import { Route as DashboardLunaIndexRouteImport } from './routes/_dashboard/luna/index'
 import { Route as DashboardLoansIndexRouteImport } from './routes/_dashboard/loans/index'
 import { Route as DashboardDashboardIndexRouteImport } from './routes/_dashboard/dashboard/index'
 import { Route as DashboardContactsIndexRouteImport } from './routes/_dashboard/contacts/index'
@@ -42,6 +43,7 @@ import { Route as ShareLoanTokenRouteImport } from './routes/share/loan/$token'
 import { Route as ShareLenderUserIdRouteImport } from './routes/share/lender/$userId'
 import { Route as ShareBorrowerContactIdRouteImport } from './routes/share/borrower/$contactId'
 import { Route as ShareApplyTokenRouteImport } from './routes/share/apply/$token'
+import { Route as ApiLunaChatRouteImport } from './routes/api/luna/chat'
 import { Route as ApiCronOverdueAlertsRouteImport } from './routes/api/cron/overdue-alerts'
 import { Route as ApiCronOverdueRouteImport } from './routes/api/cron/overdue'
 import { Route as ApiCronDigestRouteImport } from './routes/api/cron/digest'
@@ -49,8 +51,6 @@ import { Route as ApiCronDailySummaryRouteImport } from './routes/api/cron/daily
 import { Route as ApiCronAgentWeeklySummaryRouteImport } from './routes/api/cron/agent-weekly-summary'
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as ApiAdvisorChatRouteImport } from './routes/api/advisor/chat'
-import { Route as ApiAdvisorBriefingRouteImport } from './routes/api/advisor/briefing'
 import { Route as DashboardToolsEstimatorRouteImport } from './routes/_dashboard/tools/estimator'
 import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
 import { Route as DashboardReportsRiskRouteImport } from './routes/_dashboard/reports/risk'
@@ -183,6 +183,11 @@ const DashboardPaymentsIndexRoute = DashboardPaymentsIndexRouteImport.update({
   path: '/payments/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardLunaIndexRoute = DashboardLunaIndexRouteImport.update({
+  id: '/luna/',
+  path: '/luna/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardLoansIndexRoute = DashboardLoansIndexRouteImport.update({
   id: '/loans/',
   path: '/loans/',
@@ -248,6 +253,11 @@ const ShareApplyTokenRoute = ShareApplyTokenRouteImport.update({
   path: '/share/apply/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLunaChatRoute = ApiLunaChatRouteImport.update({
+  id: '/api/luna/chat',
+  path: '/api/luna/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronOverdueAlertsRoute = ApiCronOverdueAlertsRouteImport.update({
   id: '/api/cron/overdue-alerts',
   path: '/api/cron/overdue-alerts',
@@ -282,16 +292,6 @@ const ApiAuthErrorRoute = ApiAuthErrorRouteImport.update({
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAdvisorChatRoute = ApiAdvisorChatRouteImport.update({
-  id: '/api/advisor/chat',
-  path: '/api/advisor/chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAdvisorBriefingRoute = ApiAdvisorBriefingRouteImport.update({
-  id: '/api/advisor/briefing',
-  path: '/api/advisor/briefing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardToolsEstimatorRoute = DashboardToolsEstimatorRouteImport.update({
@@ -513,8 +513,6 @@ export interface FileRoutesByFullPath {
   '/reports/risk': typeof DashboardReportsRiskRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
-  '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
-  '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/agent-weekly-summary': typeof ApiCronAgentWeeklySummaryRoute
@@ -522,6 +520,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
+  '/api/luna/chat': typeof ApiLunaChatRoute
   '/share/apply/$token': typeof ShareApplyTokenRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
@@ -535,6 +534,7 @@ export interface FileRoutesByFullPath {
   '/contacts/': typeof DashboardContactsIndexRoute
   '/dashboard/': typeof DashboardDashboardIndexRoute
   '/loans/': typeof DashboardLoansIndexRoute
+  '/luna/': typeof DashboardLunaIndexRoute
   '/payments/': typeof DashboardPaymentsIndexRoute
   '/penalties/': typeof DashboardPenaltiesIndexRoute
   '/reports/': typeof DashboardReportsIndexRoute
@@ -588,8 +588,6 @@ export interface FileRoutesByTo {
   '/reports/risk': typeof DashboardReportsRiskRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
-  '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
-  '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/agent-weekly-summary': typeof ApiCronAgentWeeklySummaryRoute
@@ -597,6 +595,7 @@ export interface FileRoutesByTo {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
+  '/api/luna/chat': typeof ApiLunaChatRoute
   '/share/apply/$token': typeof ShareApplyTokenRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
@@ -610,6 +609,7 @@ export interface FileRoutesByTo {
   '/contacts': typeof DashboardContactsIndexRoute
   '/dashboard': typeof DashboardDashboardIndexRoute
   '/loans': typeof DashboardLoansIndexRoute
+  '/luna': typeof DashboardLunaIndexRoute
   '/payments': typeof DashboardPaymentsIndexRoute
   '/penalties': typeof DashboardPenaltiesIndexRoute
   '/reports': typeof DashboardReportsIndexRoute
@@ -666,8 +666,6 @@ export interface FileRoutesById {
   '/_dashboard/reports/risk': typeof DashboardReportsRiskRoute
   '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/_dashboard/tools/estimator': typeof DashboardToolsEstimatorRoute
-  '/api/advisor/briefing': typeof ApiAdvisorBriefingRoute
-  '/api/advisor/chat': typeof ApiAdvisorChatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
   '/api/cron/agent-weekly-summary': typeof ApiCronAgentWeeklySummaryRoute
@@ -675,6 +673,7 @@ export interface FileRoutesById {
   '/api/cron/digest': typeof ApiCronDigestRoute
   '/api/cron/overdue': typeof ApiCronOverdueRoute
   '/api/cron/overdue-alerts': typeof ApiCronOverdueAlertsRoute
+  '/api/luna/chat': typeof ApiLunaChatRoute
   '/share/apply/$token': typeof ShareApplyTokenRoute
   '/share/borrower/$contactId': typeof ShareBorrowerContactIdRoute
   '/share/lender/$userId': typeof ShareLenderUserIdRoute
@@ -688,6 +687,7 @@ export interface FileRoutesById {
   '/_dashboard/contacts/': typeof DashboardContactsIndexRoute
   '/_dashboard/dashboard/': typeof DashboardDashboardIndexRoute
   '/_dashboard/loans/': typeof DashboardLoansIndexRoute
+  '/_dashboard/luna/': typeof DashboardLunaIndexRoute
   '/_dashboard/payments/': typeof DashboardPaymentsIndexRoute
   '/_dashboard/penalties/': typeof DashboardPenaltiesIndexRoute
   '/_dashboard/reports/': typeof DashboardReportsIndexRoute
@@ -743,8 +743,6 @@ export interface FileRouteTypes {
     | '/reports/risk'
     | '/settings/penalty-settings'
     | '/tools/estimator'
-    | '/api/advisor/briefing'
-    | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
     | '/api/cron/agent-weekly-summary'
@@ -752,6 +750,7 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
+    | '/api/luna/chat'
     | '/share/apply/$token'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
@@ -765,6 +764,7 @@ export interface FileRouteTypes {
     | '/contacts/'
     | '/dashboard/'
     | '/loans/'
+    | '/luna/'
     | '/payments/'
     | '/penalties/'
     | '/reports/'
@@ -818,8 +818,6 @@ export interface FileRouteTypes {
     | '/reports/risk'
     | '/settings/penalty-settings'
     | '/tools/estimator'
-    | '/api/advisor/briefing'
-    | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
     | '/api/cron/agent-weekly-summary'
@@ -827,6 +825,7 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
+    | '/api/luna/chat'
     | '/share/apply/$token'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
@@ -840,6 +839,7 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/dashboard'
     | '/loans'
+    | '/luna'
     | '/payments'
     | '/penalties'
     | '/reports'
@@ -895,8 +895,6 @@ export interface FileRouteTypes {
     | '/_dashboard/reports/risk'
     | '/_dashboard/settings/penalty-settings'
     | '/_dashboard/tools/estimator'
-    | '/api/advisor/briefing'
-    | '/api/advisor/chat'
     | '/api/auth/$'
     | '/api/auth/error'
     | '/api/cron/agent-weekly-summary'
@@ -904,6 +902,7 @@ export interface FileRouteTypes {
     | '/api/cron/digest'
     | '/api/cron/overdue'
     | '/api/cron/overdue-alerts'
+    | '/api/luna/chat'
     | '/share/apply/$token'
     | '/share/borrower/$contactId'
     | '/share/lender/$userId'
@@ -917,6 +916,7 @@ export interface FileRouteTypes {
     | '/_dashboard/contacts/'
     | '/_dashboard/dashboard/'
     | '/_dashboard/loans/'
+    | '/_dashboard/luna/'
     | '/_dashboard/payments/'
     | '/_dashboard/penalties/'
     | '/_dashboard/reports/'
@@ -948,8 +948,6 @@ export interface RootRouteChildren {
   ApiTestEmailsRoute: typeof ApiTestEmailsRoute
   BlogSlugRoute: typeof BlogSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
-  ApiAdvisorBriefingRoute: typeof ApiAdvisorBriefingRoute
-  ApiAdvisorChatRoute: typeof ApiAdvisorChatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthErrorRoute: typeof ApiAuthErrorRoute
   ApiCronAgentWeeklySummaryRoute: typeof ApiCronAgentWeeklySummaryRoute
@@ -957,6 +955,7 @@ export interface RootRouteChildren {
   ApiCronDigestRoute: typeof ApiCronDigestRoute
   ApiCronOverdueRoute: typeof ApiCronOverdueRoute
   ApiCronOverdueAlertsRoute: typeof ApiCronOverdueAlertsRoute
+  ApiLunaChatRoute: typeof ApiLunaChatRoute
   ShareApplyTokenRoute: typeof ShareApplyTokenRoute
   ShareBorrowerContactIdRoute: typeof ShareBorrowerContactIdRoute
   ShareLenderUserIdRoute: typeof ShareLenderUserIdRoute
@@ -1108,6 +1107,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPaymentsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/luna/': {
+      id: '/_dashboard/luna/'
+      path: '/luna'
+      fullPath: '/luna/'
+      preLoaderRoute: typeof DashboardLunaIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/loans/': {
       id: '/_dashboard/loans/'
       path: '/loans'
@@ -1199,6 +1205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareApplyTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/luna/chat': {
+      id: '/api/luna/chat'
+      path: '/api/luna/chat'
+      fullPath: '/api/luna/chat'
+      preLoaderRoute: typeof ApiLunaChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/overdue-alerts': {
       id: '/api/cron/overdue-alerts'
       path: '/api/cron/overdue-alerts'
@@ -1246,20 +1259,6 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/advisor/chat': {
-      id: '/api/advisor/chat'
-      path: '/api/advisor/chat'
-      fullPath: '/api/advisor/chat'
-      preLoaderRoute: typeof ApiAdvisorChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/advisor/briefing': {
-      id: '/api/advisor/briefing'
-      path: '/api/advisor/briefing'
-      fullPath: '/api/advisor/briefing'
-      preLoaderRoute: typeof ApiAdvisorBriefingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_dashboard/tools/estimator': {
@@ -1539,6 +1538,7 @@ interface DashboardRouteChildren {
   DashboardContactsIndexRoute: typeof DashboardContactsIndexRoute
   DashboardDashboardIndexRoute: typeof DashboardDashboardIndexRoute
   DashboardLoansIndexRoute: typeof DashboardLoansIndexRoute
+  DashboardLunaIndexRoute: typeof DashboardLunaIndexRoute
   DashboardPaymentsIndexRoute: typeof DashboardPaymentsIndexRoute
   DashboardPenaltiesIndexRoute: typeof DashboardPenaltiesIndexRoute
   DashboardReportsIndexRoute: typeof DashboardReportsIndexRoute
@@ -1588,6 +1588,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardContactsIndexRoute: DashboardContactsIndexRoute,
   DashboardDashboardIndexRoute: DashboardDashboardIndexRoute,
   DashboardLoansIndexRoute: DashboardLoansIndexRoute,
+  DashboardLunaIndexRoute: DashboardLunaIndexRoute,
   DashboardPaymentsIndexRoute: DashboardPaymentsIndexRoute,
   DashboardPenaltiesIndexRoute: DashboardPenaltiesIndexRoute,
   DashboardReportsIndexRoute: DashboardReportsIndexRoute,
@@ -1624,8 +1625,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTestEmailsRoute: ApiTestEmailsRoute,
   BlogSlugRoute: BlogSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
-  ApiAdvisorBriefingRoute: ApiAdvisorBriefingRoute,
-  ApiAdvisorChatRoute: ApiAdvisorChatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthErrorRoute: ApiAuthErrorRoute,
   ApiCronAgentWeeklySummaryRoute: ApiCronAgentWeeklySummaryRoute,
@@ -1633,6 +1632,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronDigestRoute: ApiCronDigestRoute,
   ApiCronOverdueRoute: ApiCronOverdueRoute,
   ApiCronOverdueAlertsRoute: ApiCronOverdueAlertsRoute,
+  ApiLunaChatRoute: ApiLunaChatRoute,
   ShareApplyTokenRoute: ShareApplyTokenRoute,
   ShareBorrowerContactIdRoute: ShareBorrowerContactIdRoute,
   ShareLenderUserIdRoute: ShareLenderUserIdRoute,
