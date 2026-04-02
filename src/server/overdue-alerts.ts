@@ -34,7 +34,7 @@ export async function sendOverdueAlerts() {
 
     for (const days of reminderDays) {
       const targetDate = new Date(today)
-      targetDate.setDate(today.getDate() + days)
+      targetDate.setDate(today.getDate() - days)
       const targetDateStr = toDateString(targetDate)
 
       const items = await db.query.paymentSchedule.findMany({
