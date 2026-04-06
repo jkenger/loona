@@ -81,15 +81,26 @@ function QrPaymentsPage() {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return }
-    if (file.size > 500 * 1024) { toast.error("Image must be under 500KB"); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return }
 
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string
-      setImageData(result)
-      setPreviewUrl(result)
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const MAX = 400
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement("canvas")
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext("2d")!
+      ctx.drawImage(img, 0, 0, w, h)
+      const compressed = canvas.toDataURL("image/png")
+      setImageData(compressed)
+      setPreviewUrl(compressed)
     }
-    reader.readAsDataURL(file)
+    img.src = objectUrl
   }
 
   async function handleAdd() {
