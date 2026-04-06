@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
+import { cn } from "@/lib/utils"
 import {
   QrCode,
   Plus,
@@ -17,6 +18,7 @@ import {
   Globe,
   Spinner,
   CheckCircle,
+  Eye,
 } from "@phosphor-icons/react"
 import type { LenderQrCode } from "@/lib/db/schema"
 
@@ -49,6 +51,19 @@ function QrPaymentsPage() {
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isReordering, setIsReordering] = useState(false)
+
+  // Preview tab
+  const [previewTab, setPreviewTab] = useState<"email" | "profile">("email")
+
+  // Compute effective codes for preview (reflects in-progress edits)
+  const effectiveCodes = codes.map((c) =>
+    c.id === editingId
+      ? { ...c, label: editLabel || c.label, showInEmails: editShowInEmails, showInProfile: editShowInProfile }
+      : c
+  )
+  const emailQrCodes = effectiveCodes.filter((c) => c.showInEmails)
+  const profileQrCodes = effectiveCodes.filter((c) => c.showInProfile)
+  const hasAnyCodes = codes.length > 0
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -131,7 +146,7 @@ function QrPaymentsPage() {
       await reorderQrCodes({ data: newCodes.map((c) => c.id) })
     } catch {
       toast.error("Failed to reorder")
-      setCodes(codes) // revert
+      setCodes(codes)
     } finally {
       setIsReordering(false)
     }
@@ -297,6 +312,146 @@ function QrPaymentsPage() {
             Add QR Code
           </Button>
         </StaggerItem>
+
+        {/* Preview */}
+        {hasAnyCodes && (
+          <StaggerItem className="rounded-xl border bg-card overflow-hidden">
+            {/* Tab bar */}
+            <div className="flex items-center gap-1 px-4 pt-4 pb-0">
+              <div className="flex items-center gap-1.5 mr-auto">
+                <Eye className="h-4 w-4 text-muted-foreground" weight="duotone" />
+                <span className="text-sm font-semibold">Preview</span>
+              </div>
+              <div className="flex rounded-lg bg-muted p-0.5 text-xs font-medium">
+                <button
+                  onClick={() => setPreviewTab("email")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors",
+                    previewTab === "email" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <EnvelopeSimple className="h-3.5 w-3.5" /> Email
+                </button>
+                <button
+                  onClick={() => setPreviewTab("profile")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors",
+                    previewTab === "profile" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Globe className="h-3.5 w-3.5" /> Profile
+                </button>
+              </div>
+            </div>
+
+            {/* Email preview */}
+            {previewTab === "email" && (
+              <div className="p-4">
+                <div className="rounded-lg border bg-white text-[#1a1a1a] overflow-hidden shadow-sm text-[13px] leading-relaxed max-w-md mx-auto">
+                  {/* Email chrome */}
+                  <div className="bg-[#f3f4f6] px-3 py-2 border-b flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+                    </div>
+                    <div className="flex-1 bg-white rounded text-[10px] text-[#999] px-2 py-0.5 text-center truncate">
+                      Reminder: Payment due in 3 days — A1B2C3D4
+                    </div>
+                  </div>
+                  {/* Email body */}
+                  <div className="px-5 py-4 space-y-3">
+                    <p className="text-[#1a8cff] font-bold text-lg text-center">Loona</p>
+                    <div className="border-l-4 border-[#f59e0b] pl-3">
+                      <p className="font-bold text-[#f59e0b] text-sm">Payment Reminder</p>
+                      <p className="text-[#555] text-xs">Your payment is due in <strong>3 days</strong>.</p>
+                    </div>
+                    <p className="text-[#1a1a1a] text-xs">Hi <strong>Juan dela Cruz</strong>,</p>
+                    <div className="bg-[#f9fafb] rounded-lg p-3 space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-[#555]">Amount Due</span>
+                        <span className="font-bold text-sm">₱2,500.00</span>
+                      </div>
+                      <div className="flex justify-between border-t border-[#e5e7eb] pt-1.5">
+                        <span className="text-[#555]">Due Date</span>
+                        <span className="font-medium text-[#f59e0b]">April 9, 2026</span>
+                      </div>
+                      <div className="flex justify-between border-t border-[#e5e7eb] pt-1.5">
+                        <span className="text-[#555]">Loan Reference</span>
+                        <span className="font-medium">A1B2C3D4</span>
+                      </div>
+                    </div>
+                    {emailQrCodes.length > 0 ? (
+                      <div>
+                        <p className="text-xs font-semibold text-[#1a1a1a] mb-2">Pay via QR Code</p>
+                        <div className="flex flex-wrap gap-3">
+                          {emailQrCodes.map((qr) => (
+                            <div key={qr.id} className="text-center">
+                              <img src={qr.imageData} alt={qr.label} className="h-20 w-20 object-contain border rounded bg-white" />
+                              <p className="text-[11px] font-semibold mt-1">{qr.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-[#999] italic text-center py-2">
+                        No QR codes shown in emails — toggle "Show in emails" on any code above.
+                      </p>
+                    )}
+                    <p className="text-[10px] text-[#999] text-center border-t border-[#eee] pt-3">
+                      This reminder was sent via Loona on behalf of your lender.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Profile preview */}
+            {previewTab === "profile" && (
+              <div className="p-4">
+                <div className="rounded-lg border bg-white overflow-hidden shadow-sm max-w-md mx-auto">
+                  {/* Fake portal header */}
+                  <div className="bg-gradient-to-r from-primary to-primary/80 px-4 py-3 text-center">
+                    <p className="text-white font-bold text-sm">Loona</p>
+                    <p className="text-white/70 text-[10px]">Your loan with John Gervacio</p>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    {/* Fake next payment */}
+                    <div className="rounded-xl bg-primary/5 border border-primary/20 p-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Next Payment</p>
+                      <p className="text-lg font-bold mt-0.5">₱2,500.00</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">April 9, 2026</p>
+                    </div>
+                    {/* QR section */}
+                    {profileQrCodes.length > 0 ? (
+                      <div className="rounded-xl border p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <QrCode className="h-4 w-4 text-muted-foreground" weight="duotone" />
+                          <p className="text-sm font-semibold">Pay via QR Code</p>
+                        </div>
+                        <div className="flex flex-wrap gap-4">
+                          {profileQrCodes.map((qr) => (
+                            <div key={qr.id} className="flex flex-col items-center gap-1.5">
+                              <img src={qr.imageData} alt={qr.label} className="h-24 w-24 object-contain border rounded-lg bg-white" />
+                              <p className="text-xs font-semibold">{qr.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed p-4 text-center">
+                        <p className="text-xs text-muted-foreground italic">
+                          No QR codes shown on profile — toggle "Show on profile" on any code above.
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground text-center">Powered by Loona · This page is private to you.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </StaggerItem>
+        )}
       </Stagger>
     </div>
   )
