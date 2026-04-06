@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { getQrCodes, saveQrCode, updateQrCode, deleteQrCode, reorderQrCodes } from "@/server/qr-codes"
 import { Button } from "@/components/ui/button"
@@ -64,7 +63,6 @@ function QrPaymentsPage() {
   )
   const emailQrCodes = effectiveCodes.filter((c) => c.showInEmails)
   const profileQrCodes = effectiveCodes.filter((c) => c.showInProfile)
-  const hasAnyCodes = codes.length > 0
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -316,17 +314,8 @@ function QrPaymentsPage() {
 
       </Stagger>
 
-      {/* Preview — outside Stagger to avoid variant inheritance conflicts */}
-      <AnimatePresence>
-        {hasAnyCodes && (
-          <motion.div
-            key="qr-preview"
-            className="rounded-xl border bg-card overflow-hidden mt-6"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-          >
+      {/* Preview — always rendered, outside Stagger */}
+      <div className="rounded-xl border bg-card overflow-hidden mt-6">
             {/* Tab bar */}
             <div className="flex items-center gap-1 px-4 pt-4 pb-0">
               <div className="flex items-center gap-1.5 mr-auto">
@@ -406,7 +395,7 @@ function QrPaymentsPage() {
                       </div>
                     ) : (
                       <p className="text-[11px] text-[#999] italic text-center py-2">
-                        No QR codes shown in emails — toggle "Show in emails" on any code above.
+                        {codes.length === 0 ? "Add a QR code above to preview it here." : "No QR codes set to show in emails."}
                       </p>
                     )}
                     <p className="text-[10px] text-[#999] text-center border-t border-[#eee] pt-3">
@@ -452,7 +441,7 @@ function QrPaymentsPage() {
                     ) : (
                       <div className="rounded-xl border border-dashed p-4 text-center">
                         <p className="text-xs text-muted-foreground italic">
-                          No QR codes shown on profile — toggle "Show on profile" on any code above.
+                          {codes.length === 0 ? "Add a QR code above to preview it here." : "No QR codes set to show on profile."}
                         </p>
                       </div>
                     )}
@@ -461,9 +450,7 @@ function QrPaymentsPage() {
                 </div>
               </div>
             )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
     </div>
   )
 }
