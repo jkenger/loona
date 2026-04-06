@@ -314,11 +314,14 @@ function QrPaymentsPage() {
           </Button>
         </StaggerItem>
 
-        {/* Preview */}
-        <AnimatePresence>
+      </Stagger>
+
+      {/* Preview — outside Stagger to avoid variant inheritance conflicts */}
+      <AnimatePresence>
         {hasAnyCodes && (
           <motion.div
-            className="rounded-xl border bg-card overflow-hidden"
+            key="qr-preview"
+            className="rounded-xl border bg-card overflow-hidden mt-6"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
@@ -460,8 +463,7 @@ function QrPaymentsPage() {
             )}
           </motion.div>
         )}
-        </AnimatePresence>
-      </Stagger>
+      </AnimatePresence>
     </div>
   )
 }
