@@ -87,7 +87,7 @@ function QrPaymentsPage() {
     const objectUrl = URL.createObjectURL(file)
     img.onload = () => {
       URL.revokeObjectURL(objectUrl)
-      const MAX = 400
+      const MAX = 300
       const scale = Math.min(1, MAX / Math.max(img.width, img.height))
       const w = Math.round(img.width * scale)
       const h = Math.round(img.height * scale)
@@ -95,8 +95,11 @@ function QrPaymentsPage() {
       canvas.width = w
       canvas.height = h
       const ctx = canvas.getContext("2d")!
+      ctx.fillStyle = "#ffffff"
+      ctx.fillRect(0, 0, w, h)
       ctx.drawImage(img, 0, 0, w, h)
-      const compressed = canvas.toDataURL("image/png")
+      // Use JPEG to keep payload small enough for the dev server
+      const compressed = canvas.toDataURL("image/jpeg", 0.85)
       setImageData(compressed)
       setPreviewUrl(compressed)
     }
@@ -108,11 +111,20 @@ function QrPaymentsPage() {
     if (!imageData) { toast.error("Upload a QR image"); return }
     setIsSaving(true)
     try {
-      const res = await fetch("/api/qr-upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: label.trim(), imageData, showInEmails, showInProfile }),
-      })
+      // Convert base64 data URI to Blob for multipart upload (avoids large JSON body)
+      const byteString = atob(imageData!.split(",")[1])
+      const mimeType = imageData!.split(",")[0].split(":")[1].split(";")[0]
+      const byteArray = new Uint8Array(byteString.length)
+      for (let i = 0; i < byteString.length; i++) byteArray[i] = byteString.charCodeAt(i)
+      const blob = new Blob([byteArray], { type: mimeType })
+
+      const form = new FormData()
+      form.append("image", blob, "qr.jpg")
+      form.append("label", label.trim())
+      form.append("showInEmails", String(showInEmails))
+      form.append("showInProfile", String(showInProfile))
+
+      const res = await fetch("/api/qr-upload", { method: "POST", body: form })
       if (!res.ok) throw new Error("Upload failed")
       const created = await res.json()
       setCodes((prev) => [...prev, created])
