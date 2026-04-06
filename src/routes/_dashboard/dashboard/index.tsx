@@ -19,6 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import {
   CaretLeft,
@@ -40,6 +46,7 @@ import {
   ChartLineUp,
   EnvelopeSimple,
   ArrowClockwise,
+  Info,
 } from '@phosphor-icons/react'
 import {
   format,
@@ -90,6 +97,14 @@ function DashboardPage() {
     !!lenderConfig && !lenderConfig.notificationOnboardingSeen && !allNotificationsEnabled
   )
   const [isEnablingAll, setIsEnablingAll] = useState(false)
+  const [onboardingToggles, setOnboardingToggles] = useState({
+    paymentReceipts: lenderConfig?.paymentReceiptsEnabled ?? false,
+    overdueAlerts: lenderConfig?.overdueAlertsEnabled ?? false,
+    lenderPayment: lenderConfig?.lenderPaymentNotificationsEnabled ?? false,
+    lenderDocument: lenderConfig?.lenderDocumentNotificationsEnabled ?? false,
+    lenderPenalty: lenderConfig?.lenderPenaltyNotificationsEnabled ?? false,
+    dailySummary: lenderConfig?.lenderDailySummaryEnabled ?? false,
+  })
 
   const handleEnableAll = async () => {
     if (!lenderConfig) return
@@ -98,16 +113,16 @@ function DashboardPage() {
       await saveLenderSettings({
         data: {
           ...lenderConfig,
-          paymentReceiptsEnabled: true,
-          overdueAlertsEnabled: true,
-          lenderPaymentNotificationsEnabled: true,
-          lenderDocumentNotificationsEnabled: true,
-          lenderPenaltyNotificationsEnabled: true,
-          lenderDailySummaryEnabled: true,
+          paymentReceiptsEnabled: onboardingToggles.paymentReceipts,
+          overdueAlertsEnabled: onboardingToggles.overdueAlerts,
+          lenderPaymentNotificationsEnabled: onboardingToggles.lenderPayment,
+          lenderDocumentNotificationsEnabled: onboardingToggles.lenderDocument,
+          lenderPenaltyNotificationsEnabled: onboardingToggles.lenderPenalty,
+          lenderDailySummaryEnabled: onboardingToggles.dailySummary,
           notificationOnboardingSeen: true,
         },
       })
-      toast.success("All notifications enabled")
+      toast.success("Notification preferences saved")
       setShowNotificationOnboarding(false)
     } catch {
       toast.error("Failed to save")
@@ -736,40 +751,89 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* Feature grid */}
-          <div className="px-6 pb-2">
-            <div className="grid grid-cols-2 gap-2">
-              {([
-                { icon: CurrencyDollar, label: "Payments", desc: "Every collection", color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50" },
-                { icon: CheckCircle, label: "Loans Paid Off", desc: "Completion alerts", color: "text-green-600 bg-green-50 dark:bg-green-950/50" },
-                { icon: FileText, label: "Signatures", desc: "Document signed", color: "text-blue-600 bg-blue-50 dark:bg-blue-950/50" },
-                { icon: CalendarDots, label: "Due Reminders", desc: "Before & after", color: "text-amber-600 bg-amber-50 dark:bg-amber-950/50" },
-                { icon: Warning, label: "Penalties", desc: "Late fees & interest", color: "text-red-600 bg-red-50 dark:bg-red-950/50" },
-                { icon: ChartLineUp, label: "Daily Summary", desc: "Portfolio digest", color: "text-violet-600 bg-violet-50 dark:bg-violet-950/50" },
-              ] as const).map((item) => (
-                <div key={item.label} className="flex items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/30">
-                  <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", item.color)}>
-                    <item.icon className="h-4.5 w-4.5" weight="bold" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-tight">{item.label}</p>
-                    <p className="text-xs text-muted-foreground leading-tight">{item.desc}</p>
-                  </div>
+          {/* Toggle rows */}
+          <div className="px-6 pb-2 space-y-1">
+            {([
+              {
+                key: "paymentReceipts" as const,
+                icon: CurrencyDollar,
+                label: "Payment Receipts",
+                color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
+                tooltip: "Sends an email to your borrower each time you record a payment, with the amount and remaining balance.",
+              },
+              {
+                key: "overdueAlerts" as const,
+                icon: CalendarDots,
+                label: "Due Date Reminders",
+                color: "text-amber-600 bg-amber-50 dark:bg-amber-950/50",
+                tooltip: "Automatically emails borrowers before their due date, on the due date, and after if unpaid. You can set the number of days in Settings.",
+              },
+              {
+                key: "lenderPayment" as const,
+                icon: EnvelopeSimple,
+                label: "Payment Received (You)",
+                color: "text-blue-600 bg-blue-50 dark:bg-blue-950/50",
+                tooltip: "Notifies you by email whenever a payment is recorded on any of your active loans.",
+              },
+              {
+                key: "lenderDocument" as const,
+                icon: FileText,
+                label: "Document Signed (You)",
+                color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50",
+                tooltip: "Alerts you when a borrower or co-maker signs a promissory note or any loan document.",
+              },
+              {
+                key: "lenderPenalty" as const,
+                icon: Warning,
+                label: "Penalty Generated (You)",
+                color: "text-red-600 bg-red-50 dark:bg-red-950/50",
+                tooltip: "Notifies you when a late fee or daily interest penalty is automatically applied to a loan.",
+              },
+              {
+                key: "dailySummary" as const,
+                icon: ChartLineUp,
+                label: "Daily Summary (You)",
+                color: "text-violet-600 bg-violet-50 dark:bg-violet-950/50",
+                tooltip: "A morning digest with collections, overdue counts, completed loans, and any borrowers with consecutive missed payments.",
+              },
+            ] as const).map((item) => (
+              <div key={item.key} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-muted/40 transition-colors">
+                <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", item.color)}>
+                  <item.icon className="h-4 w-4" weight="bold" />
                 </div>
-              ))}
-            </div>
+                <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                  <p className="text-sm font-medium">{item.label}</p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-56 text-xs">
+                      {item.tooltip}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Switch
+                  checked={onboardingToggles[item.key]}
+                  onCheckedChange={(v) => setOnboardingToggles((prev) => ({ ...prev, [item.key]: v }))}
+                />
+              </div>
+            ))}
           </div>
 
           {/* Footer */}
           <div className="px-6 pb-6 pt-3 space-y-3">
             <Button onClick={handleEnableAll} disabled={isEnablingAll} className="w-full h-11 text-sm font-semibold gap-2">
               <EnvelopeSimple className="h-4 w-4" weight="bold" />
-              {isEnablingAll ? "Enabling..." : "Enable All Notifications"}
+              {isEnablingAll ? "Saving..." : "Save Preferences"}
             </Button>
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                Customize anytime in Settings
-              </p>
+              <button
+                onClick={() => setOnboardingToggles({ paymentReceipts: true, overdueAlerts: true, lenderPayment: true, lenderDocument: true, lenderPenalty: true, dailySummary: true })}
+                disabled={isEnablingAll}
+                className="text-xs text-primary hover:underline transition-colors"
+              >
+                Enable all
+              </button>
               <button
                 onClick={handleDismissOnboarding}
                 disabled={isEnablingAll}
