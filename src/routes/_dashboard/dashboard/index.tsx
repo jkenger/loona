@@ -78,8 +78,16 @@ export const Route = createFileRoute('/_dashboard/dashboard/')({
 function DashboardPage() {
   const { stats, unauthorized, firstName, lenderConfig, renewals } = Route.useLoaderData()
 
+  const allNotificationsEnabled = !!lenderConfig && (
+    lenderConfig.paymentReceiptsEnabled &&
+    lenderConfig.overdueAlertsEnabled &&
+    lenderConfig.lenderPaymentNotificationsEnabled &&
+    lenderConfig.lenderDocumentNotificationsEnabled &&
+    lenderConfig.lenderPenaltyNotificationsEnabled &&
+    lenderConfig.lenderDailySummaryEnabled
+  )
   const [showNotificationOnboarding, setShowNotificationOnboarding] = useState(
-    !!lenderConfig && !lenderConfig.notificationOnboardingSeen
+    !!lenderConfig && !lenderConfig.notificationOnboardingSeen && !allNotificationsEnabled
   )
   const [isEnablingAll, setIsEnablingAll] = useState(false)
 
