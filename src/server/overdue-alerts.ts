@@ -2,6 +2,7 @@ import { db, paymentSchedule, loans } from "@/lib/db"
 import { eq, and, inArray, sql } from "drizzle-orm"
 import { parseLenderConfig } from "@/lib/constants/lender-defaults"
 import { sendEmail, overdueAlertEmail, agentBorrowerOverdueEmail } from "@/lib/email"
+import { getEmailQrCodesForLender } from "@/server/qr-codes"
 
 function toDateString(date: Date): string {
   return date.toISOString().slice(0, 10)
@@ -26,6 +27,8 @@ export async function sendOverdueAlerts() {
 
   // Process each lender with their own day offsets
   for (const { lenderId, config } of enabledLenders) {
+    const lenderQrCodes = await getEmailQrCodesForLender(lenderId)
+
     const reminderDays = [
       -config.overdueAlertDaysBefore, // before
       0,                               // on due date
@@ -94,6 +97,7 @@ export async function sendOverdueAlerts() {
           amountDue: parseFloat(item.amount).toFixed(2),
           loanReference: item.loanId.slice(0, 8).toUpperCase(),
           daysRelative: days,
+          qrCodes: lenderQrCodes.map((q) => ({ label: q.label, imageData: q.imageData })),
         })
 
         try {

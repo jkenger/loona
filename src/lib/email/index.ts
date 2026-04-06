@@ -705,8 +705,9 @@ export function overdueAlertEmail(params: {
   amountDue: string
   loanReference: string
   daysRelative: number // negative = days before, 0 = due today, positive = days overdue
+  qrCodes?: { label: string; imageData: string }[]
 }) {
-  const { borrowerName, lenderName, dueDate, amountDue, loanReference, daysRelative } = params
+  const { borrowerName, lenderName, dueDate, amountDue, loanReference, daysRelative, qrCodes } = params
 
   let subject: string
   let urgencyText: string
@@ -766,6 +767,18 @@ export function overdueAlertEmail(params: {
 
   <p style="color: #555; font-size: 14px;">Please coordinate with <strong>${lenderName}</strong> to arrange your payment at your earliest convenience.</p>
 
+  ${qrCodes && qrCodes.length > 0 ? `
+  <div style="margin: 24px 0;">
+    <p style="font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a;">Pay via QR Code</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+      ${qrCodes.map(qr => `
+      <div style="text-align: center;">
+        <img src="${qr.imageData}" alt="${qr.label} QR Code" style="width: 140px; height: 140px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; display: block; margin: 0 auto;" />
+        <p style="margin: 6px 0 0; font-size: 13px; font-weight: 600; color: #333;">${qr.label}</p>
+      </div>`).join('')}
+    </div>
+  </div>` : ''}
+
   <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
   <p style="color: #999; font-size: 12px; text-align: center;">This reminder was sent via Loona on behalf of ${lenderName}.</p>
 </body>
@@ -784,7 +797,7 @@ Due Date: ${dueDate}
 Loan Reference: ${loanReference}
 
 Please coordinate with ${lenderName} to arrange your payment.
-
+${qrCodes && qrCodes.length > 0 ? `\nPayment QR Codes available: ${qrCodes.map(q => q.label).join(', ')}` : ''}
 Sent via Loona on behalf of ${lenderName}.
   `
 

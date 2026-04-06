@@ -4,6 +4,7 @@ import { eq, desc, and, sql, inArray } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { createAuditLogger } from "./audit"
 import { z } from "zod"
+import { getPublicQrCodesForLender } from "@/server/qr-codes"
 
 import { type CustomClauses, DEFAULT_CLAUSES, type ClauseKey } from "@/lib/constants/promissory-clauses"
 import {
@@ -325,6 +326,7 @@ export const getPublicLoanByToken = createServerFn()
     if (!result) return null
 
     const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig)
+    const qrCodes = await getPublicQrCodesForLender(result.lenderId)
     const totalPenalties = result.penalties
       .filter((p) => p.status === "applied")
       .reduce((sum, p) => sum + parseFloat(p.amount), 0)
@@ -371,6 +373,7 @@ export const getPublicLoanByToken = createServerFn()
         paidAt: p.paidAt.toISOString(),
         type: p.type,
       })),
+      qrCodes: qrCodes.map((q) => ({ label: q.label, imageData: q.imageData })),
     }
   })
 

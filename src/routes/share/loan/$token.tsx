@@ -12,6 +12,7 @@ import {
   CalendarBlank,
   Receipt,
   ShieldCheck,
+  QrCode,
 } from "@phosphor-icons/react"
 import { motion } from "framer-motion"
 import { format, formatDistanceToNow } from "date-fns"
@@ -292,6 +293,32 @@ function BorrowerLoanPortal() {
                   {loan.gracePeriodDays > 0 && ` · ${loan.gracePeriodDays}-day grace period`}
                 </p>
               </div>
+            </StaggerItem>
+          )}
+
+          {/* QR Payment Codes */}
+          {loan.qrCodes.length > 0 && (
+            <StaggerItem>
+              <Card className="rounded-xl shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <QrCode className="h-4 w-4 text-muted-foreground" weight="duotone" />
+                    <h3 className="text-sm font-semibold">Pay via QR Code</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-5">
+                    {loan.qrCodes.map((qr, i) => (
+                      <div key={i} className="flex flex-col items-center gap-2">
+                        <img
+                          src={qr.imageData}
+                          alt={`${qr.label} QR Code`}
+                          className="h-32 w-32 object-contain border rounded-lg bg-white"
+                        />
+                        <p className="text-xs font-semibold">{qr.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </StaggerItem>
           )}
 

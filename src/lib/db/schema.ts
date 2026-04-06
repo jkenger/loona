@@ -385,6 +385,21 @@ export const lenderSettings = pgTable("lender_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
 
+// QR Payment Codes (lender-uploaded payment QR codes)
+export const lenderQrCodes = pgTable("lender_qr_codes", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  label: text("label").notNull(), // e.g. "GCash", "Maya"
+  imageData: text("image_data").notNull(), // base64 data URI
+  showInEmails: boolean("show_in_emails").notNull().default(true),
+  showInProfile: boolean("show_in_profile").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
 // Penalty Settings (lender-wide penalty config)
 export const penaltySettings = pgTable("penalty_settings", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -572,6 +587,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   commissionSettings: one(commissionSettings),
   penaltySettings: one(penaltySettings),
   lenderSettings: one(lenderSettings),
+  lenderQrCodes: many(lenderQrCodes),
   blogPosts: many(blogPosts),
   playbookSections: many(playbookSections),
   lunaConversations: many(lunaConversations),
@@ -715,6 +731,10 @@ export const penaltySettingsRelations = relations(penaltySettings, ({ one }) => 
 
 export const lenderSettingsRelations = relations(lenderSettings, ({ one }) => ({
   lender: one(user, { fields: [lenderSettings.lenderId], references: [user.id] }),
+}))
+
+export const lenderQrCodesRelations = relations(lenderQrCodes, ({ one }) => ({
+  lender: one(user, { fields: [lenderQrCodes.lenderId], references: [user.id] }),
 }))
 
 export const penaltiesRelations = relations(penalties, ({ one }) => ({
@@ -861,6 +881,9 @@ export type PenaltyRow = typeof penalties.$inferSelect
 
 export type LenderSettingsRow = typeof lenderSettings.$inferSelect
 export type NewLenderSettingsRow = typeof lenderSettings.$inferInsert
+
+export type LenderQrCode = typeof lenderQrCodes.$inferSelect
+export type NewLenderQrCode = typeof lenderQrCodes.$inferInsert
 
 export type PlaybookSection = typeof playbookSections.$inferSelect
 
