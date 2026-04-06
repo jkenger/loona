@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { getQrCodes, saveQrCode, updateQrCode, deleteQrCode, reorderQrCodes } from "@/server/qr-codes"
 import { Button } from "@/components/ui/button"
@@ -314,8 +315,15 @@ function QrPaymentsPage() {
         </StaggerItem>
 
         {/* Preview */}
+        <AnimatePresence>
         {hasAnyCodes && (
-          <StaggerItem className="rounded-xl border bg-card overflow-hidden">
+          <motion.div
+            className="rounded-xl border bg-card overflow-hidden"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+          >
             {/* Tab bar */}
             <div className="flex items-center gap-1 px-4 pt-4 pb-0">
               <div className="flex items-center gap-1.5 mr-auto">
@@ -450,8 +458,9 @@ function QrPaymentsPage() {
                 </div>
               </div>
             )}
-          </StaggerItem>
+          </motion.div>
         )}
+        </AnimatePresence>
       </Stagger>
     </div>
   )
