@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "NODE_OPTIONS=--max-http-header-size=65536 vite dev --port 3000",
     "build": "drizzle-kit migrate && node --max-old-space-size=4096 ./node_modules/.bin/vite build",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
