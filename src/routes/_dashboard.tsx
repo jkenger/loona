@@ -44,6 +44,9 @@ import {
   IdentificationBadge,
   Notebook,
   Sparkle,
+  QrCode,
+  Bell,
+  ArrowRight,
 } from "@phosphor-icons/react"
 import {
   Popover,
@@ -189,6 +192,34 @@ function DashboardLayout() {
     : isOnAgentPortal && isAgent
       ? "/agent"
       : isLender ? "/dashboard" : isAgent ? "/agent" : isAdmin ? "/admin" : "/dashboard"
+
+  // New features carousel
+  const FEATURE_CAROUSEL_KEY = "loona_feature_carousel_v1_dismissed"
+  const [featureCarouselDismissed, setFeatureCarouselDismissed] = useState(() => {
+    try { return localStorage.getItem(FEATURE_CAROUSEL_KEY) === "1" } catch { return false }
+  })
+  const [featureSlide, setFeatureSlide] = useState(0)
+  const featureSlides = [
+    {
+      icon: QrCode,
+      gradient: "from-violet-500 to-blue-500",
+      title: "QR Payment Codes",
+      desc: "Upload GCash, Maya & more so borrowers can pay you instantly.",
+      href: "/settings/qr-payments",
+    },
+    {
+      icon: Bell,
+      gradient: "from-primary to-primary/70",
+      title: "Notification Settings",
+      desc: "Get alerts on payments, penalties, and daily portfolio summaries.",
+      href: "/settings",
+    },
+  ] as const
+
+  function dismissFeatureCarousel() {
+    setFeatureCarouselDismissed(true)
+    try { localStorage.setItem(FEATURE_CAROUSEL_KEY, "1") } catch { /* ignore */ }
+  }
 
   // Wallet state
   const [showBreakdown, setShowBreakdown] = useState(false)
@@ -355,6 +386,64 @@ function DashboardLayout() {
               </>
             )}
           </nav>
+
+          {/* New Features Carousel — lender portal only */}
+          {isLender && !isOnAgentPortal && !isOnAdminPortal && !featureCarouselDismissed && (
+            <div className="mx-3 mb-2 rounded-xl overflow-hidden border border-primary/20 shadow-sm">
+              {/* Slide */}
+              {featureSlides.map((slide, i) => {
+                const SlideIcon = slide.icon
+                if (i !== featureSlide) return null
+                return (
+                  <div key={i} className={`bg-gradient-to-br ${slide.gradient} p-3.5 relative`}>
+                    {/* Dismiss */}
+                    <button
+                      onClick={dismissFeatureCarousel}
+                      className="absolute top-2 right-2 text-white/60 hover:text-white transition-colors"
+                      aria-label="Dismiss"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white px-1.5 py-0.5 rounded-full">
+                        New
+                      </span>
+                    </div>
+
+                    <div className="flex items-start gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <SlideIcon className="h-4 w-4 text-white" weight="bold" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-white leading-tight">{slide.title}</p>
+                        <p className="text-[11px] text-white/75 mt-0.5 leading-snug">{slide.desc}</p>
+                      </div>
+                    </div>
+
+                    <Link
+                      to={slide.href}
+                      className="mt-3 flex items-center gap-1 text-[11px] font-semibold text-white hover:text-white/80 transition-colors"
+                    >
+                      Set up now <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                )
+              })}
+
+              {/* Dot navigation */}
+              <div className="flex items-center justify-center gap-1.5 py-2 bg-sidebar-accent/60">
+                {featureSlides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setFeatureSlide(i)}
+                    className={`rounded-full transition-all ${i === featureSlide ? "w-4 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"}`}
+                    aria-label={`Slide ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Cash Position Card — lender portal only */}
           {isLender && !isOnAgentPortal && !isOnAdminPortal && (
