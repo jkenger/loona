@@ -55,12 +55,25 @@ function QrPaymentsPage() {
   // Preview tab
   const [previewTab, setPreviewTab] = useState<"email" | "profile">("email")
 
-  // Compute effective codes for preview (reflects in-progress edits)
+  // Compute effective codes for preview (reflects in-progress edits + pending add)
   const effectiveCodes = codes.map((c) =>
     c.id === editingId
       ? { ...c, label: editLabel || c.label, showInEmails: editShowInEmails, showInProfile: editShowInProfile }
       : c
   )
+  if (imageData) {
+    effectiveCodes.push({
+      id: "__pending__",
+      lenderId: "",
+      label: label.trim() || "New QR Code",
+      imageData,
+      showInEmails,
+      showInProfile,
+      sortOrder: effectiveCodes.length,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+  }
   const emailQrCodes = effectiveCodes.filter((c) => c.showInEmails)
   const profileQrCodes = effectiveCodes.filter((c) => c.showInProfile)
 
