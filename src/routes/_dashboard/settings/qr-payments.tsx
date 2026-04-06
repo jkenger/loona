@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState, useRef } from "react"
 import { toast } from "sonner"
-import { getQrCodes, saveQrCode, updateQrCode, deleteQrCode, reorderQrCodes } from "@/server/qr-codes"
+import { getQrCodes, updateQrCode, deleteQrCode, reorderQrCodes } from "@/server/qr-codes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -108,7 +108,13 @@ function QrPaymentsPage() {
     if (!imageData) { toast.error("Upload a QR image"); return }
     setIsSaving(true)
     try {
-      const created = await saveQrCode({ data: { label: label.trim(), imageData, showInEmails, showInProfile } })
+      const res = await fetch("/api/qr-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: label.trim(), imageData, showInEmails, showInProfile }),
+      })
+      if (!res.ok) throw new Error("Upload failed")
+      const created = await res.json()
       setCodes((prev) => [...prev, created])
       setLabel("")
       setImageData(null)
