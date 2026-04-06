@@ -31,6 +31,7 @@ import {
   LinkSimple,
   Copy,
   Bell,
+  QrCode,
 } from "@phosphor-icons/react"
 import type { Icon } from "@phosphor-icons/react"
 import { Switch } from "@/components/ui/switch"
@@ -447,6 +448,16 @@ function SettingsPage() {
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5">
                 Configure
                 <ArrowSquareOut className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </SettingRow>
+
+          {/* QR Payment Codes */}
+          <SettingRow label="QR Payment Codes" description="GCash, Maya, and other payment QR codes">
+            <Link to="/settings/qr-payments">
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5">
+                <QrCode className="h-3.5 w-3.5" />
+                Manage
               </Button>
             </Link>
           </SettingRow>
