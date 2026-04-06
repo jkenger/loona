@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_OPTIONS=--max-http-header-size=65536 vite dev --port 3000",
+    "dev": "cross-env NODE_OPTIONS=--max-http-header-size=65536 vite dev --port 3000",
     "build": "drizzle-kit migrate && node --max-old-space-size=4096 ./node_modules/.bin/vite build",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
@@ -85,6 +85,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.8",
     "jsdom": "^27.0.0",
