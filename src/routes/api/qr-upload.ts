@@ -15,23 +15,19 @@ export const Route = createFileRoute('/api/qr-upload')({
           })
         }
 
-        const form = await request.formData()
-        const imageFile = form.get('image') as File | null
-        const label = (form.get('label') as string | null)?.trim()
-        const showInEmails = form.get('showInEmails') === 'true'
-        const showInProfile = form.get('showInProfile') === 'true'
+        const body = await request.json() as {
+          label: string
+          imageData: string
+          showInEmails: boolean
+          showInProfile: boolean
+        }
 
-        if (!imageFile || !label) {
+        if (!body.label?.trim() || !body.imageData) {
           return new Response(JSON.stringify({ error: 'Missing fields' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' },
           })
         }
-
-        // Convert blob to base64 data URI for storage
-        const arrayBuffer = await imageFile.arrayBuffer()
-        const base64 = Buffer.from(arrayBuffer).toString('base64')
-        const imageData = `data:${imageFile.type};base64,${base64}`
 
         const existing = await db.query.lenderQrCodes.findMany({
           where: eq(lenderQrCodes.lenderId, session.user.id),
@@ -40,10 +36,10 @@ export const Route = createFileRoute('/api/qr-upload')({
 
         const [created] = await db.insert(lenderQrCodes).values({
           lenderId: session.user.id,
-          label,
-          imageData,
-          showInEmails,
-          showInProfile,
+          label: body.label.trim(),
+          imageData: body.imageData,
+          showInEmails: body.showInEmails,
+          showInProfile: body.showInProfile,
           sortOrder: existing.length,
         }).returning()
 
