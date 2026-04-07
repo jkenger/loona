@@ -416,63 +416,6 @@ function DashboardPage() {
               </p>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Right Column */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Luna AI */}
-          <LunaDashboardWidget />
-
-          {/* Portfolio */}
-          <Card className="rounded-xl shadow-sm">
-            <CardHeader className="p-5 pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base font-semibold">
-                    Portfolio
-                  </CardTitle>
-                </div>
-                <Badge variant="secondary">{stats.activeLoans} Active</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Active Loans
-                  </span>
-                  <span className="text-sm font-semibold">
-                    {stats.activeLoans}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Total Contacts
-                  </span>
-                  <span className="text-sm font-semibold">
-                    {stats.totalContacts}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-t pt-2.5">
-                  <span className="text-sm text-muted-foreground">
-                    Outstanding
-                  </span>
-                  <span className="text-sm font-semibold">
-                    {formatCurrency(stats.outstandingBalance)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Total Collected
-                  </span>
-                  <span className="text-sm font-semibold">
-                    {formatCurrency(stats.totalCollected)}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Calendar — Week Strip */}
           <Card className="rounded-xl shadow-sm">
@@ -626,6 +569,47 @@ function DashboardPage() {
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-destructive" />
                   <span className="text-[10px] text-muted-foreground">Overdue</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Luna AI */}
+          <LunaDashboardWidget />
+
+          {/* Portfolio */}
+          <Card className="rounded-xl shadow-sm">
+            <CardHeader className="p-5 pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-base font-semibold">
+                    Portfolio
+                  </CardTitle>
+                </div>
+                <Badge variant="secondary">{stats.activeLoans} Active</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Active Loans</span>
+                  <span className="text-sm font-semibold">{stats.activeLoans}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Contacts</span>
+                  <span className="text-sm font-semibold">{stats.totalContacts}</span>
+                </div>
+                <div className="flex items-center justify-between border-t pt-2.5">
+                  <span className="text-sm text-muted-foreground">Outstanding</span>
+                  <span className="text-sm font-semibold">{formatCurrency(stats.outstandingBalance)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Collected</span>
+                  <span className="text-sm font-semibold">{formatCurrency(stats.totalCollected)}</span>
                 </div>
               </div>
             </CardContent>
