@@ -20,6 +20,7 @@ import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as ApiTestEmailsRouteImport } from './routes/api/test-emails'
 import { Route as ApiSitemapRouteImport } from './routes/api/sitemap'
+import { Route as ApiQrUploadRouteImport } from './routes/api/qr-upload'
 import { Route as DashboardPlaybookRouteImport } from './routes/_dashboard/playbook'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
@@ -52,6 +53,7 @@ import { Route as ApiCronAgentWeeklySummaryRouteImport } from './routes/api/cron
 import { Route as ApiAuthErrorRouteImport } from './routes/api/auth/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as DashboardToolsEstimatorRouteImport } from './routes/_dashboard/tools/estimator'
+import { Route as DashboardSettingsQrPaymentsRouteImport } from './routes/_dashboard/settings/qr-payments'
 import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
 import { Route as DashboardReportsRiskRouteImport } from './routes/_dashboard/reports/risk'
 import { Route as DashboardReportsPortfolioRouteImport } from './routes/_dashboard/reports/portfolio'
@@ -136,6 +138,11 @@ const ApiTestEmailsRoute = ApiTestEmailsRouteImport.update({
 const ApiSitemapRoute = ApiSitemapRouteImport.update({
   id: '/api/sitemap',
   path: '/api/sitemap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiQrUploadRoute = ApiQrUploadRouteImport.update({
+  id: '/api/qr-upload',
+  path: '/api/qr-upload',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardPlaybookRoute = DashboardPlaybookRouteImport.update({
@@ -299,6 +306,12 @@ const DashboardToolsEstimatorRoute = DashboardToolsEstimatorRouteImport.update({
   path: '/tools/estimator',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardSettingsQrPaymentsRoute =
+  DashboardSettingsQrPaymentsRouteImport.update({
+    id: '/settings/qr-payments',
+    path: '/settings/qr-payments',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardSettingsPenaltySettingsRoute =
   DashboardSettingsPenaltySettingsRouteImport.update({
     id: '/settings/penalty-settings',
@@ -488,6 +501,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/playbook': typeof DashboardPlaybookRoute
+  '/api/qr-upload': typeof ApiQrUploadRoute
   '/api/sitemap': typeof ApiSitemapRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -512,6 +526,7 @@ export interface FileRoutesByFullPath {
   '/reports/portfolio': typeof DashboardReportsPortfolioRoute
   '/reports/risk': typeof DashboardReportsRiskRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
+  '/settings/qr-payments': typeof DashboardSettingsQrPaymentsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
@@ -563,6 +578,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/playbook': typeof DashboardPlaybookRoute
+  '/api/qr-upload': typeof ApiQrUploadRoute
   '/api/sitemap': typeof ApiSitemapRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -587,6 +603,7 @@ export interface FileRoutesByTo {
   '/reports/portfolio': typeof DashboardReportsPortfolioRoute
   '/reports/risk': typeof DashboardReportsRiskRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
+  '/settings/qr-payments': typeof DashboardSettingsQrPaymentsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
@@ -641,6 +658,7 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_dashboard/playbook': typeof DashboardPlaybookRoute
+  '/api/qr-upload': typeof ApiQrUploadRoute
   '/api/sitemap': typeof ApiSitemapRoute
   '/api/test-emails': typeof ApiTestEmailsRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -665,6 +683,7 @@ export interface FileRoutesById {
   '/_dashboard/reports/portfolio': typeof DashboardReportsPortfolioRoute
   '/_dashboard/reports/risk': typeof DashboardReportsRiskRoute
   '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
+  '/_dashboard/settings/qr-payments': typeof DashboardSettingsQrPaymentsRoute
   '/_dashboard/tools/estimator': typeof DashboardToolsEstimatorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/error': typeof ApiAuthErrorRoute
@@ -718,6 +737,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/playbook'
+    | '/api/qr-upload'
     | '/api/sitemap'
     | '/api/test-emails'
     | '/blog/$slug'
@@ -742,6 +762,7 @@ export interface FileRouteTypes {
     | '/reports/portfolio'
     | '/reports/risk'
     | '/settings/penalty-settings'
+    | '/settings/qr-payments'
     | '/tools/estimator'
     | '/api/auth/$'
     | '/api/auth/error'
@@ -793,6 +814,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/playbook'
+    | '/api/qr-upload'
     | '/api/sitemap'
     | '/api/test-emails'
     | '/blog/$slug'
@@ -817,6 +839,7 @@ export interface FileRouteTypes {
     | '/reports/portfolio'
     | '/reports/risk'
     | '/settings/penalty-settings'
+    | '/settings/qr-payments'
     | '/tools/estimator'
     | '/api/auth/$'
     | '/api/auth/error'
@@ -870,6 +893,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/reset-password'
     | '/_dashboard/playbook'
+    | '/api/qr-upload'
     | '/api/sitemap'
     | '/api/test-emails'
     | '/blog/$slug'
@@ -894,6 +918,7 @@ export interface FileRouteTypes {
     | '/_dashboard/reports/portfolio'
     | '/_dashboard/reports/risk'
     | '/_dashboard/settings/penalty-settings'
+    | '/_dashboard/settings/qr-payments'
     | '/_dashboard/tools/estimator'
     | '/api/auth/$'
     | '/api/auth/error'
@@ -944,6 +969,7 @@ export interface RootRouteChildren {
   SplashRoute: typeof SplashRoute
   TermsRoute: typeof TermsRoute
   WelcomeRoute: typeof WelcomeRoute
+  ApiQrUploadRoute: typeof ApiQrUploadRoute
   ApiSitemapRoute: typeof ApiSitemapRoute
   ApiTestEmailsRoute: typeof ApiTestEmailsRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -1042,6 +1068,13 @@ declare module '@tanstack/react-router' {
       path: '/api/sitemap'
       fullPath: '/api/sitemap'
       preLoaderRoute: typeof ApiSitemapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/qr-upload': {
+      id: '/api/qr-upload'
+      path: '/api/qr-upload'
+      fullPath: '/api/qr-upload'
+      preLoaderRoute: typeof ApiQrUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_dashboard/playbook': {
@@ -1266,6 +1299,13 @@ declare module '@tanstack/react-router' {
       path: '/tools/estimator'
       fullPath: '/tools/estimator'
       preLoaderRoute: typeof DashboardToolsEstimatorRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/settings/qr-payments': {
+      id: '/_dashboard/settings/qr-payments'
+      path: '/settings/qr-payments'
+      fullPath: '/settings/qr-payments'
+      preLoaderRoute: typeof DashboardSettingsQrPaymentsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/settings/penalty-settings': {
@@ -1531,6 +1571,7 @@ interface DashboardRouteChildren {
   DashboardReportsPortfolioRoute: typeof DashboardReportsPortfolioRoute
   DashboardReportsRiskRoute: typeof DashboardReportsRiskRoute
   DashboardSettingsPenaltySettingsRoute: typeof DashboardSettingsPenaltySettingsRoute
+  DashboardSettingsQrPaymentsRoute: typeof DashboardSettingsQrPaymentsRoute
   DashboardToolsEstimatorRoute: typeof DashboardToolsEstimatorRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
   DashboardAgentIndexRoute: typeof DashboardAgentIndexRoute
@@ -1581,6 +1622,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardReportsPortfolioRoute: DashboardReportsPortfolioRoute,
   DashboardReportsRiskRoute: DashboardReportsRiskRoute,
   DashboardSettingsPenaltySettingsRoute: DashboardSettingsPenaltySettingsRoute,
+  DashboardSettingsQrPaymentsRoute: DashboardSettingsQrPaymentsRoute,
   DashboardToolsEstimatorRoute: DashboardToolsEstimatorRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
   DashboardAgentIndexRoute: DashboardAgentIndexRoute,
@@ -1621,6 +1663,7 @@ const rootRouteChildren: RootRouteChildren = {
   SplashRoute: SplashRoute,
   TermsRoute: TermsRoute,
   WelcomeRoute: WelcomeRoute,
+  ApiQrUploadRoute: ApiQrUploadRoute,
   ApiSitemapRoute: ApiSitemapRoute,
   ApiTestEmailsRoute: ApiTestEmailsRoute,
   BlogSlugRoute: BlogSlugRoute,

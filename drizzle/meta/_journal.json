@@ -260,6 +260,13 @@
       "when": 1774852502583,
       "tag": "0036_silent_amazoness",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1775569520118,
+      "tag": "0037_swift_franklin_richards",
+      "breakpoints": true
     }
   ]
 }
