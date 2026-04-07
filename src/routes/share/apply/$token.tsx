@@ -3,6 +3,7 @@ import { useState } from "react"
 import { getApplicationFormInfo, submitLoanApplication } from "@/server/loan-applications"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
@@ -276,8 +277,8 @@ function LoanApplicationForm() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-medium text-foreground">Loan Amount (₱) <span className="text-destructive">*</span></Label>
-                      <Input type="number" min="0" step="100" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 10000" className="mt-1.5 h-11 rounded-lg" required />
+                      <Label className="text-xs font-medium text-foreground">Loan Amount <span className="text-destructive">*</span></Label>
+                      <CurrencyInput value={amount} onValueChange={setAmount} placeholder="e.g. 10,000" className="mt-1.5 h-11 rounded-lg" />
                     </div>
                     <div>
                       <Label className="text-xs font-medium text-foreground">Preferred Term (months)</Label>
@@ -311,12 +312,12 @@ function LoanApplicationForm() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Monthly Income (₱)</Label>
-                    <Input type="number" min="0" value={monthlyIncome} onChange={(e) => setMonthlyIncome(e.target.value)} placeholder="e.g. 25000" className="mt-1.5 h-11 rounded-lg bg-background" />
+                    <Label className="text-xs font-medium text-muted-foreground">Monthly Income</Label>
+                    <CurrencyInput value={monthlyIncome} onValueChange={setMonthlyIncome} placeholder="e.g. 25,000" className="mt-1.5 h-11 rounded-lg bg-background" />
                   </div>
                   <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Other Income (₱)</Label>
-                    <Input type="number" min="0" value={otherIncome} onChange={(e) => setOtherIncome(e.target.value)} placeholder="e.g. 5000" className="mt-1.5 h-11 rounded-lg bg-background" />
+                    <Label className="text-xs font-medium text-muted-foreground">Other Income</Label>
+                    <CurrencyInput value={otherIncome} onValueChange={setOtherIncome} placeholder="e.g. 5,000" className="mt-1.5 h-11 rounded-lg bg-background" />
                   </div>
                 </div>
               </CardContent>
