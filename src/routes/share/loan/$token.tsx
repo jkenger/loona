@@ -301,19 +301,20 @@ function BorrowerLoanPortal() {
             <StaggerItem>
               <Card className="rounded-xl shadow-sm">
                 <CardContent className="p-5">
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
                     <QrCode className="h-4 w-4 text-muted-foreground" weight="duotone" />
                     <h3 className="text-sm font-semibold">Pay via QR Code</h3>
                   </div>
-                  <div className="flex flex-wrap gap-5">
+                  <p className="text-xs text-muted-foreground mb-4">Scan any code below to pay instantly.</p>
+                  <div className="flex flex-col items-center gap-6">
                     {loan.qrCodes.map((qr, i) => (
                       <div key={i} className="flex flex-col items-center gap-2">
                         <img
                           src={qr.imageData}
                           alt={`${qr.label} QR Code`}
-                          className="h-32 w-32 object-contain border rounded-lg bg-white"
+                          className="w-52 h-52 object-contain border-2 rounded-xl bg-white p-2"
                         />
-                        <p className="text-xs font-semibold">{qr.label}</p>
+                        <p className="text-sm font-semibold">{qr.label}</p>
                       </div>
                     ))}
                   </div>

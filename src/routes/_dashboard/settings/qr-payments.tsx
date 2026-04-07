@@ -415,12 +415,12 @@ function QrPaymentsPage() {
                     </div>
                     {emailQrCodes.length > 0 ? (
                       <div>
-                        <p className="text-xs font-semibold text-[#1a1a1a] mb-2">Pay via QR Code</p>
-                        <div className="flex flex-wrap gap-3">
+                        <p className="text-xs font-semibold text-[#1a1a1a] mb-3">Pay via QR Code</p>
+                        <div className="flex flex-col items-center gap-3">
                           {emailQrCodes.map((qr) => (
                             <div key={qr.id} className="text-center">
-                              <img src={qr.imageData} alt={qr.label} className="h-32 w-32 object-contain border rounded bg-white" />
-                              <p className="text-[11px] font-semibold mt-1">{qr.label}</p>
+                              <img src={qr.imageData} alt={qr.label} className="h-36 w-36 object-contain border-2 rounded-lg bg-white p-1 mx-auto" />
+                              <p className="text-[11px] font-semibold mt-1.5">{qr.label}</p>
                             </div>
                           ))}
                         </div>
@@ -461,10 +461,10 @@ function QrPaymentsPage() {
                           <QrCode className="h-4 w-4 text-muted-foreground" weight="duotone" />
                           <p className="text-sm font-semibold">Pay via QR Code</p>
                         </div>
-                        <div className="flex flex-wrap gap-4">
+                        <div className="flex flex-col items-center gap-4">
                           {profileQrCodes.map((qr) => (
                             <div key={qr.id} className="flex flex-col items-center gap-1.5">
-                              <img src={qr.imageData} alt={qr.label} className="h-24 w-24 object-contain border rounded-lg bg-white" />
+                              <img src={qr.imageData} alt={qr.label} className="h-36 w-36 object-contain border-2 rounded-xl bg-white p-1" />
                               <p className="text-xs font-semibold">{qr.label}</p>
                             </div>
                           ))}

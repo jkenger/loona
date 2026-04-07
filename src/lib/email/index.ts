@@ -768,15 +768,14 @@ export function overdueAlertEmail(params: {
   <p style="color: #555; font-size: 14px;">Please coordinate with <strong>${lenderName}</strong> to arrange your payment at your earliest convenience.</p>
 
   ${qrCodes && qrCodes.length > 0 ? `
-  <div style="margin: 24px 0;">
-    <p style="font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a;">Pay via QR Code</p>
-    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-      ${qrCodes.map(qr => `
-      <div style="text-align: center;">
-        <img src="${qr.imageData}" alt="${qr.label} QR Code" style="width: 140px; height: 140px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; display: block; margin: 0 auto;" />
-        <p style="margin: 6px 0 0; font-size: 13px; font-weight: 600; color: #333;">${qr.label}</p>
-      </div>`).join('')}
-    </div>
+  <div style="margin: 24px 0; text-align: center;">
+    <p style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #1a1a1a;">Pay via QR Code</p>
+    <p style="font-size: 12px; color: #888; margin: 0 0 16px;">Scan any code below to pay instantly.</p>
+    ${qrCodes.map(qr => `
+    <div style="margin-bottom: 20px;">
+      <img src="${qr.imageData}" alt="${qr.label} QR Code" style="width: 220px; height: 220px; object-fit: contain; border: 2px solid #e5e7eb; border-radius: 12px; background: #fff; display: block; margin: 0 auto; padding: 6px;" />
+      <p style="margin: 8px 0 0; font-size: 14px; font-weight: 600; color: #333;">${qr.label}</p>
+    </div>`).join('')}
   </div>` : ''}
 
   <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
