@@ -87,7 +87,7 @@ function QrPaymentsPage() {
     const objectUrl = URL.createObjectURL(file)
     img.onload = () => {
       URL.revokeObjectURL(objectUrl)
-      const MAX = 150
+      const MAX = 300
       const scale = Math.min(1, MAX / Math.max(img.width, img.height))
       const w = Math.round(img.width * scale)
       const h = Math.round(img.height * scale)
@@ -98,7 +98,7 @@ function QrPaymentsPage() {
       ctx.fillStyle = "#ffffff"
       ctx.fillRect(0, 0, w, h)
       ctx.drawImage(img, 0, 0, w, h)
-      const compressed = canvas.toDataURL("image/jpeg", 0.7)
+      const compressed = canvas.toDataURL("image/jpeg", 0.9)
       setImageData(compressed)
       setPreviewUrl(compressed)
     }
