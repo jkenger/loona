@@ -60,7 +60,7 @@ function ApplicationsPage() {
   const [rejectionReason, setRejectionReason] = useState("")
   const [isProcessing, setIsProcessing] = useState<string | null>(null)
   const [approveApp, setApproveApp] = useState<(typeof applications)[0] | null>(null)
-  const [approvedResult, setApprovedResult] = useState<{ id: string; name: string; amount: string } | null>(null)
+  const [approvedResult, setApprovedResult] = useState<{ id: string; name: string; amount: string; app: (typeof applications)[0] } | null>(null)
   const [isUndoing, setIsUndoing] = useState(false)
 
   if (unauthorized) return <AccessDenied message="Only lenders can access applications." homeLink="/agent" homeLinkLabel="Go to Agent Portal" />
@@ -71,9 +71,10 @@ function ApplicationsPage() {
     try {
       const result = await reviewLoanApplication({ data: { applicationId: approveApp.id, action: "approve" } })
       const appId = approveApp.id
+      const appSnapshot = { ...approveApp }
       setApproveApp(null)
       if (result.applicant) {
-        setApprovedResult({ id: appId, name: result.applicant.name, amount: result.applicant.requestedAmount ?? "0" })
+        setApprovedResult({ id: appId, name: result.applicant.name, amount: result.applicant.requestedAmount ?? "0", app: appSnapshot })
       } else {
         toast.success("Application approved")
         router.invalidate()
@@ -375,18 +376,18 @@ function ApplicationsPage() {
               className="w-full gap-1.5"
               onClick={() => {
                 if (!approvedResult) return
-                const app = applications.find(a => a.applicantName === approvedResult.name && a.status === "approved")
+                const app = approvedResult.app
                 setApprovedResult(null)
                 router.navigate({
                   to: "/loans/new-wizard",
-                  search: app ? {
+                  search: {
                     fromApplication: JSON.stringify({
                       name: app.applicantName, phone: app.applicantPhone, email: app.applicantEmail,
                       address: app.applicantAddress, city: app.applicantCity, principal: app.requestedAmount,
                       termMonths: app.requestedTermMonths, purpose: app.purpose,
                       income: app.monthlyIncome, otherIncome: app.otherIncome,
                     }),
-                  } : {},
+                  },
                 })
               }}
             >
