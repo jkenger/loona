@@ -71,7 +71,6 @@ function LoanApplicationForm() {
           className="max-w-md w-full"
         >
           <Card className="rounded-2xl shadow-xl border-0 overflow-hidden">
-            {/* Green gradient header */}
             <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-8 text-center relative overflow-hidden">
               <FloatingCircle className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" delay={0} duration={6} />
               <FloatingCircle className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" delay={0.3} duration={5} />
@@ -194,126 +193,130 @@ function LoanApplicationForm() {
           </div>
         </div>
 
-        <div className="max-w-lg mx-auto px-4 sm:px-6 py-8 space-y-6">
-          {/* Title (desktop) */}
+        <div className="max-w-lg mx-auto px-5 sm:px-8 py-8 sm:py-10">
+          {/* Title */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="hidden md:block"
+            className="mb-8"
           >
-            <h2 className="text-2xl font-bold tracking-tight">Loan Application</h2>
-            <p className="text-sm text-muted-foreground mt-1">Fill out the form below to apply for a loan.</p>
-          </motion.div>
-
-          {/* Title (mobile) */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="md:hidden"
-          >
-            <h2 className="text-xl font-bold tracking-tight">Apply for a Loan</h2>
-            <p className="text-xs text-muted-foreground mt-1">Fill out your details below. Fields marked * are required.</p>
+            <h2 className="text-2xl font-bold tracking-tight hidden md:block">Loan Application</h2>
+            <h2 className="text-xl font-bold tracking-tight md:hidden">Apply for a Loan</h2>
+            <p className="text-sm text-muted-foreground mt-1.5">Takes about 2 minutes. Fields marked <span className="text-foreground font-medium">*</span> are required.</p>
           </motion.div>
 
           <motion.form
             onSubmit={handleSubmit}
-            className="space-y-6"
+            className="space-y-8"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            {/* Section: Personal */}
-            <Card className="rounded-xl shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <User className="h-4.5 w-4.5 text-primary" weight="bold" />
+            {/* ── Section 1: Personal Information ── */}
+            <Card className="rounded-2xl shadow-sm border-0 bg-card ring-1 ring-border/60">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
+                    <User className="h-5 w-5 text-primary" weight="bold" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold">Personal Information</h3>
-                    <p className="text-xs text-muted-foreground">Your basic contact details</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold">About You</h3>
+                      <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">1 of 3</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Let's start with your contact details</p>
                   </div>
                 </div>
-                <div className="space-y-3">
+
+                <div className="space-y-4">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Full Name *</Label>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Juan dela Cruz" className="mt-1 h-9" required />
+                    <Label className="text-xs font-medium text-foreground">Full Name <span className="text-destructive">*</span></Label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Juan dela Cruz" className="mt-1.5 h-11 rounded-lg" required />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs text-muted-foreground">Phone</Label>
-                      <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09171234567" className="mt-1 h-9" />
+                      <Label className="text-xs font-medium text-foreground">Phone Number</Label>
+                      <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 09171234567" className="mt-1.5 h-11 rounded-lg" />
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Email *</Label>
-                      <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="juan@email.com" className="mt-1 h-9" required />
+                      <Label className="text-xs font-medium text-foreground">Email Address <span className="text-destructive">*</span></Label>
+                      <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. juan@email.com" className="mt-1.5 h-11 rounded-lg" required />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs text-muted-foreground">Address</Label>
-                      <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, Barangay" className="mt-1 h-9" />
+                      <Label className="text-xs font-medium text-foreground">Home Address</Label>
+                      <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, Barangay" className="mt-1.5 h-11 rounded-lg" />
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">City</Label>
-                      <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Quezon City" className="mt-1 h-9" />
+                      <Label className="text-xs font-medium text-foreground">City / Municipality</Label>
+                      <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Quezon City" className="mt-1.5 h-11 rounded-lg" />
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Section: Loan Details */}
-            <Card className="rounded-xl shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-lg bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0">
-                    <CurrencyCircleDollar className="h-4.5 w-4.5 text-green-600 dark:text-green-400" weight="bold" />
+            {/* ── Section 2: Loan Details ── */}
+            <Card className="rounded-2xl shadow-sm border-0 bg-card ring-1 ring-border/60">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-10 w-10 rounded-xl bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0">
+                    <CurrencyCircleDollar className="h-5 w-5 text-green-600 dark:text-green-400" weight="bold" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold">Loan Details</h3>
-                    <p className="text-xs text-muted-foreground">How much do you need?</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold">Loan Details</h3>
+                      <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">2 of 3</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">How much do you need and what is it for?</p>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs text-muted-foreground">Amount (₱) *</Label>
-                      <Input type="number" min="0" step="100" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="10,000" className="mt-1 h-9" required />
+                      <Label className="text-xs font-medium text-foreground">Loan Amount (₱) <span className="text-destructive">*</span></Label>
+                      <Input type="number" min="0" step="100" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 10000" className="mt-1.5 h-11 rounded-lg" required />
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Term (months)</Label>
-                      <Input type="number" min="1" max="60" value={termMonths} onChange={(e) => setTermMonths(e.target.value)} placeholder="6" className="mt-1 h-9" />
+                      <Label className="text-xs font-medium text-foreground">Preferred Term (months)</Label>
+                      <Input type="number" min="1" max="60" value={termMonths} onChange={(e) => setTermMonths(e.target.value)} placeholder="e.g. 6" className="mt-1.5 h-11 rounded-lg" />
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Purpose</Label>
-                    <Textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="What will you use the loan for?" rows={2} className="mt-1" />
+                    <Label className="text-xs font-medium text-foreground">Purpose of Loan</Label>
+                    <Textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. Business capital, home improvement, emergency expenses..." rows={3} className="mt-1.5 rounded-lg text-sm" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Section: Income */}
-            <Card className="rounded-xl shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-lg bg-amber-100 dark:bg-amber-950/30 flex items-center justify-center shrink-0">
-                    <Briefcase className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400" weight="bold" />
+            {/* ── Section 3: Income (optional, lighter style) ── */}
+            <Card className="rounded-2xl shadow-sm border-0 bg-muted/30 dark:bg-muted/10 ring-1 ring-border/40">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-10 w-10 rounded-xl bg-amber-100/70 dark:bg-amber-950/20 flex items-center justify-center shrink-0">
+                    <Briefcase className="h-5 w-5 text-amber-600 dark:text-amber-400" weight="bold" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold">Income</h3>
-                    <p className="text-xs text-muted-foreground">Optional — helps your lender assess your application</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-muted-foreground">Income</h3>
+                      <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">3 of 3</span>
+                      <span className="text-[10px] font-medium text-muted-foreground/70 italic">Optional</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Sharing this helps your lender review faster</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Monthly Income (₱)</Label>
-                    <Input type="number" min="0" value={monthlyIncome} onChange={(e) => setMonthlyIncome(e.target.value)} placeholder="25,000" className="mt-1 h-9" />
+                    <Label className="text-xs font-medium text-muted-foreground">Monthly Income (₱)</Label>
+                    <Input type="number" min="0" value={monthlyIncome} onChange={(e) => setMonthlyIncome(e.target.value)} placeholder="e.g. 25000" className="mt-1.5 h-11 rounded-lg bg-background" />
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Other Income (₱)</Label>
-                    <Input type="number" min="0" value={otherIncome} onChange={(e) => setOtherIncome(e.target.value)} placeholder="5,000" className="mt-1 h-9" />
+                    <Label className="text-xs font-medium text-muted-foreground">Other Income (₱)</Label>
+                    <Input type="number" min="0" value={otherIncome} onChange={(e) => setOtherIncome(e.target.value)} placeholder="e.g. 5000" className="mt-1.5 h-11 rounded-lg bg-background" />
                   </div>
                 </div>
               </CardContent>
@@ -321,23 +324,30 @@ function LoanApplicationForm() {
 
             {/* Error */}
             {error && (
-              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive flex items-start gap-2"
+              >
+                <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" weight="bold" />
                 {error}
-              </div>
+              </motion.div>
             )}
 
             {/* Submit */}
-            <Button type="submit" className="w-full h-11 gap-2 text-sm font-semibold shadow-[0_0_12px_hsl(var(--primary)/0.3)]" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <><Spinner className="h-4 w-4 animate-spin" />Submitting...</>
-              ) : (
-                <><PaperPlaneTilt className="h-4 w-4" weight="bold" />Submit Application</>
-              )}
-            </Button>
+            <div className="pt-1">
+              <Button type="submit" className="w-full h-12 gap-2.5 text-sm font-semibold rounded-xl shadow-[0_0_16px_hsl(var(--primary)/0.25)]" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <><Spinner className="h-4.5 w-4.5 animate-spin" />Submitting your application...</>
+                ) : (
+                  <><PaperPlaneTilt className="h-4.5 w-4.5" weight="bold" />Submit Application</>
+                )}
+              </Button>
+            </div>
 
             {/* Privacy note */}
-            <p className="text-center text-[11px] text-muted-foreground">
-              <ShieldCheck className="h-3 w-3 inline-block mr-1" weight="bold" />
+            <p className="text-center text-[11px] text-muted-foreground pb-4">
+              <ShieldCheck className="h-3.5 w-3.5 inline-block mr-1 align-[-2px]" weight="bold" />
               Your information is shared only with {info.lenderName} and is never sold.
             </p>
           </motion.form>
