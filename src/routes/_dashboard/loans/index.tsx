@@ -175,7 +175,7 @@ function LoansPage() {
       {/* Header */}
       <StaggerItem>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Loans</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
           <div className="flex items-center gap-2">
             <Link to="/loans/applications">
               <Button variant="outline" size="sm" className="gap-1.5 h-9">
@@ -197,28 +197,28 @@ function LoansPage() {
       {loans.length > 0 && (
         <StaggerItem>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl border bg-card px-4 py-3">
+            <div className="rounded-xl border shadow-sm bg-card px-4 py-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <Wallet className="h-3.5 w-3.5" />
                 Outstanding
               </div>
               <p className="text-lg font-bold tracking-tight">{formatCurrency(stats.totalOutstanding)}</p>
             </div>
-            <div className="rounded-xl border bg-card px-4 py-3">
+            <div className="rounded-xl border shadow-sm bg-card px-4 py-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <CurrencyCircleDollar className="h-3.5 w-3.5" />
                 Active
               </div>
               <p className="text-lg font-bold tracking-tight">{stats.activeCount}</p>
             </div>
-            <div className="rounded-xl border bg-card px-4 py-3">
+            <div className="rounded-xl border shadow-sm bg-card px-4 py-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <Users className="h-3.5 w-3.5" />
                 Borrowers
               </div>
               <p className="text-lg font-bold tracking-tight">{stats.borrowers}</p>
             </div>
-            <div className="rounded-xl border bg-card px-4 py-3">
+            <div className="rounded-xl border shadow-sm bg-card px-4 py-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <ChartLineUp className="h-3.5 w-3.5" />
                 Collected
@@ -296,7 +296,7 @@ function LoansPage() {
       {/* Loan List */}
       <StaggerItem>
         {paginatedLoans.length > 0 ? (
-          <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="rounded-xl border shadow-sm bg-card overflow-hidden">
             {/* Desktop header */}
             <div className="hidden sm:grid sm:grid-cols-[1fr_100px_100px_100px_90px_28px] gap-3 px-4 py-2.5 border-b bg-muted/30 text-xs font-medium text-muted-foreground">
               <span>Borrower</span>
@@ -321,7 +321,7 @@ function LoansPage() {
                   key={loan.id}
                   to="/loans/$loanId"
                   params={{ loanId: loan.id }}
-                  className="block border-b last:border-0 hover:bg-muted/40 transition-colors"
+                  className="block border-b last:border-0 hover:bg-muted/50 transition-colors"
                 >
                   {/* Desktop row */}
                   <div className="hidden sm:grid sm:grid-cols-[1fr_100px_100px_100px_90px_28px] gap-3 px-4 py-3 items-center">
@@ -415,7 +415,7 @@ function LoansPage() {
             })}
           </div>
         ) : (
-          <div className="rounded-xl border bg-card">
+          <div className="rounded-xl border shadow-sm bg-card">
             <div className="flex flex-col items-center justify-center py-12">
               <CurrencyCircleDollar className="h-10 w-10 text-muted-foreground/30 mb-3" />
               <p className="text-sm font-medium mb-1">
