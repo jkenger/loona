@@ -116,11 +116,11 @@ const lenderPrimaryNav = [
   { name: "Dashboard", href: "/dashboard", icon: SquaresFour, exact: true },
   { name: "Loans", href: "/loans", icon: Handshake, exact: false },
   { name: "Payments", href: "/payments", icon: ArrowsLeftRight, exact: false },
+  { name: "Reports", href: "/reports", icon: ChartLineUp, exact: false },
 ]
 const lenderMoreNav = [
   { name: "Luna AI", href: "/luna", icon: Sparkle, exact: false },
   { name: "Agents", href: "/agents", icon: IdentificationBadge, exact: false },
-  { name: "Reports", href: "/reports", icon: ChartLineUp, exact: false },
   { name: "Estimator", href: "/tools/estimator", icon: Calculator, exact: false },
   { name: "Playbook", href: "/playbook", icon: Notebook, exact: false },
 ]
