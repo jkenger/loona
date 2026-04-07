@@ -419,7 +419,7 @@ function QrPaymentsPage() {
                         <div className="flex flex-wrap gap-3">
                           {emailQrCodes.map((qr) => (
                             <div key={qr.id} className="text-center">
-                              <img src={qr.imageData} alt={qr.label} className="h-20 w-20 object-contain border rounded bg-white" />
+                              <img src={qr.imageData} alt={qr.label} className="h-32 w-32 object-contain border rounded bg-white" />
                               <p className="text-[11px] font-semibold mt-1">{qr.label}</p>
                             </div>
                           ))}
