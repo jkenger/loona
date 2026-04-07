@@ -1,23 +1,13 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { getLoans } from "@/server/loans"
-import { getContacts, createContact } from "@/server/contacts"
+import { getContacts } from "@/server/contacts"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton"
 import { AccessDenied } from "@/components/access-denied"
 import { hasRole, ROLES } from "@/lib/constants/roles"
-import { PhoneInput } from "@/components/ui/phone-input"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Plus,
   MagnifyingGlass,
@@ -32,15 +22,12 @@ import {
   Phone,
   EnvelopeSimple,
   MapPin,
-  Spinner,
-  UserPlus,
   Eye,
   EyeSlash,
 } from "@phosphor-icons/react"
 import { useState, useMemo } from "react"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner"
 
 export const Route = createFileRoute("/_dashboard/loans/")({
   loader: async ({ context }) => {
@@ -101,17 +88,11 @@ const statusColors: Record<string, string> = {
 
 function LoansPage() {
   const { loans, contacts, unauthorized } = Route.useLoaderData()
-  const router = useRouter()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [showNoLoans, setShowNoLoans] = useState(false)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 10
-
-  // Add Borrower dialog
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [addPhone, setAddPhone] = useState("")
-  const [isCreating, setIsCreating] = useState(false)
 
   if (unauthorized) {
     return <AccessDenied message="Only lenders can access the loans page." homeLink="/agent" homeLinkLabel="Go to Agent Portal" />
@@ -221,32 +202,6 @@ function LoansPage() {
 
   const contactsWithNoLoans = contacts.filter((c) => c.totalLoans === 0).length
 
-  // Add Borrower handler
-  const handleAddBorrower = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsCreating(true)
-    const formData = new FormData(e.currentTarget)
-    try {
-      const contact = await createContact({
-        data: {
-          name: (formData.get("name") as string).trim(),
-          phone: addPhone || undefined,
-          email: (formData.get("email") as string)?.trim() || undefined,
-          city: (formData.get("city") as string)?.trim() || undefined,
-        },
-      })
-      toast.success(`${contact.name} added`)
-      setShowAddDialog(false)
-      setAddPhone("")
-      setShowNoLoans(true) // show contacts without loans so they see the new one
-      router.invalidate()
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create contact")
-    } finally {
-      setIsCreating(false)
-    }
-  }
-
   return (
     <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Page Header */}
@@ -263,10 +218,6 @@ function LoansPage() {
                 <span className="hidden sm:inline">Applications</span>
               </Button>
             </Link>
-            <Button variant="outline" className="gap-2" onClick={() => setShowAddDialog(true)}>
-              <UserPlus className="h-4 w-4" weight="bold" />
-              <span className="hidden sm:inline">Add Borrower</span>
-            </Button>
             <Link to="/loans/new-wizard">
               <Button className="gap-2">
                 <Plus className="h-4 w-4" weight="bold" />
@@ -519,42 +470,6 @@ function LoansPage() {
         )}
       </StaggerItem>
 
-      {/* Add Borrower Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Borrower</DialogTitle>
-            <DialogDescription>Add a new contact to your borrower list.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAddBorrower} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="add-name">Full Name</Label>
-              <Input id="add-name" name="name" placeholder="Juan dela Cruz" required />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="add-phone">Phone</Label>
-                <PhoneInput id="add-phone" value={addPhone} onValueChange={setAddPhone} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-email">Email</Label>
-                <Input id="add-email" name="email" type="email" placeholder="juan@email.com" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-city">City</Label>
-              <Input id="add-city" name="city" placeholder="Quezon City" />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
-              <Button type="submit" disabled={isCreating} className="gap-1.5">
-                {isCreating ? <Spinner className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" weight="bold" />}
-                Add Borrower
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </Stagger>
   )
 }
