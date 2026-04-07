@@ -11,7 +11,6 @@ import {
   MagnifyingGlass,
   CurrencyCircleDollar,
   CaretRight,
-  Funnel,
   ClipboardText,
   Users,
   ChartLineUp,
@@ -231,23 +230,22 @@ function LoansPage() {
 
       {/* Search + Filters */}
       <StaggerItem>
-        <div className="space-y-3">
-          <div className="relative max-w-sm">
-            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="relative sm:w-72">
+            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
             <Input
-              placeholder="Search by name, phone, or email..."
+              placeholder="Search borrowers..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              className="pl-9 h-9"
+              className="pl-9 h-9 bg-muted/40 border-transparent focus:border-border focus:bg-background transition-colors"
             />
           </div>
           <div className="flex items-center gap-1 flex-wrap">
-            <Funnel className="h-3.5 w-3.5 text-muted-foreground mr-0.5" />
             {statusCounts.pending_approval > 0 && (
               <button
                 onClick={() => handleFilterChange("pending_approval")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                  "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
                   statusFilter === "pending_approval"
                     ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400"
                     : "text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
@@ -263,7 +261,7 @@ function LoansPage() {
                 key={s}
                 onClick={() => handleFilterChange(s)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                  "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
                   statusFilter === s
                     ? "bg-muted text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -278,7 +276,7 @@ function LoansPage() {
               <button
                 onClick={() => handleFilterChange("rejected")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                  "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
                   statusFilter === "rejected"
                     ? "bg-muted text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
