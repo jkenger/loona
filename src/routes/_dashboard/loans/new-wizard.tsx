@@ -86,6 +86,7 @@ const searchSchema = z.object({
   interestRate: z.string().optional(),
   termMonths: z.string().optional(),
   paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]).optional(),
+  fromApplication: z.string().optional(),
 })
 
 export const Route = createFileRoute("/_dashboard/loans/new-wizard")({
@@ -130,7 +131,13 @@ function NewLoanWizard() {
     interestRate: searchInterestRate,
     termMonths: searchTermMonths,
     paymentFrequency: searchPaymentFrequency,
+    fromApplication: fromApplicationJson,
   } = Route.useSearch()
+
+  const fromApp = (() => {
+    if (!fromApplicationJson) return null
+    try { return JSON.parse(fromApplicationJson) as Record<string, string | undefined> } catch { return null }
+  })()
 
   const isRenewal = !!renewFromLoan
   const renewalContactId = renewFromLoan?.contactId
@@ -143,29 +150,29 @@ function NewLoanWizard() {
   const [createdLoanId, setCreatedLoanId] = useState<string | null>(null)
 
   // Step 1 — Borrower
-  const [isNewContact, setIsNewContact] = useState(!hasPreselected)
+  const [isNewContact, setIsNewContact] = useState(!hasPreselected || !!fromApp)
   // New borrower fields
-  const [name, setName] = useState("")
-  const [phone, setPhone] = useState("")
-  const [email, setEmail] = useState("")
-  const [address, setAddress] = useState("")
-  const [city, setCity] = useState("")
+  const [name, setName] = useState(fromApp?.name || "")
+  const [phone, setPhone] = useState(fromApp?.phone || "")
+  const [email, setEmail] = useState(fromApp?.email || "")
+  const [address, setAddress] = useState(fromApp?.address || "")
+  const [city, setCity] = useState(fromApp?.city || "")
   const [facebookProfile, setFacebookProfile] = useState("")
   const [contactNotes, setContactNotes] = useState("")
-  const [contactIncome, setContactIncome] = useState("")
-  const [contactOtherIncome, setContactOtherIncome] = useState("")
+  const [contactIncome, setContactIncome] = useState(fromApp?.income || "")
+  const [contactOtherIncome, setContactOtherIncome] = useState(fromApp?.otherIncome || "")
   // Existing borrower
   const [contactId, setContactId] = useState(effectivePreselectedContactId || "")
 
-  // Step 2 — Loan Terms (pre-fill from renewal source if available)
-  const [principal, setPrincipal] = useState(renewFromLoan ? renewFromLoan.principal : searchPrincipal || "")
+  // Step 2 — Loan Terms (pre-fill from renewal source or application)
+  const [principal, setPrincipal] = useState(renewFromLoan ? renewFromLoan.principal : fromApp?.principal || searchPrincipal || "")
   const [interestRate, setInterestRate] = useState(renewFromLoan ? renewFromLoan.interestRate : searchInterestRate || "5")
-  const [termMonths, setTermMonths] = useState(renewFromLoan ? String(renewFromLoan.termMonths) : searchTermMonths || "6")
+  const [termMonths, setTermMonths] = useState(renewFromLoan ? String(renewFromLoan.termMonths) : fromApp?.termMonths || searchTermMonths || "6")
   const [paymentFrequency, setPaymentFrequency] = useState<
     "daily" | "weekly" | "biweekly" | "semimonthly" | "monthly"
   >(renewFromLoan?.paymentFrequency as any || searchPaymentFrequency || "monthly")
   const [startDate, setStartDate] = useState<Date>(new Date())
-  const [purpose, setPurpose] = useState(renewFromLoan?.purpose || "")
+  const [purpose, setPurpose] = useState(renewFromLoan?.purpose || fromApp?.purpose || "")
   const [hasCollateral, setHasCollateral] = useState(!!renewFromLoan?.collateralDescription)
   const [collateralDescription, setCollateralDescription] = useState(renewFromLoan?.collateralDescription || "")
   const [hasCoMaker, setHasCoMaker] = useState(!!renewFromLoan?.coMakerName)
