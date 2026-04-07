@@ -173,8 +173,11 @@ function LoansPage() {
     <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-5">
       {/* Header */}
       <StaggerItem>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
+            <p className="text-muted-foreground">Manage your lending portfolio</p>
+          </div>
           <div className="flex items-center gap-2">
             <Link to="/loans/applications">
               <Button variant="outline" size="sm" className="gap-1.5 h-9">
