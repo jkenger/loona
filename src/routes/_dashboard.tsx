@@ -39,7 +39,6 @@ import {
   ChartLineUp,
   SquaresFour,
   Handshake,
-  AddressBook,
   ArrowsLeftRight,
   IdentificationBadge,
   Notebook,
@@ -116,7 +115,6 @@ export const Route = createFileRoute("/_dashboard")({
 const lenderPrimaryNav = [
   { name: "Dashboard", href: "/dashboard", icon: SquaresFour, exact: true },
   { name: "Loans", href: "/loans", icon: Handshake, exact: false },
-  { name: "Contacts", href: "/contacts", icon: AddressBook, exact: false },
   { name: "Payments", href: "/payments", icon: ArrowsLeftRight, exact: false },
 ]
 const lenderMoreNav = [

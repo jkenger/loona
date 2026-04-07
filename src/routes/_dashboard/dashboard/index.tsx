@@ -239,10 +239,10 @@ function DashboardPage() {
               View Payments
             </Button>
           </Link>
-          <Link to="/contacts">
+          <Link to="/loans">
             <Button variant="outline" size="sm" className="rounded-full gap-1.5">
               <Users className="h-4 w-4" weight="bold" />
-              Manage Contacts
+              Borrowers
             </Button>
           </Link>
           </div>

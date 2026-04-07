@@ -3,7 +3,6 @@ import {
   House,
   CurrencyCircleDollar,
   Receipt,
-  Users,
   UsersThree,
   Gear,
   ShieldStar,
@@ -45,7 +44,6 @@ const portalConfig: Record<
       { name: "Payments", href: "/payments", icon: Receipt, exact: false },
     ],
     more: [
-      { name: "Contacts", href: "/contacts", icon: Users, exact: false },
       { name: "Agents", href: "/agents", icon: UsersThree, exact: false },
       { name: "Estimator", href: "/tools/estimator", icon: Calculator, exact: true },
       { name: "Playbook", href: "/playbook", icon: BookOpenText, exact: true },

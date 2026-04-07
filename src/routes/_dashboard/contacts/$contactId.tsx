@@ -176,8 +176,8 @@ function ContactDetailPage() {
       <AccessDenied
         title="Contact Not Found"
         message="This contact doesn't exist or you don't have access to it."
-        homeLink="/contacts"
-        homeLinkLabel="Back to Contacts"
+        homeLink="/loans"
+        homeLinkLabel="Back to Loans"
       />
     )
   }
@@ -217,7 +217,7 @@ function ContactDetailPage() {
     try {
       await deleteContact({ data: contact.id })
       toast.success("Contact deleted")
-      router.navigate({ to: "/contacts" })
+      router.navigate({ to: "/loans" })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete contact")
       setIsDeleting(false)
@@ -250,9 +250,9 @@ function ContactDetailPage() {
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Back link */}
-      <Link to="/contacts" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      <Link to="/loans" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        Back to Contacts
+        Back to Loans
       </Link>
 
       {/* Title Row */}
