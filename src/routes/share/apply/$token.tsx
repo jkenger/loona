@@ -216,8 +216,8 @@ function LoanApplicationForm() {
             <Card className="rounded-2xl shadow-sm border-0 bg-card ring-1 ring-border/60">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
-                    <User className="h-5 w-5 text-primary" weight="bold" />
+                  <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                    <User className="h-5 w-5 text-muted-foreground" weight="bold" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -261,8 +261,8 @@ function LoanApplicationForm() {
             <Card className="rounded-2xl shadow-sm border-0 bg-card ring-1 ring-border/60">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="h-10 w-10 rounded-xl bg-green-100 dark:bg-green-950/30 flex items-center justify-center shrink-0">
-                    <CurrencyCircleDollar className="h-5 w-5 text-green-600 dark:text-green-400" weight="bold" />
+                  <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                    <CurrencyCircleDollar className="h-5 w-5 text-muted-foreground" weight="bold" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -296,8 +296,8 @@ function LoanApplicationForm() {
             <Card className="rounded-2xl shadow-sm border-0 bg-muted/30 dark:bg-muted/10 ring-1 ring-border/40">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="h-10 w-10 rounded-xl bg-amber-100/70 dark:bg-amber-950/20 flex items-center justify-center shrink-0">
-                    <Briefcase className="h-5 w-5 text-amber-600 dark:text-amber-400" weight="bold" />
+                  <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                    <Briefcase className="h-5 w-5 text-muted-foreground" weight="bold" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
