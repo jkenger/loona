@@ -318,32 +318,108 @@ function ApplicationsPage() {
 
       {/* Approve Confirmation Dialog */}
       <Dialog open={!!approveApp} onOpenChange={(open) => { if (!open) setApproveApp(null) }}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Approve Application</DialogTitle>
+            <DialogTitle>Review Application</DialogTitle>
             <DialogDescription>
-              Approve this loan application and create a loan for <strong>{approveApp?.applicantName}</strong>?
+              Review the details below before approving.
             </DialogDescription>
           </DialogHeader>
           {approveApp && (
-            <div className="rounded-lg bg-muted/50 p-3 space-y-1.5 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Applicant</span>
-                <span className="font-medium">{approveApp.applicantName}</span>
+            <div className="space-y-3">
+              {/* Applicant info */}
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    {approveApp.applicantName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold">{approveApp.applicantName}</p>
+                    {approveApp.applicantEmail && <p className="text-xs text-muted-foreground">{approveApp.applicantEmail}</p>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                  {approveApp.applicantPhone && (
+                    <>
+                      <span className="text-muted-foreground">Phone</span>
+                      <span className="font-medium text-right">{approveApp.applicantPhone}</span>
+                    </>
+                  )}
+                  {approveApp.applicantAddress && (
+                    <>
+                      <span className="text-muted-foreground">Address</span>
+                      <span className="font-medium text-right">{approveApp.applicantAddress}{approveApp.applicantCity ? `, ${approveApp.applicantCity}` : ""}</span>
+                    </>
+                  )}
+                  {!approveApp.applicantAddress && approveApp.applicantCity && (
+                    <>
+                      <span className="text-muted-foreground">City</span>
+                      <span className="font-medium text-right">{approveApp.applicantCity}</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Requested</span>
-                <span className="font-bold text-primary">{fmt(approveApp.requestedAmount)}</span>
+
+              {/* Loan request */}
+              <div className="rounded-lg border p-4 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Loan Request</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-bold text-primary text-right">{fmt(approveApp.requestedAmount)}</span>
+                  {approveApp.requestedTermMonths && (
+                    <>
+                      <span className="text-muted-foreground">Term</span>
+                      <span className="font-medium text-right">{approveApp.requestedTermMonths} months</span>
+                    </>
+                  )}
+                  {approveApp.purpose && (
+                    <>
+                      <span className="text-muted-foreground">Purpose</span>
+                      <span className="font-medium text-right">{approveApp.purpose}</span>
+                    </>
+                  )}
+                </div>
               </div>
-              {approveApp.requestedTermMonths && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Term</span>
-                  <span className="font-medium">{approveApp.requestedTermMonths} months</span>
+
+              {/* Income & DTI */}
+              {(approveApp.monthlyIncome || approveApp.otherIncome) && (
+                <div className="rounded-lg border p-4 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Income & Capacity</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                    {approveApp.monthlyIncome && (
+                      <>
+                        <span className="text-muted-foreground">Monthly Income</span>
+                        <span className="font-medium text-right">{fmt(approveApp.monthlyIncome)}</span>
+                      </>
+                    )}
+                    {approveApp.otherIncome && (
+                      <>
+                        <span className="text-muted-foreground">Other Income</span>
+                        <span className="font-medium text-right">{fmt(approveApp.otherIncome)}</span>
+                      </>
+                    )}
+                    {approveApp.monthlyIncome && approveApp.requestedTermMonths && (
+                      <>
+                        <span className="text-muted-foreground">Est. DTI</span>
+                        {(() => {
+                          const grossIncome = Number(approveApp.monthlyIncome) + Number(approveApp.otherIncome || 0)
+                          const monthlyPayment = Number(approveApp.requestedAmount) / approveApp.requestedTermMonths
+                          const dti = Math.round((monthlyPayment / grossIncome) * 100)
+                          return (
+                            <span className={cn("font-bold text-right", dti > 40 ? "text-red-600 dark:text-red-400" : dti > 25 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400")}>
+                              {dti}%
+                            </span>
+                          )
+                        })()}
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
+
+              <p className="text-xs text-muted-foreground">Approving will let you create the loan in the wizard with final terms.</p>
             </div>
           )}
-          <p className="text-xs text-muted-foreground">You'll be taken to the loan wizard to set the final terms.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproveApp(null)} disabled={isProcessing === approveApp?.id}>Cancel</Button>
             <Button onClick={handleConfirmApprove} disabled={isProcessing === approveApp?.id} className="gap-1.5">
