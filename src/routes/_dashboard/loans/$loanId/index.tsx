@@ -269,7 +269,7 @@ function LoanDetailPage() {
     paid: { icon: Check, className: "text-primary bg-primary/10" },
     pending: { icon: Clock, className: "text-muted-foreground bg-muted" },
     partial: { icon: Clock, className: "text-primary bg-primary/10" },
-    overdue: { icon: Warning, className: "text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-950/40" },
+    overdue: { icon: Warning, className: "text-muted-foreground bg-muted" },
   }
 
   const borrowerInitials = loan.contact.name
@@ -572,14 +572,14 @@ function LoanDetailPage() {
               const grandTotal = overdueTotal + penaltyTotal
               if (grandTotal <= 0) return null
               return (
-                <div className="rounded-lg bg-muted/50 border-l-2 border-l-amber-400 pl-3 pr-3 py-3 space-y-1.5">
+                <div className="rounded-lg bg-muted/50 px-3 py-3 space-y-1.5">
                   {overdueItems.map((s) => {
                     const idx = loan.schedule.findIndex((x) => x.id === s.id)
                     const due = parseFloat(s.amount) - parseFloat(s.paidAmount)
                     return (
                       <div key={s.id} className="flex justify-between text-xs">
                         <span className="text-muted-foreground">
-                          Payment #{idx + 1} overdue
+                          Payment #{idx + 1}
                           <span className="ml-1 opacity-60">({format(new Date(s.dueDate), "MMM d")})</span>
                         </span>
                         <span className="font-medium">{formatCurrency(due)}</span>
@@ -592,7 +592,7 @@ function LoanDetailPage() {
                       <span className="font-medium">{formatCurrency(penaltyTotal)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-bold border-t border-border/60 pt-1.5 mt-0.5">
+                  <div className="flex justify-between text-sm font-bold border-t border-border/40 pt-1.5 mt-0.5">
                     <span>Total Due Now</span>
                     <span>{formatCurrency(grandTotal)}</span>
                   </div>
@@ -784,19 +784,20 @@ function LoanDetailPage() {
                 >
                   {({ toggleButton, detailPanel }) => (
                     <div className="space-y-1">
-                      <div
-                        className={`flex items-center justify-between p-3 rounded ${
-                          item.status === "overdue"
-                            ? "border-l-2 border-l-amber-400 bg-amber-50/40 dark:bg-amber-950/10"
-                            : "border"
-                        }`}
-                      >
+                      <div className="flex items-center justify-between p-3 rounded border">
                         <div className="flex items-center gap-3">
                           <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
                             <StatusIcon className="h-4 w-4" weight="bold" />
                           </div>
                           <div>
-                            <p className="font-medium">Payment #{index + 1}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">Payment #{index + 1}</p>
+                              {item.status === "overdue" && (
+                                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
+                                  Overdue
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
                               {toggleButton}
