@@ -335,6 +335,9 @@ export const getPublicLoanByToken = createServerFn()
     const nextPayment = result.schedule.find((s) => s.status === "pending" || s.status === "overdue")
     const overdueCount = result.schedule.filter((s) => s.status === "overdue").length
     const paidCount = result.schedule.filter((s) => s.status === "paid").length
+    const overdueAmount = result.schedule
+      .filter((s) => s.status === "overdue")
+      .reduce((sum, s) => sum + parseFloat(s.amount) - parseFloat(s.paidAmount), 0)
 
     return {
       id: result.id,
@@ -352,6 +355,7 @@ export const getPublicLoanByToken = createServerFn()
       maturityDate: result.maturityDate?.toISOString() ?? null,
       gracePeriodDays: penaltyConfig.gracePeriodDays,
       totalPenalties,
+      overdueAmount,
       overdueCount,
       paidCount,
       totalScheduleItems: result.schedule.length,

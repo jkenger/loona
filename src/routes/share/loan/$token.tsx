@@ -134,7 +134,7 @@ function BorrowerLoanPortal() {
             <p className="text-sm text-muted-foreground mt-0.5">Here's a summary of your loan.</p>
           </StaggerItem>
 
-          {/* Next Payment / Completed banner */}
+          {/* Total Due / Completed banner */}
           <StaggerItem>
             {isCompleted ? (
               <div className="rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 p-5 text-center">
@@ -142,29 +142,46 @@ function BorrowerLoanPortal() {
                 <p className="font-semibold text-green-700 dark:text-green-400">Loan Fully Paid!</p>
                 <p className="text-xs text-green-600/80 dark:text-green-400/60 mt-1">Congratulations, you've completed all payments.</p>
               </div>
+            ) : (loan.overdueAmount > 0 || loan.totalPenalties > 0) ? (
+              <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 p-5">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Total Amount Due</p>
+                    <p className="text-3xl font-bold mt-1 text-red-700 dark:text-red-300">
+                      {fmt(loan.overdueAmount + loan.totalPenalties)}
+                    </p>
+                  </div>
+                  <Warning className="h-10 w-10 text-red-400 shrink-0 mt-1" weight="duotone" />
+                </div>
+                <div className="space-y-2 border-t border-red-200 dark:border-red-800 pt-3">
+                  {loan.overdueAmount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-red-600/80 dark:text-red-400/70">
+                        Overdue payments ({loan.overdueCount})
+                      </span>
+                      <span className="font-semibold text-red-700 dark:text-red-300">{fmt(loan.overdueAmount)}</span>
+                    </div>
+                  )}
+                  {loan.totalPenalties > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-red-600/80 dark:text-red-400/70">Penalties</span>
+                      <span className="font-semibold text-red-700 dark:text-red-300">{fmt(loan.totalPenalties)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : loan.nextPayment ? (
-              <div className={`rounded-xl p-5 border ${loan.nextPayment.status === "overdue" ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900" : "bg-primary/5 border-primary/20"}`}>
+              <div className="rounded-xl p-5 border bg-primary/5 border-primary/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                      {loan.nextPayment.status === "overdue" ? "Overdue Payment" : "Next Payment"}
-                    </p>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Next Payment</p>
                     <p className="text-2xl font-bold mt-1">{fmt(loan.nextPayment.amount)}</p>
                     <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1.5">
                       <CalendarBlank className="h-3.5 w-3.5" />
                       {format(new Date(loan.nextPayment.dueDate), "MMMM d, yyyy")}
-                      {loan.nextPayment.status === "overdue" && (
-                        <Badge className="text-[10px] bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 ml-1">
-                          {formatDistanceToNow(new Date(loan.nextPayment.dueDate))} overdue
-                        </Badge>
-                      )}
                     </p>
                   </div>
-                  {loan.nextPayment.status === "overdue" ? (
-                    <Warning className="h-10 w-10 text-red-400 shrink-0" weight="duotone" />
-                  ) : (
-                    <CurrencyCircleDollar className="h-10 w-10 text-primary/30 shrink-0" weight="duotone" />
-                  )}
+                  <CurrencyCircleDollar className="h-10 w-10 text-primary/30 shrink-0" weight="duotone" />
                 </div>
               </div>
             ) : null}
@@ -280,21 +297,6 @@ function BorrowerLoanPortal() {
             </StaggerItem>
           )}
 
-          {/* Penalties */}
-          {loan.totalPenalties > 0 && (
-            <StaggerItem>
-              <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/10 p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Warning className="h-4 w-4 text-red-500" />
-                  <p className="text-sm font-semibold text-red-700 dark:text-red-400">Penalties Applied</p>
-                </div>
-                <p className="text-xs text-red-600/80 dark:text-red-400/60">
-                  Total penalties: <span className="font-bold">{fmt(loan.totalPenalties)}</span>
-                  {loan.gracePeriodDays > 0 && ` · ${loan.gracePeriodDays}-day grace period`}
-                </p>
-              </div>
-            </StaggerItem>
-          )}
 
           {/* QR Payment Codes */}
           {loan.qrCodes.length > 0 && (
