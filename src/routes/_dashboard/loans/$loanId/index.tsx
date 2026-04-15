@@ -50,9 +50,6 @@ import {
   UsersThree,
   Spinner,
   Trash,
-  ShieldCheck,
-  Users,
-  Tag,
   FileText,
   CheckCircle,
   X,
@@ -65,6 +62,9 @@ import {
   LinkSimple,
   ArrowsClockwise,
   DotsThreeVertical,
+  CaretDown,
+  CaretRight,
+  CurrencyCircleDollar,
 } from "@phosphor-icons/react"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
@@ -151,6 +151,12 @@ function LoanDetailPage() {
   const [selectedPaymentForEdit, setSelectedPaymentForEdit] = useState<{
     id: string; amount: string; method: string; paidAt: string; scheduleItemId: string | null
   } | null>(null)
+
+  // Progressive disclosure toggles
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false)
+  const [showPaidSchedule, setShowPaidSchedule] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
+  const [showAllPayments, setShowAllPayments] = useState(false)
 
   if (unauthorized) {
     return (
@@ -279,124 +285,231 @@ function LoanDetailPage() {
     .join("")
     .toUpperCase()
 
-  return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Back link */}
-      <Link to="/loans" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Loans
-      </Link>
+  // Derived values for redesigned page
+  const overdueItems = loan.schedule.filter((s) => s.status === "overdue")
+  const upcomingItems = loan.schedule.filter((s) => s.status === "pending" || s.status === "partial")
+  const paidItems = loan.schedule.filter((s) => s.status === "paid")
+  const chargedPenalties = (penaltyData?.penalties ?? []).filter((p) => p.status === "applied" || p.status === "pending")
+  const overdueTotal = overdueItems.reduce((sum, s) => sum + parseFloat(s.amount) - parseFloat(s.paidAmount), 0)
+  const penaltyTotal = chargedPenalties.reduce((sum, p) => sum + parseFloat(p.amount), 0)
+  const totalDueNow = overdueTotal + penaltyTotal
+  const nextUpcoming = upcomingItems[0]
+  const progressPct = Math.round((parseFloat(loan.amountPaid) / parseFloat(loan.totalToRepay)) * 100)
 
-      {/* Borrower Identity Hero + Loan Title Row */}
-      <div className="rounded-xl border bg-card overflow-hidden">
-        {/* Borrower strip */}
-        <div className="flex items-center justify-between gap-4 px-5 py-4 border-b bg-muted/30">
-          <Link
-            to="/contacts/$contactId"
-            params={{ contactId: loan.contact.id }}
-            className="flex items-center gap-3 group"
-          >
-            <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm border border-primary/20">
-              {borrowerInitials}
-            </div>
-            <div>
-              <p className="font-semibold text-sm group-hover:text-primary transition-colors leading-tight">
-                {loan.contact.name}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                {loan.contact.phone && <span>{loan.contact.phone}</span>}
-                {loan.contact.phone && loan.contact.city && <span>·</span>}
-                {loan.contact.city && <span>{loan.contact.city}</span>}
+  const handleQuickPay = () => {
+    const target = overdueItems[0] || upcomingItems[0]
+    if (target) setSelectedScheduleItem(target)
+  }
+
+  const freqLabel = loan.paymentFrequency === "semimonthly" ? "Semi-monthly" : loan.paymentFrequency.charAt(0).toUpperCase() + loan.paymentFrequency.slice(1)
+
+  const renderScheduleItem = (item: ScheduleItem, index: number) => {
+    const config = scheduleStatusConfig[item.status]
+    const StatusIcon = config.icon
+    const itemPenalties = penaltyData?.penalties.filter((p) => p.scheduleItemId === item.id) ?? []
+    const gracePeriodDays = loan.gracePeriodDays ?? 0
+    const paidLate = item.paidAt && (() => {
+      const paid = new Date(new Date(item.paidAt).toDateString()).getTime()
+      const due = new Date(new Date(item.dueDate).toDateString()).getTime()
+      const graceMs = gracePeriodDays * 24 * 60 * 60 * 1000
+      return paid > due + graceMs
+    })()
+    const daysOverdue = calendarDaysOverdue(new Date(item.dueDate))
+
+    return (
+      <PenaltyItems
+        key={item.id}
+        penalties={itemPenalties}
+        daysOverdue={daysOverdue}
+        formatCurrency={formatCurrency}
+      >
+        {({ toggleButton, detailPanel }) => (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between p-3 rounded border">
+              <div className="flex items-center gap-3">
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
+                  <StatusIcon className="h-4 w-4" weight="bold" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">Payment #{index + 1}</p>
+                    {item.status === "overdue" && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
+                        Overdue
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
+                    {toggleButton}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="font-semibold">{formatCurrency(item.amount)}</p>
+                  {item.status === "paid" && item.paidAt && (
+                    <>
+                      {parseFloat(item.paidAmount) !== parseFloat(item.amount) && (
+                        <p className="text-xs text-primary">Paid: {formatCurrency(item.paidAmount)}</p>
+                      )}
+                      <p className={`text-xs ${paidLate ? "text-amber-600" : "text-muted-foreground"}`}>
+                        {new Date(item.paidAt).toLocaleDateString()}
+                        {paidLate ? " (late)" : ""}
+                      </p>
+                    </>
+                  )}
+                  {item.status === "partial" && (
+                    <p className="text-xs text-primary">Paid: {formatCurrency(item.paidAmount)}</p>
+                  )}
+                </div>
+                {item.status !== "paid" && loan.status === "active" && (
+                  <Button
+                    size="sm"
+                    variant={item.status === "overdue" ? "default" : "outline"}
+                    onClick={() => setSelectedScheduleItem(item)}
+                  >
+                    Pay
+                  </Button>
+                )}
               </div>
             </div>
-          </Link>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-full px-3 py-1 bg-background shrink-0">
-            <User className="h-3 w-3" />
-            Borrower
+            {detailPanel && (
+              <div className="pl-14 pr-3 pb-1">
+                {detailPanel}
+              </div>
+            )}
+          </div>
+        )}
+      </PenaltyItems>
+    )
+  }
+
+  return (
+    <div className="px-4 sm:px-6 lg:px-8 py-5 pb-28 md:pb-6 space-y-5">
+      {/* Slim header */}
+      <div className="flex items-center justify-between gap-3">
+        <Link to="/loans" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Loans
+        </Link>
+        {loan.isLender && (
+          <div className="flex items-center gap-1.5">
+            {loan.borrowerToken && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8"
+                onClick={() => {
+                  const url = `${window.location.origin}/share/loan/${loan.borrowerToken}`
+                  navigator.clipboard.writeText(url)
+                  toast.success("Borrower link copied!")
+                }}
+              >
+                <LinkSimple className="h-3.5 w-3.5" weight="bold" />
+                <span className="hidden sm:inline">Share</span>
+              </Button>
+            )}
+            {loan.status === "completed" && (
+              <Link to="/loans/new-wizard" search={{ renewFromLoanId: loan.id }}>
+                <Button variant="outline" size="sm" className="gap-1.5 h-8">
+                  <ArrowClockwise className="h-3.5 w-3.5" weight="bold" />
+                  <span className="hidden sm:inline">Renew</span>
+                </Button>
+              </Link>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={(props) => (
+                  <Button {...props} variant="ghost" size="icon" className="h-8 w-8">
+                    <DotsThreeVertical className="h-4 w-4" weight="bold" />
+                  </Button>
+                )}
+              />
+              <DropdownMenuContent align="end">
+                {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                  <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
+                    <ArrowsClockwise className="h-4 w-4" />
+                    Regenerate Schedule
+                  </DropdownMenuItem>
+                )}
+                {import.meta.env.DEV && loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                  <DropdownMenuItem onClick={() => {
+                    setRestructureAdditionalMonths("")
+                    setRestructureBalanceReduction("")
+                    setRestructureReason("")
+                    setShowRestructureDialog(true)
+                  }}>
+                    <ArrowCounterClockwise className="h-4 w-4" />
+                    Restructure Loan
+                  </DropdownMenuItem>
+                )}
+                {import.meta.env.DEV && loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
+                  <DropdownMenuSeparator />
+                )}
+                <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+                  <Trash className="h-4 w-4" />
+                  Delete Loan
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </div>
+
+      {/* Borrower identity strip */}
+      <Link
+        to="/contacts/$contactId"
+        params={{ contactId: loan.contact.id }}
+        className="flex items-center gap-3 group"
+      >
+        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm border border-primary/20">
+          {borrowerInitials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg font-bold tracking-tight group-hover:text-primary transition-colors truncate">
+            {loan.contact.name}
+          </h1>
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            <Badge variant={statusConfig[loan.status].variant} className={`text-[10px] h-5 ${statusConfig[loan.status].className || ""}`}>
+              {statusConfig[loan.status].label}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {loan.contact.phone}
+              {loan.contact.phone && loan.contact.city && " · "}
+              {loan.contact.city}
+            </span>
           </div>
         </div>
+      </Link>
 
-        {/* Loan title row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 py-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">
-                {formatCurrency(loan.principal)}
-              </h1>
-              <Badge variant={statusConfig[loan.status].variant} className={statusConfig[loan.status].className || ""}>
-                {statusConfig[loan.status].label}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {loan.interestRate}% / mo · {loan.termMonths} months · {loan.paymentFrequency === "semimonthly" ? "Semi-monthly" : loan.paymentFrequency} payments
-            </p>
-          </div>
-          {loan.isLender && (
-            <div className="flex gap-2">
-              {loan.borrowerToken && (
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => {
-                    const url = `${window.location.origin}/share/loan/${loan.borrowerToken}`
-                    navigator.clipboard.writeText(url)
-                    toast.success("Borrower link copied!")
-                  }}
-                >
-                  <LinkSimple className="h-4 w-4" weight="bold" />
-                  Share
-                </Button>
-              )}
-              {loan.status === "completed" && (
-                <Link
-                  to="/loans/new-wizard"
-                  search={{ renewFromLoanId: loan.id }}
-                >
-                  <Button variant="outline" className="gap-2">
-                    <ArrowClockwise className="h-4 w-4" weight="bold" />
-                    Renew
-                  </Button>
-                </Link>
-              )}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={(props) => (
-                    <Button {...props} variant="ghost" size="icon">
-                      <DotsThreeVertical className="h-5 w-5" weight="bold" />
-                    </Button>
-                  )}
-                />
-                <DropdownMenuContent align="end">
-                  {loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                    <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
-                      <ArrowsClockwise className="h-4 w-4" />
-                      Regenerate Schedule
-                    </DropdownMenuItem>
-                  )}
-                  {import.meta.env.DEV && loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                    <DropdownMenuItem onClick={() => {
-                      setRestructureAdditionalMonths("")
-                      setRestructureBalanceReduction("")
-                      setRestructureReason("")
-                      setShowRestructureDialog(true)
-                    }}>
-                      <ArrowCounterClockwise className="h-4 w-4" />
-                      Restructure Loan
-                    </DropdownMenuItem>
-                  )}
-                  {import.meta.env.DEV && loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                    <DropdownMenuSeparator />
-                  )}
-                  <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-                    <Trash className="h-4 w-4" />
-                    Delete Loan
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+      {/* Renewal chain (compact inline pills) */}
+      {(loan.renewedFromLoan || loan.renewedToLoan) && (
+        <div className="flex flex-wrap gap-2">
+          {loan.renewedFromLoan && (
+            <Link
+              to="/loans/$loanId"
+              params={{ loanId: loan.renewedFromLoan.id }}
+              className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1 text-xs hover:border-primary/40 transition-colors"
+            >
+              <ArrowCounterClockwise className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">Renewed from</span>
+              <span className="font-medium">{formatCurrency(loan.renewedFromLoan.principal)}</span>
+            </Link>
+          )}
+          {loan.renewedToLoan && (
+            <Link
+              to="/loans/$loanId"
+              params={{ loanId: loan.renewedToLoan.id }}
+              className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1 text-xs hover:border-primary/40 transition-colors"
+            >
+              <ArrowClockwise className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">Renewed as</span>
+              <span className="font-medium">{formatCurrency(loan.renewedToLoan.principal)}</span>
+            </Link>
           )}
         </div>
-      </div>
+      )}
 
       {/* Pending Approval Banner */}
       {loan.status === "pending_approval" && loan.isLender && (
@@ -457,122 +570,51 @@ function LoanDetailPage() {
         </Card>
       )}
 
-      {/* Renewal Chain */}
-      {(loan.renewedFromLoan || loan.renewedToLoan) && (
-        <div className="flex flex-wrap gap-3">
-          {loan.renewedFromLoan && (
-            <Link
-              to="/loans/$loanId"
-              params={{ loanId: loan.renewedFromLoan.id }}
-              className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm hover:border-primary/40 transition-colors"
-            >
-              <ArrowCounterClockwise className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Renewed from</span>
-              <span className="font-medium">{formatCurrency(loan.renewedFromLoan.principal)} loan</span>
-            </Link>
-          )}
-          {loan.renewedToLoan && (
-            <Link
-              to="/loans/$loanId"
-              params={{ loanId: loan.renewedToLoan.id }}
-              className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm hover:border-primary/40 transition-colors"
-            >
-              <ArrowClockwise className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Renewed as</span>
-              <span className="font-medium">{formatCurrency(loan.renewedToLoan.principal)} loan</span>
-            </Link>
-          )}
-        </div>
-      )}
+      {/* Main two-column layout */}
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* LEFT COLUMN — Hero + Schedule */}
+        <div className="lg:col-span-2 space-y-5">
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Loan Summary */}
-        <Card className="shadow-sm rounded-xl">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle>Loan Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0 space-y-4">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Principal</span>
-              <span className="font-medium">{formatCurrency(loan.principal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total to Repay</span>
-              <span className="font-medium">{formatCurrency(loan.totalToRepay)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Interest Rate</span>
-              <span className="font-medium">{loan.interestRate}% / mo</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Effective Rate</span>
-              <span className="font-medium text-primary">
-                {formatEIR(
-                  calculateEIR({
-                    principal: parseFloat(loan.principal),
-                    totalInterest:
-                      parseFloat(loan.totalToRepay) - parseFloat(loan.principal),
-                    termMonths: loan.termMonths,
-                    paymentFrequency: loan.paymentFrequency as any,
-                  })
-                )}
-              </span>
-            </div>
-            {loan.processingFeePercent && parseFloat(loan.processingFeePercent) > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Processing Fee ({loan.processingFeePercent}%)</span>
-                <span className="font-medium">{formatCurrency(parseFloat(loan.principal) * parseFloat(loan.processingFeePercent) / 100)}</span>
+          {/* HERO CARD */}
+          <Card className="shadow-sm rounded-xl">
+            <CardContent className="p-5 sm:p-6">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Remaining Balance</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-4xl font-bold tracking-tight">{formatCurrency(loan.remainingBalance)}</p>
               </div>
-            )}
-            {loan.processingFeePercent && parseFloat(loan.processingFeePercent) > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Net Proceeds</span>
-                <span className="font-medium">{formatCurrency(parseFloat(loan.principal) - parseFloat(loan.principal) * parseFloat(loan.processingFeePercent) / 100)}</span>
-              </div>
-            )}
-            <div className="flex justify-between border-t pt-4">
-              <span className="text-muted-foreground">Amount Paid</span>
-              <span className="font-medium text-primary">{formatCurrency(loan.amountPaid)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-semibold">Remaining</span>
-              <span className="font-bold">{formatCurrency(loan.remainingBalance)}</span>
-            </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                of {formatCurrency(loan.principal)} principal · {formatCurrency(loan.totalToRepay)} total repay
+              </p>
 
-            {/* Progress */}
-            <div className="pt-2">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Progress</span>
-                <span>
-                  {Math.round(
-                    (parseFloat(loan.amountPaid) / parseFloat(loan.totalToRepay)) * 100
-                  )}
-                  %
-                </span>
+              {/* Progress */}
+              <div className="mt-5">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                  <span>{paidItems.length} of {loan.schedule.length} payments</span>
+                  <span>{Math.min(100, progressPct)}% paid</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${Math.min(100, progressPct)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      (parseFloat(loan.amountPaid) / parseFloat(loan.totalToRepay)) * 100
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
 
-            {/* Total Due Now — shown when overdue or penalties exist */}
-            {loan.status === "active" && (() => {
-              const overdueItems = loan.schedule.filter((s) => s.status === "overdue")
-              const chargedPenalties = (penaltyData?.penalties ?? []).filter((p) => p.status === "applied" || p.status === "pending")
-              const overdueTotal = overdueItems.reduce((sum, s) => sum + parseFloat(s.amount) - parseFloat(s.paidAmount), 0)
-              const penaltyTotal = chargedPenalties.reduce((sum, p) => sum + parseFloat(p.amount), 0)
-              const grandTotal = overdueTotal + penaltyTotal
-              if (grandTotal <= 0) return null
-              return (
-                <div className="rounded-lg bg-muted/50 px-3 py-3 space-y-1.5">
+              {/* Next due (when active, no overdue) */}
+              {loan.status === "active" && totalDueNow <= 0 && nextUpcoming && (
+                <div className="mt-5 pt-4 border-t flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Next due</span>
+                    <span className="font-medium">{format(new Date(nextUpcoming.dueDate), "MMM d")}</span>
+                  </div>
+                  <span className="font-semibold">{formatCurrency(nextUpcoming.amount)}</span>
+                </div>
+              )}
+
+              {/* Total Due Now breakdown */}
+              {loan.status === "active" && totalDueNow > 0 && (
+                <div className="mt-5 pt-4 border-t space-y-1.5">
                   {overdueItems.map((s) => {
                     const idx = loan.schedule.findIndex((x) => x.id === s.id)
                     const due = parseFloat(s.amount) - parseFloat(s.paidAmount)
@@ -592,125 +634,338 @@ function LoanDetailPage() {
                       <span className="font-medium">{formatCurrency(penaltyTotal)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-bold border-t border-border/40 pt-1.5 mt-0.5">
-                    <span>Total Due Now</span>
-                    <span>{formatCurrency(grandTotal)}</span>
+                  <div className="flex items-center justify-between pt-2 mt-1 border-t">
+                    <span className="text-sm font-bold">Total Due Now</span>
+                    <span className="text-lg font-bold">{formatCurrency(totalDueNow)}</span>
+                  </div>
+                  {loan.isLender && (
+                    <Button className="w-full gap-2 mt-2" onClick={handleQuickPay}>
+                      <CurrencyCircleDollar className="h-4 w-4" weight="bold" />
+                      Record Payment
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {loan.status === "completed" && (
+                <div className="mt-5 pt-4 border-t flex items-center gap-2.5 text-sm text-green-600 dark:text-green-400">
+                  <CheckCircle className="h-4 w-4" weight="fill" />
+                  <span className="font-medium">Loan fully paid</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* PAYMENT SCHEDULE — Grouped */}
+          <Card className="shadow-sm rounded-xl">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle>Payment Schedule</CardTitle>
+              <CardDescription>
+                {paidItems.length} of {loan.schedule.length} payments completed
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-4">
+
+              {/* Overdue — auto-expanded */}
+              {overdueItems.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                    <span>Overdue</span>
+                    <span className="bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 rounded px-1.5 py-0.5 text-[10px]">
+                      {overdueItems.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {overdueItems.map((item) => {
+                      const index = loan.schedule.findIndex((s) => s.id === item.id)
+                      return renderScheduleItem(item, index)
+                    })}
                   </div>
                 </div>
-              )
-            })()}
-          </CardContent>
-        </Card>
+              )}
 
-        {/* Timeline */}
-        <Card className="shadow-sm rounded-xl">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <CalendarCheck className="h-5 w-5 text-primary" />
-              Timeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0 space-y-4">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Start Date</span>
-              <span className="font-medium">
-                {loan.startDate
-                  ? new Date(loan.startDate).toLocaleDateString()
-                  : "Not started"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Maturity Date</span>
-              <span className="font-medium">
-                {loan.maturityDate
-                  ? new Date(loan.maturityDate).toLocaleDateString()
-                  : "-"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Payment Frequency</span>
-              <span className="font-medium capitalize">
-                {loan.paymentFrequency === "semimonthly" ? "Semi-monthly" : loan.paymentFrequency}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Optional Details - Purpose, Collateral, Co-maker, Agent Assignment */}
-      {(loan.purpose || loan.collateralDescription || loan.coMakerName || loan.isLender) && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Purpose */}
-          {loan.purpose && (
-            <Card className="shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Tag className="h-4 w-4 text-primary" />
-                  Purpose
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="text-sm">{loan.purpose}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Collateral */}
-          {loan.collateralDescription && (
-            <Card className="shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  Collateral
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="text-sm">{loan.collateralDescription}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Co-maker */}
-          {loan.coMakerName && (
-            <Card className="shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4 text-primary" />
-                  Co-maker / Guarantor
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-2">
-                <p className="font-medium">{loan.coMakerName}</p>
-                {loan.coMakerPhone && (
-                  <p className="text-sm text-muted-foreground">{loan.coMakerPhone}</p>
-                )}
-                {loan.coMakerRelationship && (
-                  <p className="text-sm text-muted-foreground">
-                    Relationship: {loan.coMakerRelationship}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Agent Assignment */}
-          {loan.isLender && (
-            <Card className="shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <UsersThree className="h-4 w-4 text-primary" />
-                  Agent Assignment
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                {activeAgents.length > 0 ? (
+              {/* Upcoming */}
+              {upcomingItems.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <span>Upcoming</span>
+                      <span className="bg-muted rounded px-1.5 py-0.5 text-[10px] text-foreground">
+                        {upcomingItems.length}
+                      </span>
+                    </div>
+                  </div>
                   <div className="space-y-2">
+                    {(showAllUpcoming ? upcomingItems : upcomingItems.slice(0, 3)).map((item) => {
+                      const index = loan.schedule.findIndex((s) => s.id === item.id)
+                      return renderScheduleItem(item, index)
+                    })}
+                    {upcomingItems.length > 3 && (
+                      <button
+                        onClick={() => setShowAllUpcoming(!showAllUpcoming)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+                      >
+                        {showAllUpcoming ? <CaretDown className="h-3 w-3" /> : <CaretRight className="h-3 w-3" />}
+                        {showAllUpcoming ? "Show less" : `Show ${upcomingItems.length - 3} more`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Paid — collapsed by default */}
+              {paidItems.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowPaidSchedule(!showPaidSchedule)}
+                    className="flex items-center justify-between w-full mb-2 group"
+                  >
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground group-hover:text-foreground transition-colors">
+                      <span>Paid</span>
+                      <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px]">
+                        {paidItems.length}
+                      </span>
+                    </div>
+                    {showPaidSchedule
+                      ? <CaretDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      : <CaretRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </button>
+                  {showPaidSchedule && (
+                    <div className="space-y-2">
+                      {paidItems.map((item) => {
+                        const index = loan.schedule.findIndex((s) => s.id === item.id)
+                        return renderScheduleItem(item, index)
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </CardContent>
+          </Card>
+
+        </div>
+
+        {/* RIGHT COLUMN — Recent Payments + Loan Details + Restructure + Documents */}
+        <div className="space-y-5">
+
+          {/* RECENT PAYMENTS (compact, top 5) */}
+          {loan.payments.length > 0 && (
+            <Card className="shadow-sm rounded-xl">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base">Recent Payments</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-0">
+                  {(showAllPayments ? loan.payments : loan.payments.slice(0, 5)).map((payment) => {
+                    const isDebit = payment.type === "debit"
+                    const isReversed = payment.type === "credit" && !!payment.reversedAt
+                    const isPenaltyPayment = !!payment.penaltyId && !payment.scheduleItemId
+                    const canReverse = payment.type === "credit" && !payment.reversedAt && (
+                      isPenaltyPayment || (
+                        payment.scheduleItemId && !loan.payments.some(
+                          (other) =>
+                            other.id !== payment.id &&
+                            other.type === "credit" &&
+                            !other.reversedAt &&
+                            other.scheduleItemId === payment.scheduleItemId &&
+                            new Date(other.createdAt) > new Date(payment.createdAt)
+                        )
+                      )
+                    )
+
+                    if (isDebit) {
+                      return (
+                        <div key={payment.id} className="py-2.5 border-b last:border-0 opacity-80">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">-{formatCurrency(payment.amount)}</p>
+                            <Badge variant="outline" className="text-[10px] h-5">Reversal</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{new Date(payment.paidAt).toLocaleDateString()}</p>
+                          {payment.notes && <p className="text-xs text-muted-foreground/70 mt-0.5">{payment.notes}</p>}
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div key={payment.id} className={`py-2.5 border-b last:border-0 group ${isReversed ? "opacity-60" : ""}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className={`text-sm font-medium ${isReversed ? "line-through" : ""}`}>
+                                {formatCurrency(payment.amount)}
+                              </p>
+                              {isPenaltyPayment && !isReversed && (
+                                <Badge variant="outline" className="text-[10px] h-5 text-amber-600 border-amber-300">Penalty</Badge>
+                              )}
+                              {isReversed && (
+                                <Badge variant="outline" className="text-[10px] h-5">Reversed</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(payment.paidAt).toLocaleDateString()} · {payment.method.toUpperCase()}
+                            </p>
+                            {isReversed && payment.reversalReason && (
+                              <p className="text-xs text-muted-foreground/70 mt-0.5">Reason: {payment.reversalReason}</p>
+                            )}
+                          </div>
+                          {payment.type === "credit" && !payment.reversedAt && loan.isLender && (
+                            <div className="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[6rem] group-hover:opacity-100 transition-all duration-200 shrink-0">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                onClick={() => {
+                                  const url = `${window.location.origin}/share/receipt/${payment.id}`
+                                  navigator.clipboard.writeText(url)
+                                  toast.success("Receipt link copied to clipboard")
+                                }}
+                              >
+                                <LinkSimple className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                onClick={() => setSelectedPaymentForEdit({
+                                  id: payment.id,
+                                  amount: payment.amount,
+                                  method: payment.method,
+                                  paidAt: payment.paidAt,
+                                  scheduleItemId: payment.scheduleItemId,
+                                })}
+                              >
+                                <PencilSimple className="h-3.5 w-3.5" />
+                              </Button>
+                              {canReverse && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => setSelectedPaymentForReversal({
+                                    id: payment.id,
+                                    amount: payment.amount,
+                                    method: payment.method,
+                                    paidAt: payment.paidAt,
+                                    scheduleItemId: payment.scheduleItemId,
+                                  })}
+                                >
+                                  <ArrowCounterClockwise className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {loan.payments.length > 5 && (
+                  <button
+                    onClick={() => setShowAllPayments(!showAllPayments)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-3"
+                  >
+                    {showAllPayments ? <CaretDown className="h-3 w-3" /> : <CaretRight className="h-3 w-3" />}
+                    {showAllPayments ? "Show recent only" : `View all ${loan.payments.length} payments`}
+                  </button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* LOAN DETAILS — collapsed by default */}
+          <Card className="shadow-sm rounded-xl">
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full flex items-center justify-between p-4 group"
+            >
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">Loan Details</CardTitle>
+              </div>
+              {showDetails
+                ? <CaretDown className="h-4 w-4 text-muted-foreground" />
+                : <CaretRight className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {showDetails && (
+              <CardContent className="p-4 pt-0 space-y-2.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Interest Rate</span>
+                  <span className="font-medium">{loan.interestRate}% / mo</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Effective Rate</span>
+                  <span className="font-medium">
+                    {formatEIR(
+                      calculateEIR({
+                        principal: parseFloat(loan.principal),
+                        totalInterest: parseFloat(loan.totalToRepay) - parseFloat(loan.principal),
+                        termMonths: loan.termMonths,
+                        paymentFrequency: loan.paymentFrequency as any,
+                      })
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Term</span>
+                  <span className="font-medium">{loan.termMonths} months</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Frequency</span>
+                  <span className="font-medium">{freqLabel}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount Paid</span>
+                  <span className="font-medium">{formatCurrency(loan.amountPaid)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Start Date</span>
+                  <span className="font-medium">{loan.startDate ? new Date(loan.startDate).toLocaleDateString() : "Not started"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Maturity Date</span>
+                  <span className="font-medium">{loan.maturityDate ? new Date(loan.maturityDate).toLocaleDateString() : "—"}</span>
+                </div>
+                {loan.processingFeePercent && parseFloat(loan.processingFeePercent) > 0 && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Processing Fee ({loan.processingFeePercent}%)</span>
+                      <span className="font-medium">{formatCurrency(parseFloat(loan.principal) * parseFloat(loan.processingFeePercent) / 100)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Net Proceeds</span>
+                      <span className="font-medium">{formatCurrency(parseFloat(loan.principal) - parseFloat(loan.principal) * parseFloat(loan.processingFeePercent) / 100)}</span>
+                    </div>
+                  </>
+                )}
+                {loan.purpose && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-0.5">Purpose</p>
+                    <p className="text-sm">{loan.purpose}</p>
+                  </div>
+                )}
+                {loan.collateralDescription && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-0.5">Collateral</p>
+                    <p className="text-sm">{loan.collateralDescription}</p>
+                  </div>
+                )}
+                {loan.coMakerName && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-0.5">Co-maker / Guarantor</p>
+                    <p className="text-sm font-medium">{loan.coMakerName}</p>
+                    {loan.coMakerPhone && <p className="text-xs text-muted-foreground">{loan.coMakerPhone}</p>}
+                    {loan.coMakerRelationship && <p className="text-xs text-muted-foreground">{loan.coMakerRelationship}</p>}
+                  </div>
+                )}
+                {loan.isLender && activeAgents.length > 0 && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-1.5">Agent Assignment</p>
                     <Select
                       value={loan.assignedAgentId || "unassigned"}
                       onValueChange={handleAgentSelectChange}
                       disabled={assigning}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full h-9 text-sm">
                         {loan.assignedAgentId ? (
                           (() => {
                             const agent = activeAgents.find((a) => a.id === loan.assignedAgentId)
@@ -731,395 +986,137 @@ function LoanDetailPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {assigning && <Spinner className="h-4 w-4 animate-spin" />}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No agents available.{" "}
-                    <Link to="/agents" className="text-primary hover:underline">
-                      Add agents
-                    </Link>{" "}
-                    to assign them to loans.
-                  </p>
                 )}
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Restructure History */}
+          {loan.restructures && loan.restructures.length > 0 && (
+            <Card className="shadow-sm rounded-xl">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ArrowCounterClockwise className="h-4 w-4 text-primary" />
+                  Restructure History
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {loan.restructures.length} restructure{loan.restructures.length > 1 ? "s" : ""} on record
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-3">
+                  {loan.restructures.map((r, i) => (
+                    <div key={r.id} className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Restructure #{loan.restructures!.length - i}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(r.createdAt), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <span className="text-muted-foreground">Balance before</span>
+                        <span className="font-medium text-right">{formatCurrency(r.previousRemainingBalance)}</span>
+                        {parseFloat(r.balanceReduction) > 0 && (
+                          <>
+                            <span className="text-muted-foreground">Balance waived</span>
+                            <span className="font-medium text-right text-amber-600 dark:text-amber-400">−{formatCurrency(r.balanceReduction)}</span>
+                          </>
+                        )}
+                        <span className="text-muted-foreground">New balance</span>
+                        <span className="font-medium text-right">{formatCurrency(r.newRemainingBalance)}</span>
+                        {r.additionalMonths > 0 && (
+                          <>
+                            <span className="text-muted-foreground">Term extended</span>
+                            <span className="font-medium text-right">+{r.additionalMonths} months</span>
+                          </>
+                        )}
+                        <span className="text-muted-foreground">New installment</span>
+                        <span className="font-bold text-right text-primary">{formatCurrency(r.newPaymentAmount)}</span>
+                      </div>
+                      {r.reason && (
+                        <p className="text-xs text-muted-foreground border-t pt-2 mt-1">"{r.reason}"</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
-        </div>
-      )}
 
-      {/* Payment Schedule */}
-      <Card className="shadow-sm">
-        <CardHeader className="p-4 pb-2">
-          <CardTitle>Payment Schedule</CardTitle>
-          <CardDescription>
-            {loan.schedule.filter((s) => s.status === "paid").length} of{" "}
-            {loan.schedule.length} payments completed
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="space-y-2">
-            {loan.schedule.map((item, index) => {
-              const config = scheduleStatusConfig[item.status]
-              const StatusIcon = config.icon
-              const itemPenalties = penaltyData?.penalties.filter(
-                (p) => p.scheduleItemId === item.id,
-              ) ?? []
-              // Determine if paid late — compare calendar dates, accounting for grace period
-              const gracePeriodDays = loan.gracePeriodDays ?? 0
-              const paidLate = item.paidAt && (() => {
-                const paid = new Date(new Date(item.paidAt).toDateString()).getTime()
-                const due = new Date(new Date(item.dueDate).toDateString()).getTime()
-                const graceMs = gracePeriodDays * 24 * 60 * 60 * 1000
-                return paid > due + graceMs
-              })()
-              const daysOverdue = calendarDaysOverdue(new Date(item.dueDate))
-
-              return (
-                <PenaltyItems
-                  key={item.id}
-                  penalties={itemPenalties}
-                  daysOverdue={daysOverdue}
-                  formatCurrency={formatCurrency}
-                >
-                  {({ toggleButton, detailPanel }) => (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between p-3 rounded border">
-                        <div className="flex items-center gap-3">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${config.className}`}>
-                            <StatusIcon className="h-4 w-4" weight="bold" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">Payment #{index + 1}</p>
-                              {item.status === "overdue" && (
-                                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
-                                  Overdue
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
-                              {toggleButton}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                            {item.status === "paid" && item.paidAt && (
-                              <>
-                                {parseFloat(item.paidAmount) !== parseFloat(item.amount) && (
-                                  <p className="text-xs text-primary">
-                                    Paid: {formatCurrency(item.paidAmount)}
-                                  </p>
-                                )}
-                                <p className={`text-xs ${paidLate ? "text-amber-600" : "text-muted-foreground"}`}>
-                                  {new Date(item.paidAt).toLocaleDateString()}
-                                  {paidLate ? " (late)" : ""}
-                                </p>
-                              </>
-                            )}
-                            {item.status === "partial" && (
-                              <p className="text-xs text-primary">
-                                Paid: {formatCurrency(item.paidAmount)}
-                              </p>
-                            )}
-                          </div>
-                          {item.status !== "paid" && loan.status === "active" && (
-                            <Button
-                              size="sm"
-                              variant={item.status === "overdue" ? "default" : "outline"}
-                              onClick={() => setSelectedScheduleItem(item)}
-                            >
-                              Pay
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      {detailPanel && (
-                        <div className="pl-14 pr-3 pb-1">
-                          {detailPanel}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </PenaltyItems>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Payments */}
-      {loan.payments.length > 0 && (
-        <Card className="shadow-sm">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle>Recent Payments</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-3">
-              {loan.payments.slice(0, 5).map((payment) => {
-                const isDebit = payment.type === "debit"
-                const isReversed = payment.type === "credit" && !!payment.reversedAt
-                const isPenaltyPayment = !!payment.penaltyId && !payment.scheduleItemId
-                // Check if this credit is the most recent non-reversed credit for its schedule item
-                // Penalty payments can always be reversed (no "most recent" check needed)
-                const canReverse = payment.type === "credit" && !payment.reversedAt && (
-                  isPenaltyPayment || (
-                    payment.scheduleItemId && !loan.payments.some(
-                      (other) =>
-                        other.id !== payment.id &&
-                        other.type === "credit" &&
-                        !other.reversedAt &&
-                        other.scheduleItemId === payment.scheduleItemId &&
-                        new Date(other.createdAt) > new Date(payment.createdAt)
-                    )
-                  )
-                )
-
-                if (isDebit) {
-                  return (
-                    <div
-                      key={payment.id}
-                      className="flex items-center justify-between py-2 border-b last:border-0 opacity-80"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-destructive">
-                            -{formatCurrency(payment.amount)}
-                          </p>
-                          <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">
-                            Reversal
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(payment.paidAt).toLocaleDateString()}
-                        </p>
-                        {payment.notes && (
-                          <p className="text-xs text-destructive/70 mt-0.5">
-                            {payment.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )
-                }
-
-                return (
-                  <div
-                    key={payment.id}
-                    className={`flex items-center justify-between py-2 border-b last:border-0 group ${isReversed ? "opacity-60" : ""}`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className={`font-medium ${isReversed ? "line-through" : ""}`}>
-                          {formatCurrency(payment.amount)}
-                        </p>
-                        {isPenaltyPayment && !isReversed && (
-                          <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">
-                            Penalty
-                          </Badge>
-                        )}
-                        {isReversed && (
-                          <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">
-                            Reversed
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(payment.paidAt).toLocaleDateString()} via{" "}
-                        {payment.method.toUpperCase()}
-                      </p>
-                      {isReversed && payment.reversalReason && (
-                        <p className="text-xs text-destructive/70 mt-0.5">
-                          Reason: {payment.reversalReason}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {payment.notes && (
-                        <p className="text-sm text-muted-foreground mr-1">{payment.notes}</p>
-                      )}
-                      {payment.type === "credit" && !payment.reversedAt && loan.isLender && (
-                        <div className="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[6rem] group-hover:opacity-100 transition-all duration-200">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary"
-                            onClick={() => {
-                              const url = `${window.location.origin}/share/receipt/${payment.id}`
-                              navigator.clipboard.writeText(url)
-                              toast.success("Receipt link copied to clipboard")
-                            }}
-                          >
-                            <LinkSimple className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary"
-                            onClick={() => setSelectedPaymentForEdit({
-                              id: payment.id,
-                              amount: payment.amount,
-                              method: payment.method,
-                              paidAt: payment.paidAt,
-                              scheduleItemId: payment.scheduleItemId,
-                            })}
-                          >
-                            <PencilSimple className="h-3.5 w-3.5" />
-                          </Button>
-                          {canReverse && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                              onClick={() => setSelectedPaymentForReversal({
-                                id: payment.id,
-                                amount: payment.amount,
-                                method: payment.method,
-                                paidAt: payment.paidAt,
-                                scheduleItemId: payment.scheduleItemId,
-                              })}
-                            >
-                              <ArrowCounterClockwise className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Restructure History */}
-      {loan.restructures && loan.restructures.length > 0 && (
-        <Card className="shadow-sm">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <ArrowCounterClockwise className="h-5 w-5 text-primary" />
-              Restructure History
-            </CardTitle>
-            <CardDescription>
-              {loan.restructures.length} restructure{loan.restructures.length > 1 ? "s" : ""} on record
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-3">
-              {loan.restructures.map((r, i) => (
-                <div key={r.id} className="rounded-lg border bg-muted/20 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Restructure #{loan.restructures!.length - i}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(r.createdAt), "MMM d, yyyy")}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                    <span className="text-muted-foreground">Balance before</span>
-                    <span className="font-medium text-right">{formatCurrency(r.previousRemainingBalance)}</span>
-                    {parseFloat(r.balanceReduction) > 0 && (
-                      <>
-                        <span className="text-muted-foreground">Balance waived</span>
-                        <span className="font-medium text-right text-amber-600 dark:text-amber-400">−{formatCurrency(r.balanceReduction)}</span>
-                      </>
-                    )}
-                    <span className="text-muted-foreground">New balance</span>
-                    <span className="font-medium text-right">{formatCurrency(r.newRemainingBalance)}</span>
-                    {r.additionalMonths > 0 && (
-                      <>
-                        <span className="text-muted-foreground">Term extended</span>
-                        <span className="font-medium text-right">+{r.additionalMonths} months</span>
-                      </>
-                    )}
-                    <span className="text-muted-foreground">New installment</span>
-                    <span className="font-bold text-right text-primary">{formatCurrency(r.newPaymentAmount)}</span>
-                  </div>
-                  {r.reason && (
-                    <p className="text-xs text-muted-foreground border-t pt-2 mt-1">"{r.reason}"</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Documents */}
-      {loan.isLender && (
-        <Card className="shadow-sm">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle>Documents</CardTitle>
-            <CardDescription>
-              Generate and download loan documents
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Link
-                to="/loans/$loanId/disclosure"
-                params={{ loanId: loan.id }}
-                className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                  <FileText className="h-5 w-5 text-blue-600" weight="bold" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium">Disclosure Statement</p>
-                  <p className="text-sm text-muted-foreground">
-                    Credit terms and cost of borrowing
-                  </p>
-                </div>
-                <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-              </Link>
-
-              <Link
-                to="/loans/$loanId/promissory-note"
-                params={{ loanId: loan.id }}
-                className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
-                  <Scroll className="h-5 w-5 text-amber-600" weight="bold" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium">Promissory Note</p>
-                  <p className="text-sm text-muted-foreground">
-                    Borrower's promise to pay
-                  </p>
-                </div>
-                <SigningStatusBadge status={signingStatus?.promissory_note} />
-                <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-              </Link>
-
-              {loan.status === "completed" && (
-                <>
+          {/* Documents */}
+          {loan.isLender && (
+            <Card className="shadow-sm rounded-xl">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base">Documents</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-2">
                   <Link
-                    to="/share/recap/$loanId"
+                    to="/loans/$loanId/disclosure"
                     params={{ loanId: loan.id }}
-                    className="group flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100">
-                      <ChartLineUp className="h-5 w-5 text-green-600" weight="bold" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-950/40">
+                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" weight="bold" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium">Loan Recap</p>
-                      <p className="text-sm text-muted-foreground">
-                        Payment behavior summary
-                      </p>
+                      <p className="text-sm font-medium">Disclosure Statement</p>
+                      <p className="text-xs text-muted-foreground">Credit terms & cost of borrowing</p>
                     </div>
-                    <ArrowSquareOut className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    <ArrowSquareOut className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                   </Link>
-                </>
-              )}
 
-            </div>
-          </CardContent>
-        </Card>
+                  <Link
+                    to="/loans/$loanId/promissory-note"
+                    params={{ loanId: loan.id }}
+                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-950/40">
+                      <Scroll className="h-4 w-4 text-amber-600 dark:text-amber-400" weight="bold" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Promissory Note</p>
+                      <p className="text-xs text-muted-foreground">Borrower's promise to pay</p>
+                    </div>
+                    <SigningStatusBadge status={signingStatus?.promissory_note} />
+                    <ArrowSquareOut className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </Link>
+
+                  {loan.status === "completed" && (
+                    <Link
+                      to="/share/recap/$loanId"
+                      params={{ loanId: loan.id }}
+                      className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100 dark:bg-green-950/40">
+                        <ChartLineUp className="h-4 w-4 text-green-600 dark:text-green-400" weight="bold" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">Loan Recap</p>
+                        <p className="text-xs text-muted-foreground">Payment behavior summary</p>
+                      </div>
+                      <ArrowSquareOut className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    </Link>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+        </div>
+      </div>
+
+      {/* Sticky mobile Record Payment footer — active loans with unpaid items */}
+      {loan.isLender && loan.status === "active" && (overdueItems.length > 0 || upcomingItems.length > 0) && (
+        <div className="fixed bottom-16 left-0 right-0 md:hidden bg-background border-t px-4 py-3 z-40 flex gap-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <Button className="flex-1 gap-2" onClick={handleQuickPay}>
+            <CurrencyCircleDollar className="h-4 w-4" weight="bold" />
+            Record Payment
+          </Button>
+        </div>
       )}
 
       {/* Agent Assignment Confirmation Dialog */}
