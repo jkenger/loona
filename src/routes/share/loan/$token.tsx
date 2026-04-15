@@ -143,29 +143,27 @@ function BorrowerLoanPortal() {
                 <p className="text-xs text-green-600/80 dark:text-green-400/60 mt-1">Congratulations, you've completed all payments.</p>
               </div>
             ) : (loan.overdueAmount > 0 || loan.totalPenalties > 0) ? (
-              <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 p-5">
+              <div className="rounded-xl border bg-card p-5">
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Total Amount Due</p>
-                    <p className="text-3xl font-bold mt-1 text-red-700 dark:text-red-300">
-                      {fmt(loan.overdueAmount + loan.totalPenalties)}
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Amount Due</p>
+                    <p className="text-3xl font-bold mt-1">{fmt(loan.overdueAmount + loan.totalPenalties)}</p>
                   </div>
-                  <Warning className="h-10 w-10 text-red-400 shrink-0 mt-1" weight="duotone" />
+                  <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center shrink-0 mt-0.5">
+                    <Warning className="h-5 w-5 text-amber-600 dark:text-amber-400" weight="bold" />
+                  </div>
                 </div>
-                <div className="space-y-2 border-t border-red-200 dark:border-red-800 pt-3">
+                <div className="space-y-2 border-t pt-3">
                   {loan.overdueAmount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-red-600/80 dark:text-red-400/70">
-                        Overdue payments ({loan.overdueCount})
-                      </span>
-                      <span className="font-semibold text-red-700 dark:text-red-300">{fmt(loan.overdueAmount)}</span>
+                      <span className="text-muted-foreground">Overdue payments ({loan.overdueCount})</span>
+                      <span className="font-semibold">{fmt(loan.overdueAmount)}</span>
                     </div>
                   )}
                   {loan.totalPenalties > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-red-600/80 dark:text-red-400/70">Penalties</span>
-                      <span className="font-semibold text-red-700 dark:text-red-300">{fmt(loan.totalPenalties)}</span>
+                      <span className="text-muted-foreground">Penalties</span>
+                      <span className="font-semibold">{fmt(loan.totalPenalties)}</span>
                     </div>
                   )}
                 </div>

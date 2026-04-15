@@ -269,7 +269,7 @@ function LoanDetailPage() {
     paid: { icon: Check, className: "text-primary bg-primary/10" },
     pending: { icon: Clock, className: "text-muted-foreground bg-muted" },
     partial: { icon: Clock, className: "text-primary bg-primary/10" },
-    overdue: { icon: Warning, className: "text-destructive bg-destructive/10" },
+    overdue: { icon: Warning, className: "text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-950/40" },
   }
 
   const borrowerInitials = loan.contact.name
@@ -572,7 +572,7 @@ function LoanDetailPage() {
               const grandTotal = overdueTotal + penaltyTotal
               if (grandTotal <= 0) return null
               return (
-                <div className="rounded-lg bg-destructive/8 border border-destructive/20 p-3 space-y-1.5">
+                <div className="rounded-lg bg-muted/50 border-l-2 border-l-amber-400 pl-3 pr-3 py-3 space-y-1.5">
                   {overdueItems.map((s) => {
                     const idx = loan.schedule.findIndex((x) => x.id === s.id)
                     const due = parseFloat(s.amount) - parseFloat(s.paidAmount)
@@ -582,22 +582,19 @@ function LoanDetailPage() {
                           Payment #{idx + 1} overdue
                           <span className="ml-1 opacity-60">({format(new Date(s.dueDate), "MMM d")})</span>
                         </span>
-                        <span className="font-medium text-destructive">{formatCurrency(due)}</span>
+                        <span className="font-medium">{formatCurrency(due)}</span>
                       </div>
                     )
                   })}
                   {penaltyTotal > 0 && (
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Penalties ({appliedPenalties.length})</span>
-                      <span className="font-medium text-destructive">{formatCurrency(penaltyTotal)}</span>
+                      <span className="font-medium">{formatCurrency(penaltyTotal)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-bold border-t border-destructive/20 pt-1.5 mt-0.5">
-                    <span className="flex items-center gap-1.5">
-                      <Warning className="h-3.5 w-3.5 text-destructive" weight="bold" />
-                      Total Due Now
-                    </span>
-                    <span className="text-destructive">{formatCurrency(grandTotal)}</span>
+                  <div className="flex justify-between text-sm font-bold border-t border-border/60 pt-1.5 mt-0.5">
+                    <span>Total Due Now</span>
+                    <span>{formatCurrency(grandTotal)}</span>
                   </div>
                 </div>
               )
@@ -788,8 +785,10 @@ function LoanDetailPage() {
                   {({ toggleButton, detailPanel }) => (
                     <div className="space-y-1">
                       <div
-                        className={`flex items-center justify-between p-3 rounded border ${
-                          item.status === "overdue" ? "border-destructive/50" : ""
+                        className={`flex items-center justify-between p-3 rounded ${
+                          item.status === "overdue"
+                            ? "border-l-2 border-l-amber-400 bg-amber-50/40 dark:bg-amber-950/10"
+                            : "border"
                         }`}
                       >
                         <div className="flex items-center gap-3">
