@@ -566,9 +566,9 @@ function LoanDetailPage() {
             {/* Total Due Now — shown when overdue or penalties exist */}
             {loan.status === "active" && (() => {
               const overdueItems = loan.schedule.filter((s) => s.status === "overdue")
-              const appliedPenalties = (penaltyData?.penalties ?? []).filter((p) => p.status === "applied")
+              const chargedPenalties = (penaltyData?.penalties ?? []).filter((p) => p.status === "applied" || p.status === "pending")
               const overdueTotal = overdueItems.reduce((sum, s) => sum + parseFloat(s.amount) - parseFloat(s.paidAmount), 0)
-              const penaltyTotal = appliedPenalties.reduce((sum, p) => sum + parseFloat(p.amount), 0)
+              const penaltyTotal = chargedPenalties.reduce((sum, p) => sum + parseFloat(p.amount), 0)
               const grandTotal = overdueTotal + penaltyTotal
               if (grandTotal <= 0) return null
               return (
@@ -588,7 +588,7 @@ function LoanDetailPage() {
                   })}
                   {penaltyTotal > 0 && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Penalties ({appliedPenalties.length})</span>
+                      <span className="text-muted-foreground">Penalties ({chargedPenalties.length})</span>
                       <span className="font-medium">{formatCurrency(penaltyTotal)}</span>
                     </div>
                   )}

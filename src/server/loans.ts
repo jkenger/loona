@@ -328,7 +328,7 @@ export const getPublicLoanByToken = createServerFn()
     const penaltyConfig = getEffectivePenaltyConfig(result.penaltyConfig)
     const qrCodes = await getPublicQrCodesForLender(result.lenderId)
     const totalPenalties = result.penalties
-      .filter((p) => p.status === "applied")
+      .filter((p) => p.status === "applied" || p.status === "pending")
       .reduce((sum, p) => sum + parseFloat(p.amount), 0)
 
     // Find next pending payment
