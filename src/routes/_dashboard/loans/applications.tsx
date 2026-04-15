@@ -174,43 +174,41 @@ function ApplicationsPage() {
                 <div className="space-y-0">
                   {pending.map((app) => (
                     <div key={app.id} className="py-3 border-b last:border-0 -mx-5 px-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 text-primary font-bold text-xs">
-                            {app.applicantName.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold truncate">{app.applicantName}</p>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-                              {app.applicantEmail && <span className="flex items-center gap-1"><EnvelopeSimple className="h-3 w-3" />{app.applicantEmail}</span>}
-                              {app.applicantPhone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{app.applicantPhone}</span>}
-                              {app.applicantCity && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{app.applicantCity}</span>}
-                            </div>
-                            <div className="flex items-center gap-3 mt-2 text-sm">
-                              <span className="font-bold text-primary">{fmt(app.requestedAmount)}</span>
-                              {app.requestedTermMonths && <span className="text-muted-foreground">{app.requestedTermMonths} mo</span>}
-                              {app.purpose && <span className="text-muted-foreground truncate max-w-[150px]">{app.purpose}</span>}
-                            </div>
-                            {app.monthlyIncome && app.requestedTermMonths && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Income: {fmt(app.monthlyIncome)} · ~{Math.round((Number(app.requestedAmount) / app.requestedTermMonths / Number(app.monthlyIncome)) * 100)}% DTI
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                              <CalendarBlank className="h-3 w-3" />
-                              {formatDistanceToNow(new Date(app.createdAt), { addSuffix: true })}
-                            </p>
-                          </div>
+                      <div className="flex items-start gap-3">
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 text-primary font-bold text-xs">
+                          {app.applicantName.charAt(0).toUpperCase()}
                         </div>
-                        <div className="flex gap-1.5 shrink-0 mt-0.5">
-                          <Button size="sm" className="h-7 gap-1 text-xs" onClick={() => setApproveApp(app)} disabled={isProcessing === app.id}>
-                            <CheckCircle className="h-3 w-3" weight="bold" />
-                            Approve
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => { setRejectId(app.id); setRejectionReason("") }} disabled={isProcessing === app.id}>
-                            <XCircle className="h-3 w-3" weight="bold" />
-                            Reject
-                          </Button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{app.applicantName}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+                            {app.applicantEmail && <span className="flex items-center gap-1"><EnvelopeSimple className="h-3 w-3" />{app.applicantEmail}</span>}
+                            {app.applicantPhone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{app.applicantPhone}</span>}
+                            {app.applicantCity && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{app.applicantCity}</span>}
+                          </div>
+                          <div className="flex items-center gap-3 mt-2 text-sm">
+                            <span className="font-bold text-primary">{fmt(app.requestedAmount)}</span>
+                            {app.requestedTermMonths && <span className="text-muted-foreground">{app.requestedTermMonths} mo</span>}
+                            {app.purpose && <span className="text-muted-foreground truncate max-w-[150px]">{app.purpose}</span>}
+                          </div>
+                          {app.monthlyIncome && app.requestedTermMonths && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Income: {fmt(app.monthlyIncome)} · ~{Math.round((Number(app.requestedAmount) / app.requestedTermMonths / Number(app.monthlyIncome)) * 100)}% DTI
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <CalendarBlank className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(app.createdAt), { addSuffix: true })}
+                          </p>
+                          <div className="flex gap-1.5 mt-3">
+                            <Button size="sm" className="h-7 gap-1 text-xs" onClick={() => setApproveApp(app)} disabled={isProcessing === app.id}>
+                              <CheckCircle className="h-3 w-3" weight="bold" />
+                              Approve
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => { setRejectId(app.id); setRejectionReason("") }} disabled={isProcessing === app.id}>
+                              <XCircle className="h-3 w-3" weight="bold" />
+                              Reject
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -285,22 +283,49 @@ function ApplicationsPage() {
                     .map((app) => {
                     const isApproved = app.status === "approved"
                     return (
-                      <div key={app.id} className="flex items-center gap-3 py-3 border-b last:border-0 -mx-5 px-5 hover:bg-muted/50 transition-colors">
-                        <div className={cn(
-                          "h-7 w-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold",
-                          isApproved ? "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400"
-                        )}>
-                          {app.applicantName.charAt(0).toUpperCase()}
+                      <div key={app.id} className="py-3 border-b last:border-0 -mx-5 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "h-7 w-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold",
+                            isApproved ? "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400"
+                          )}>
+                            {app.applicantName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{app.applicantName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {fmt(app.requestedAmount)} · {app.reviewedAt ? format(new Date(app.reviewedAt), "MMM d") : ""}
+                            </p>
+                          </div>
+                          <Badge className={cn("text-[10px] shrink-0", isApproved ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400")}>
+                            {isApproved ? "Approved" : "Rejected"}
+                          </Badge>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{app.applicantName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {fmt(app.requestedAmount)} · {app.reviewedAt ? format(new Date(app.reviewedAt), "MMM d") : ""}
-                          </p>
-                        </div>
-                        <Badge className={cn("text-[10px] shrink-0", isApproved ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400")}>
-                          {isApproved ? "Approved" : "Rejected"}
-                        </Badge>
+                        {isApproved && (
+                          <div className="mt-2 ml-10">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 gap-1 text-xs"
+                              onClick={() => {
+                                router.navigate({
+                                  to: "/loans/new-wizard",
+                                  search: {
+                                    fromApplication: JSON.stringify({
+                                      name: app.applicantName, phone: app.applicantPhone, email: app.applicantEmail,
+                                      address: app.applicantAddress, city: app.applicantCity, principal: app.requestedAmount,
+                                      termMonths: app.requestedTermMonths, purpose: app.purpose,
+                                      income: app.monthlyIncome, otherIncome: app.otherIncome,
+                                    }),
+                                  },
+                                })
+                              }}
+                            >
+                              <ArrowRight className="h-3 w-3" weight="bold" />
+                              Create Loan
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
