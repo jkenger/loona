@@ -485,57 +485,6 @@ function LoanDetailPage() {
         </div>
       )}
 
-      {/* Collection Summary — shown when there are overdue payments or applied penalties */}
-      {loan.status === "active" && (() => {
-        const overdueItems = loan.schedule.filter((s) => s.status === "overdue")
-        const appliedPenalties = (penaltyData?.penalties ?? []).filter((p) => p.status === "applied")
-        const overdueTotal = overdueItems.reduce((sum, s) => sum + parseFloat(s.amount) - parseFloat(s.paidAmount), 0)
-        const penaltyTotal = appliedPenalties.reduce((sum, p) => sum + parseFloat(p.amount), 0)
-        const grandTotal = overdueTotal + penaltyTotal
-        if (grandTotal <= 0) return null
-        return (
-          <Card className="shadow-sm rounded-xl border-destructive/40 bg-destructive/5">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="flex items-center gap-2 text-destructive">
-                <Warning className="h-5 w-5" weight="bold" />
-                Collection Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="space-y-1.5">
-                {overdueItems.map((s, i) => {
-                  const idx = loan.schedule.findIndex((x) => x.id === s.id)
-                  const due = parseFloat(s.amount) - parseFloat(s.paidAmount)
-                  return (
-                    <div key={s.id} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Payment #{idx + 1} overdue
-                        <span className="ml-1.5 text-xs opacity-60">
-                          ({format(new Date(s.dueDate), "MMM d")})
-                        </span>
-                      </span>
-                      <span className="font-medium text-destructive">{formatCurrency(due)}</span>
-                    </div>
-                  )
-                })}
-                {penaltyTotal > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Penalties ({appliedPenalties.length})
-                    </span>
-                    <span className="font-medium text-destructive">{formatCurrency(penaltyTotal)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-base font-bold border-t pt-2 mt-2">
-                  <span>Total Due Now</span>
-                  <span className="text-destructive">{formatCurrency(grandTotal)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )
-      })()}
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Loan Summary */}
         <Card className="shadow-sm rounded-xl">
@@ -613,6 +562,46 @@ function LoanDetailPage() {
                 />
               </div>
             </div>
+
+            {/* Total Due Now — shown when overdue or penalties exist */}
+            {loan.status === "active" && (() => {
+              const overdueItems = loan.schedule.filter((s) => s.status === "overdue")
+              const appliedPenalties = (penaltyData?.penalties ?? []).filter((p) => p.status === "applied")
+              const overdueTotal = overdueItems.reduce((sum, s) => sum + parseFloat(s.amount) - parseFloat(s.paidAmount), 0)
+              const penaltyTotal = appliedPenalties.reduce((sum, p) => sum + parseFloat(p.amount), 0)
+              const grandTotal = overdueTotal + penaltyTotal
+              if (grandTotal <= 0) return null
+              return (
+                <div className="rounded-lg bg-destructive/8 border border-destructive/20 p-3 space-y-1.5">
+                  {overdueItems.map((s) => {
+                    const idx = loan.schedule.findIndex((x) => x.id === s.id)
+                    const due = parseFloat(s.amount) - parseFloat(s.paidAmount)
+                    return (
+                      <div key={s.id} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          Payment #{idx + 1} overdue
+                          <span className="ml-1 opacity-60">({format(new Date(s.dueDate), "MMM d")})</span>
+                        </span>
+                        <span className="font-medium text-destructive">{formatCurrency(due)}</span>
+                      </div>
+                    )
+                  })}
+                  {penaltyTotal > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Penalties ({appliedPenalties.length})</span>
+                      <span className="font-medium text-destructive">{formatCurrency(penaltyTotal)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-bold border-t border-destructive/20 pt-1.5 mt-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <Warning className="h-3.5 w-3.5 text-destructive" weight="bold" />
+                      Total Due Now
+                    </span>
+                    <span className="text-destructive">{formatCurrency(grandTotal)}</span>
+                  </div>
+                </div>
+              )
+            })()}
           </CardContent>
         </Card>
 
