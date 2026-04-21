@@ -374,7 +374,7 @@ export const commissionSettings = pgTable("commission_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })
 
-// Lender Settings (lender-wide config: initial capital, etc.)
+/// Lender Settings (lender-wide config: initial capital, etc.)
 export const lenderSettings = pgTable("lender_settings", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   lenderId: text("lender_id")
@@ -384,6 +384,20 @@ export const lenderSettings = pgTable("lender_settings", {
   config: text("config").notNull(), // JSON blob
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})
+
+export const cashTransactionTypeEnum = pgEnum("cash_transaction_type", ["deposit", "expense"])
+
+export const cashTransactions = pgTable("cash_transactions", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  lenderId: text("lender_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  type: cashTransactionTypeEnum("type").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  description: text("description").notNull(),
+  transactionDate: timestamp("transaction_date").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
 // QR Payment Codes (lender-uploaded payment QR codes)
@@ -732,6 +746,10 @@ export const penaltySettingsRelations = relations(penaltySettings, ({ one }) => 
 
 export const lenderSettingsRelations = relations(lenderSettings, ({ one }) => ({
   lender: one(user, { fields: [lenderSettings.lenderId], references: [user.id] }),
+}))
+
+export const cashTransactionsRelations = relations(cashTransactions, ({ one }) => ({
+  lender: one(user, { fields: [cashTransactions.lenderId], references: [user.id] }),
 }))
 
 export const lenderQrCodesRelations = relations(lenderQrCodes, ({ one }) => ({
