@@ -484,10 +484,25 @@ function DashboardLayout() {
                         <span>+ Total Collected</span>
                         <span className="font-medium text-sidebar-foreground">{formatPHP(parseFloat(cashPosition.totalCollected))}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span>+ Deposits</span>
+                        <span className="font-medium text-sidebar-foreground">{formatPHP(parseFloat(cashPosition.totalDeposits))}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>&minus; Expenses</span>
+                        <span className="font-medium text-sidebar-foreground">{formatPHP(parseFloat(cashPosition.totalExpenses))}</span>
+                      </div>
                       <div className="flex justify-between border-t border-sidebar-border pt-1 mt-1">
                         <span className="font-medium text-sidebar-foreground">= Cash Available</span>
                         <span className="font-bold text-primary">{formatPHP(cashPosition.cashAvailable)}</span>
                       </div>
+                      <Link
+                        to="/settings/cash-transactions"
+                        className="flex items-center justify-between gap-1 pt-1.5 mt-1 border-t border-sidebar-border text-[11px] text-muted-foreground hover:text-sidebar-foreground transition-colors"
+                      >
+                        <span>Manage transactions</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
                     </div>
                   )}
                 </div>

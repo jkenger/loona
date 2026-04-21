@@ -167,27 +167,25 @@ function CashTransactionsPage() {
 
       {/* Filter pills */}
       {transactions.length > 0 && (
-        <StaggerItem>
-          <div className="flex items-center gap-1.5">
-            {(["all", "deposit", "expense"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                  filter === f ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                {f === "deposit" && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-                {f === "expense" && <span className="h-1.5 w-1.5 rounded-full bg-red-500" />}
-                {f === "all" ? "All" : f === "deposit" ? "Deposits" : "Expenses"}
-                <span className="text-muted-foreground/70">
-                  ({f === "all" ? transactions.length : transactions.filter((t) => t.type === f).length})
-                </span>
-              </button>
-            ))}
-          </div>
-        </StaggerItem>
+        <div className="flex items-center gap-1.5">
+          {(["all", "deposit", "expense"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                filter === f ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              {f === "deposit" && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              {f === "expense" && <span className="h-1.5 w-1.5 rounded-full bg-red-500" />}
+              {f === "all" ? "All" : f === "deposit" ? "Deposits" : "Expenses"}
+              <span className="text-muted-foreground/70">
+                ({f === "all" ? transactions.length : transactions.filter((t) => t.type === f).length})
+              </span>
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Transaction list */}
