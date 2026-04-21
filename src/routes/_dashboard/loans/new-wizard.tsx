@@ -59,6 +59,7 @@ import {
   UsersThree,
 } from "@phosphor-icons/react"
 import { Switch } from "@/components/ui/switch"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { type PenaltyConfig, DEFAULT_PENALTY_CONFIG, getLateFeePreview, getDailyInterestPreview } from "@/lib/constants/penalty-defaults"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
@@ -148,6 +149,7 @@ function NewLoanWizard() {
   const [loading, setLoading] = useState(false)
   const [stepError, setStepError] = useState("")
   const [createdLoanId, setCreatedLoanId] = useState<string | null>(null)
+  const [wasDraft, setWasDraft] = useState(false)
 
   // Step 1 — Borrower
   const [isNewContact, setIsNewContact] = useState(!hasPreselected || !!fromApp)
@@ -317,7 +319,7 @@ function NewLoanWizard() {
     setStep(step - 1)
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (isDraft = false) => {
     setStepError("")
     setLoading(true)
 
@@ -341,6 +343,7 @@ function NewLoanWizard() {
         processingFeePercent: hasProcessingFee ? parseFloat(processingFeePercent) || 0 : undefined,
         assignedAgentId: assignedAgentId || undefined,
         notifyAgent,
+        status: isDraft ? "draft" as const : "active" as const,
       }
 
       const payload = isNewContact
@@ -365,6 +368,7 @@ function NewLoanWizard() {
 
       const loan = await createContactAndLoan({ data: payload })
       setCreatedLoanId(loan.id)
+      setWasDraft(isDraft)
       setLoading(false)
       setStep(4)
     } catch (err) {
@@ -1858,34 +1862,63 @@ function NewLoanWizard() {
                 </div>
               )}
 
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleBack}
                   className="gap-2"
+                  disabled={loading}
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
                 </Button>
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Spinner className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <CurrencyCircleDollar className="h-4 w-4" />
-                      Issue Loan
-                    </>
-                  )}
-                </Button>
+                <TooltipProvider>
+                  <div className="flex gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleSubmit(true)}
+                          disabled={loading}
+                          className="gap-2"
+                        >
+                          {loading ? <Spinner className="h-4 w-4 animate-spin" /> : null}
+                          Save as Draft
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Save loan without generating a schedule. You can edit terms and activate later.
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          onClick={() => handleSubmit(false)}
+                          disabled={loading}
+                          className="gap-2"
+                        >
+                          {loading ? (
+                            <>
+                              <Spinner className="h-4 w-4 animate-spin" />
+                              Creating...
+                            </>
+                          ) : (
+                            <>
+                              <CurrencyCircleDollar className="h-4 w-4" />
+                              Activate Loan
+                            </>
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Generate the payment schedule and start collecting immediately.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               </div>
             </div>
           </div>
@@ -1903,24 +1936,30 @@ function NewLoanWizard() {
                   />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold">Loan Created</h2>
+                  <h2 className="text-2xl font-bold">{wasDraft ? "Draft Saved" : "Loan Created"}</h2>
                   <p className="text-muted-foreground mt-1">
-                    The loan for{" "}
-                    <span className="font-medium text-foreground">
-                      {borrowerDisplayName}
-                    </span>{" "}
-                    has been created with a principal of{" "}
-                    <span className="font-medium text-foreground">
-                      {formatCurrency(parseFloat(principal) || 0)}
-                    </span>
-                    . Payment schedule has been generated.
+                    {wasDraft ? (
+                      <>
+                        The loan for{" "}
+                        <span className="font-medium text-foreground">{borrowerDisplayName}</span>{" "}
+                        has been saved as a draft. No schedule has been generated yet — activate it when you're ready to start collecting.
+                      </>
+                    ) : (
+                      <>
+                        The loan for{" "}
+                        <span className="font-medium text-foreground">{borrowerDisplayName}</span>{" "}
+                        has been created with a principal of{" "}
+                        <span className="font-medium text-foreground">{formatCurrency(parseFloat(principal) || 0)}</span>
+                        . Payment schedule has been generated.
+                      </>
+                    )}
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Documents */}
-            <Card className="shadow-sm rounded-xl">
+            {/* Documents — only for active loans */}
+            {!wasDraft && <Card className="shadow-sm rounded-xl">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-base">Documents Ready</CardTitle>
                 <CardDescription>
@@ -1967,7 +2006,7 @@ function NewLoanWizard() {
                   </Link>
                 </div>
               </CardContent>
-            </Card>
+            </Card>}
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3">

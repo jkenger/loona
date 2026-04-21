@@ -18,6 +18,7 @@ import { relations } from "drizzle-orm"
 export const userRoleEnum = pgEnum("user_role", ["lender", "agent", "admin"])
 
 export const loanStatusEnum = pgEnum("loan_status", [
+  "draft",
   "pending_disbursement",
   "active",
   "completed",

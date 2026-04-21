@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { getLoan, deleteLoan, approveLoan, rejectLoan } from "@/server/loans"
+import { getLoan, deleteLoan, approveLoan, rejectLoan, activateDraftLoan, updateDraftLoan } from "@/server/loans"
 import { restructureLoan } from "@/server/restructure"
 import { getLoanSigningStatus } from "@/server/signatures"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
@@ -70,6 +70,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
 import { calculateEIR, formatEIR } from "@/lib/utils/eir"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
+import { DatePicker } from "@/components/ui/date-picker"
 
 export const Route = createFileRoute("/_dashboard/loans/$loanId/")({
   loader: async ({ params, context }) => {
@@ -152,6 +154,18 @@ function LoanDetailPage() {
     id: string; amount: string; method: string; paidAt: string; scheduleItemId: string | null
   } | null>(null)
 
+  // Draft loan state
+  const [showActivateDraftDialog, setShowActivateDraftDialog] = useState(false)
+  const [isActivatingDraft, setIsActivatingDraft] = useState(false)
+  const [showEditDraftDialog, setShowEditDraftDialog] = useState(false)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [draftPrincipal, setDraftPrincipal] = useState("")
+  const [draftInterestRate, setDraftInterestRate] = useState("")
+  const [draftTermMonths, setDraftTermMonths] = useState("")
+  const [draftStartDate, setDraftStartDate] = useState<Date | undefined>(undefined)
+  const [draftFrequency, setDraftFrequency] = useState("")
+  const [draftPurpose, setDraftPurpose] = useState("")
+
   // Progressive disclosure toggles
   const [showAllUpcoming, setShowAllUpcoming] = useState(false)
   const [showPaidSchedule, setShowPaidSchedule] = useState(false)
@@ -222,6 +236,44 @@ function LoanDetailPage() {
     }
   }
 
+  const handleActivateDraft = async () => {
+    setIsActivatingDraft(true)
+    try {
+      await activateDraftLoan({ data: { loanId: loan.id } })
+      toast.success("Loan activated")
+      setShowActivateDraftDialog(false)
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to activate loan")
+    } finally {
+      setIsActivatingDraft(false)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true)
+    try {
+      await updateDraftLoan({
+        data: {
+          loanId: loan.id,
+          principal: parseFloat(draftPrincipal),
+          interestRate: parseFloat(draftInterestRate),
+          termMonths: parseInt(draftTermMonths),
+          paymentFrequency: draftFrequency as any,
+          startDate: draftStartDate ? format(draftStartDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+          purpose: draftPurpose || undefined,
+        },
+      })
+      toast.success("Draft updated")
+      setShowEditDraftDialog(false)
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update draft")
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }
+
   const handleApprove = async () => {
     setIsApproving(true)
     try {
@@ -263,6 +315,7 @@ function LoanDetailPage() {
   }
 
   const statusConfig: Record<string, { variant: any; label: string; className?: string }> = {
+    draft: { variant: "outline", label: "Draft", className: "bg-muted text-muted-foreground border-border" },
     pending_disbursement: { variant: "outline", label: "Pending Disbursement" },
     active: { variant: "secondary", label: "Active" },
     completed: { variant: "default", label: "Completed" },
@@ -570,6 +623,54 @@ function LoanDetailPage() {
         </Card>
       )}
 
+      {/* Draft Banner */}
+      {loan.status === "draft" && loan.isLender && (
+        <Card className="border-muted shadow-sm rounded-xl">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold">Draft Loan</p>
+                  <p className="text-sm text-muted-foreground">
+                    No schedule generated yet. Edit the terms or activate to start collecting.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 sm:shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    setDraftPrincipal(loan.principal)
+                    setDraftInterestRate(loan.interestRate)
+                    setDraftTermMonths(String(loan.termMonths))
+                    setDraftStartDate(loan.startDate ? new Date(loan.startDate) : new Date())
+                    setDraftFrequency(loan.paymentFrequency)
+                    setDraftPurpose(loan.purpose || "")
+                    setShowEditDraftDialog(true)
+                  }}
+                >
+                  <PencilSimple className="h-4 w-4" />
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setShowActivateDraftDialog(true)}
+                >
+                  <CurrencyCircleDollar className="h-4 w-4" />
+                  Activate
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main two-column layout */}
       <div className="grid gap-5 lg:grid-cols-3">
         {/* LEFT COLUMN — Hero + Schedule */}
@@ -656,7 +757,16 @@ function LoanDetailPage() {
             </CardContent>
           </Card>
 
-          {/* PAYMENT SCHEDULE — Grouped */}
+          {/* PAYMENT SCHEDULE — Grouped (hidden for drafts) */}
+          {loan.status === "draft" ? (
+            <Card className="shadow-sm rounded-xl">
+              <CardContent className="p-8 text-center text-muted-foreground">
+                <CurrencyCircleDollar className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm font-medium">No schedule yet</p>
+                <p className="text-xs mt-1">Activate the loan to generate the payment schedule.</p>
+              </CardContent>
+            </Card>
+          ) : (
           <Card className="shadow-sm rounded-xl">
             <CardHeader className="p-4 pb-2">
               <CardTitle>Payment Schedule</CardTitle>
@@ -743,6 +853,7 @@ function LoanDetailPage() {
 
             </CardContent>
           </Card>
+          )}
 
         </div>
 
@@ -1574,6 +1685,123 @@ function LoanDetailPage() {
                   <X className="h-4 w-4 mr-2" />
                   Reject Loan
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activate Draft Dialog */}
+      <Dialog open={showActivateDraftDialog} onOpenChange={setShowActivateDraftDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Activate Loan</DialogTitle>
+            <DialogDescription>
+              This will generate the payment schedule and activate the loan for {loan.contact.name}. You won't be able to edit the terms after activation.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowActivateDraftDialog(false)} disabled={isActivatingDraft}>
+              Cancel
+            </Button>
+            <Button onClick={handleActivateDraft} disabled={isActivatingDraft} className="gap-2">
+              {isActivatingDraft ? (
+                <><Spinner className="h-4 w-4 animate-spin" /> Activating...</>
+              ) : (
+                <><CurrencyCircleDollar className="h-4 w-4" /> Activate Loan</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Draft Dialog */}
+      <Dialog open={showEditDraftDialog} onOpenChange={setShowEditDraftDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Draft Loan</DialogTitle>
+            <DialogDescription>Update loan terms before activating.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Principal Amount</Label>
+                <CurrencyInput
+                  value={draftPrincipal}
+                  onValueChange={setDraftPrincipal}
+                  placeholder="10,000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Interest Rate</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="15"
+                    step="0.5"
+                    value={draftInterestRate}
+                    onChange={(e) => setDraftInterestRate(e.target.value)}
+                    className="pr-16"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">% / mo</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Loan Term</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="60"
+                    value={draftTermMonths}
+                    onChange={(e) => setDraftTermMonths(e.target.value)}
+                    className="pr-20"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">months</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Frequency</Label>
+                <Select value={draftFrequency} onValueChange={setDraftFrequency}>
+                  <SelectTrigger>
+                    {{ monthly: "Monthly", semimonthly: "Semi-monthly", biweekly: "Bi-weekly", weekly: "Weekly", daily: "Daily" }[draftFrequency] || "Select..."}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="semimonthly">Semi-monthly (1st & 15th)</SelectItem>
+                    <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <DatePicker
+                value={draftStartDate}
+                onChange={(date) => date && setDraftStartDate(date)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Purpose <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                value={draftPurpose}
+                onChange={(e) => setDraftPurpose(e.target.value)}
+                placeholder="e.g., Medical, Business"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDraftDialog(false)} disabled={isSavingDraft}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveDraft} disabled={isSavingDraft} className="gap-2">
+              {isSavingDraft ? (
+                <><Spinner className="h-4 w-4 animate-spin" /> Saving...</>
+              ) : (
+                <><Check className="h-4 w-4" /> Save Changes</>
               )}
             </Button>
           </DialogFooter>

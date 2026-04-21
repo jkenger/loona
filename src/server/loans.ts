@@ -18,6 +18,7 @@ import { assignLoanToAgent } from "@/server/agents"
 
 // Valid loan status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft: ["active"],
   pending_disbursement: ["active"],
   pending_approval: ["active", "rejected"],
   active: ["completed"],
@@ -609,6 +610,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     assignedAgentId: z.string().optional(),
     notifyAgent: z.boolean().optional().default(false),
     processingFeePercent: z.number().min(0).max(100).optional(),
+    status: z.enum(["active", "draft"]).optional().default("active"),
   }),
   z.object({
     isNewContact: z.literal(false),
@@ -630,6 +632,7 @@ const createContactAndLoanSchema = z.discriminatedUnion("isNewContact", [
     assignedAgentId: z.string().optional(),
     notifyAgent: z.boolean().optional().default(false),
     processingFeePercent: z.number().min(0).max(100).optional(),
+    status: z.enum(["active", "draft"]).optional().default("active"),
   }),
 ])
 
@@ -703,6 +706,8 @@ export const createContactAndLoan = createServerFn()
       penaltyConfigSnapshot = penaltySettingsRow?.config ?? null
     }
 
+    const isDraft = data.status === "draft"
+
     // Create loan
     const [loan] = await db
       .insert(loans)
@@ -716,7 +721,7 @@ export const createContactAndLoan = createServerFn()
         paymentAmount: paymentAmount.toFixed(2),
         totalToRepay: totalToRepay.toFixed(2),
         remainingBalance: totalToRepay.toFixed(2),
-        status: "active",
+        status: isDraft ? "draft" : "active",
         startDate: data.startDate,
         maturityDate,
         purpose: data.purpose || null,
@@ -733,17 +738,25 @@ export const createContactAndLoan = createServerFn()
       })
       .returning()
 
-    // Generate payment schedule
-    const scheduleItems = generatePaymentSchedule(
-      loan.id,
-      data.startDate,
-      paymentsCount,
-      paymentAmount,
-      data.paymentFrequency,
-      totalToRepay
-    )
+    // Only generate schedule and notify agent for active loans
+    if (!isDraft) {
+      const scheduleItems = generatePaymentSchedule(
+        loan.id,
+        data.startDate,
+        paymentsCount,
+        paymentAmount,
+        data.paymentFrequency,
+        totalToRepay
+      )
 
-    await db.insert(paymentSchedule).values(scheduleItems)
+      await db.insert(paymentSchedule).values(scheduleItems)
+
+      if (data.assignedAgentId) {
+        assignLoanToAgent({ data: { loanId: loan.id, agentId: data.assignedAgentId, notify: data.notifyAgent } }).catch((err) => {
+          console.error('[Loan] Post-create agent assignment failed', err)
+        })
+      }
+    }
 
     log("loan.create", "loan", loan.id, {
       contactId,
@@ -752,13 +765,8 @@ export const createContactAndLoan = createServerFn()
       termMonths,
       isNewContact: data.isNewContact,
       renewedFromLoanId: data.renewedFromLoanId || null,
+      status: isDraft ? "draft" : "active",
     })
-
-    if (data.assignedAgentId) {
-      assignLoanToAgent({ data: { loanId: loan.id, agentId: data.assignedAgentId, notify: data.notifyAgent } }).catch((err) => {
-        console.error('[Loan] Post-create agent assignment failed', err)
-      })
-    }
 
     return {
       ...loan,
@@ -1447,4 +1455,121 @@ export const regenerateSchedule = createServerFn()
     })
 
     return { success: true }
+  })
+
+// ============================================================================
+// Draft Loan — Activate
+// ============================================================================
+
+export const activateDraftLoan = createServerFn()
+  .inputValidator(z.object({ loanId: z.string() }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+      with: { contact: true },
+    })
+
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    assertTransition(loan.status, "active")
+
+    const paymentsCount = calculatePaymentsCount(loan.termMonths, loan.paymentFrequency as any)
+    const scheduleItems = generatePaymentSchedule(
+      loan.id,
+      loan.startDate || new Date(),
+      paymentsCount,
+      parseFloat(loan.paymentAmount),
+      loan.paymentFrequency as any,
+      parseFloat(loan.totalToRepay)
+    )
+
+    const [, [updated]] = await db.batch([
+      db.insert(paymentSchedule).values(scheduleItems),
+      db.update(loans).set({ status: "active", updatedAt: new Date() }).where(eq(loans.id, data.loanId)).returning(),
+    ])
+
+    log("loan.activate_draft", "loan", data.loanId, {
+      contactName: loan.contact.name,
+      principal: loan.principal,
+    })
+
+    return {
+      ...updated,
+      startDate: updated.startDate?.toISOString() ?? null,
+      maturityDate: updated.maturityDate?.toISOString() ?? null,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    }
+  })
+
+// ============================================================================
+// Draft Loan — Update Fields
+// ============================================================================
+
+export const updateDraftLoan = createServerFn()
+  .inputValidator(z.object({
+    loanId: z.string(),
+    principal: z.number().positive(),
+    interestRate: z.number().min(0).max(15),
+    termMonths: z.number().int().positive(),
+    paymentFrequency: z.enum(["daily", "weekly", "biweekly", "semimonthly", "monthly"]),
+    startDate: z.string(),
+    purpose: z.string().optional(),
+    collateralDescription: z.string().optional(),
+    coMakerName: z.string().optional(),
+    processingFeePercent: z.number().min(0).max(100).optional(),
+  }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    const loan = await db.query.loans.findFirst({ where: eq(loans.id, data.loanId) })
+
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    if (loan.status !== "draft") {
+      throw new Error("Only draft loans can be edited")
+    }
+
+    const totalInterest = data.principal * (data.interestRate / 100) * data.termMonths
+    const totalToRepay = data.principal + totalInterest
+    const paymentsCount = calculatePaymentsCount(data.termMonths, data.paymentFrequency)
+    const paymentAmount = totalToRepay / paymentsCount
+    const startDate = new Date(data.startDate)
+    const maturityDate = new Date(startDate)
+    maturityDate.setMonth(maturityDate.getMonth() + data.termMonths)
+
+    const [updated] = await db.update(loans).set({
+      principal: data.principal.toString(),
+      interestRate: data.interestRate.toString(),
+      termMonths: data.termMonths,
+      paymentFrequency: data.paymentFrequency,
+      paymentAmount: paymentAmount.toFixed(2),
+      totalToRepay: totalToRepay.toFixed(2),
+      remainingBalance: totalToRepay.toFixed(2),
+      startDate,
+      maturityDate,
+      purpose: data.purpose || null,
+      collateralDescription: data.collateralDescription || null,
+      coMakerName: data.coMakerName || null,
+      processingFeePercent: data.processingFeePercent?.toString() || null,
+      updatedAt: new Date(),
+    }).where(eq(loans.id, data.loanId)).returning()
+
+    log("loan.update_draft", "loan", data.loanId, { principal: data.principal })
+
+    return {
+      ...updated,
+      startDate: updated.startDate?.toISOString() ?? null,
+      maturityDate: updated.maturityDate?.toISOString() ?? null,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    }
   })

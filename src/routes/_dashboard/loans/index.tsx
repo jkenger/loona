@@ -54,10 +54,11 @@ function LoansPageSkeleton() {
   )
 }
 
-type StatusFilter = "all" | "active" | "pending_disbursement" | "completed" | "defaulted" | "pending_approval" | "rejected"
+type StatusFilter = "all" | "active" | "draft" | "pending_disbursement" | "completed" | "defaulted" | "pending_approval" | "rejected"
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
   active: { label: "Active", dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400" },
+  draft: { label: "Draft", dot: "bg-gray-300 dark:bg-gray-500", text: "text-muted-foreground" },
   pending_disbursement: { label: "Pending", dot: "bg-blue-400", text: "text-blue-600 dark:text-blue-400" },
   completed: { label: "Completed", dot: "bg-gray-400 dark:bg-gray-500", text: "text-muted-foreground" },
   defaulted: { label: "Defaulted", dot: "bg-red-500", text: "text-red-700 dark:text-red-400" },
@@ -68,6 +69,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string }
 const FILTER_LABELS: Record<string, string> = {
   all: "All",
   active: "Active",
+  draft: "Draft",
   pending_disbursement: "Pending",
   completed: "Completed",
   defaulted: "Defaulted",
@@ -95,14 +97,15 @@ function LoansPage() {
     return map
   }, [contacts])
 
-  // Portfolio stats
+  // Portfolio stats (exclude drafts)
   const stats = useMemo(() => {
-    const activeLoans = loans.filter((l) => l.status === "active")
+    const nonDraftLoans = loans.filter((l) => l.status !== "draft")
+    const activeLoans = nonDraftLoans.filter((l) => l.status === "active")
     const totalOutstanding = activeLoans.reduce((sum, l) => sum + parseFloat(l.remainingBalance), 0)
-    const totalPaid = loans.reduce((sum, l) => sum + parseFloat(l.amountPaid), 0)
-    const totalToRepay = loans.reduce((sum, l) => sum + parseFloat(l.totalToRepay), 0)
+    const totalPaid = nonDraftLoans.reduce((sum, l) => sum + parseFloat(l.amountPaid), 0)
+    const totalToRepay = nonDraftLoans.reduce((sum, l) => sum + parseFloat(l.totalToRepay), 0)
     const collectionRate = totalToRepay > 0 ? Math.round((totalPaid / totalToRepay) * 100) : 0
-    const uniqueBorrowers = new Set(loans.map((l) => l.contactId)).size
+    const uniqueBorrowers = new Set(nonDraftLoans.map((l) => l.contactId)).size
     return { totalOutstanding, activeCount: activeLoans.length, borrowers: uniqueBorrowers, collectionRate }
   }, [loans])
 
@@ -132,9 +135,10 @@ function LoansPage() {
         if (s === "active") return 1
         if (s === "pending_approval") return 2
         if (s === "pending_disbursement") return 3
-        if (s === "completed") return 4
-        if (s === "rejected") return 5
-        return 6
+        if (s === "draft") return 4
+        if (s === "completed") return 5
+        if (s === "rejected") return 6
+        return 7
       }
       const pa = priority(a.status)
       const pb = priority(b.status)
@@ -157,6 +161,7 @@ function LoansPage() {
   const statusCounts = useMemo(() => ({
     all: loans.length,
     active: loans.filter((l) => l.status === "active").length,
+    draft: loans.filter((l) => l.status === "draft").length,
     pending_disbursement: loans.filter((l) => l.status === "pending_disbursement").length,
     completed: loans.filter((l) => l.status === "completed").length,
     defaulted: loans.filter((l) => l.status === "defaulted").length,
@@ -257,6 +262,21 @@ function LoansPage() {
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 Review
                 <span className="bg-amber-500 text-white rounded-full px-1.5 text-[10px] font-bold leading-tight">{statusCounts.pending_approval}</span>
+              </button>
+            )}
+            {statusCounts.draft > 0 && (
+              <button
+                onClick={() => handleFilterChange("draft")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                  statusFilter === "draft"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-gray-300 dark:bg-gray-500" />
+                Draft
+                <span className="text-muted-foreground/70">({statusCounts.draft})</span>
               </button>
             )}
             {(["all", "active", "pending_disbursement", "completed", "defaulted"] as StatusFilter[]).map((s) => (
