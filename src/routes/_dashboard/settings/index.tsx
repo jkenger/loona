@@ -148,7 +148,7 @@ function SettingsPage() {
   const [currentCapital, setCurrentCapital] = useState(lenderConfig?.initialCapital ?? 0)
 
   // Cash Transactions
-  const [cashTxs, setCashTxs] = useState(initialCashTxs)
+  const [cashTxs, setCashTxs] = useState(initialCashTxs ?? [])
   const [txType, setTxType] = useState<"deposit" | "expense">("expense")
   const [txAmount, setTxAmount] = useState("")
   const [txDescription, setTxDescription] = useState("")
