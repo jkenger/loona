@@ -32,15 +32,11 @@ import {
   Copy,
   Bell,
   QrCode,
-  Plus,
-  Trash,
-  ArrowUp,
-  ArrowDown,
+  Receipt,
 } from "@phosphor-icons/react"
 import type { Icon } from "@phosphor-icons/react"
 import { Switch } from "@/components/ui/switch"
-import { DatePicker } from "@/components/ui/date-picker"
-import { getLenderSettings, saveLenderSettings, getCashTransactions, addCashTransaction, deleteCashTransaction } from "@/server/lender-settings"
+import { getLenderSettings, saveLenderSettings } from "@/server/lender-settings"
 import { getLenderProfileLinks, saveLenderProfileLinks } from "@/server/lender-profile"
 import { hasRole, ROLES } from "@/lib/constants/roles"
 import { Stagger, StaggerItem } from "@/components/ui/stagger"
@@ -52,10 +48,10 @@ export const Route = createFileRoute("/_dashboard/settings/")({
       session: { user: { role: string | null } }
     }
     const isLender = hasRole(session.user.role, ROLES.LENDER)
-    const [lenderConfig, profileLinks, cashTxs] = isLender
-      ? await Promise.all([getLenderSettings(), getLenderProfileLinks(), getCashTransactions()])
-      : [null, null, []]
-    return { lenderConfig, profileLinks, cashTxs: cashTxs ?? [] }
+    const [lenderConfig, profileLinks] = isLender
+      ? await Promise.all([getLenderSettings(), getLenderProfileLinks()])
+      : [null, null]
+    return { lenderConfig, profileLinks }
   },
   pendingComponent: SettingsSkeleton,
   component: SettingsPage,
@@ -124,7 +120,7 @@ function SettingRow({ label, description, children, border = true }: {
 function SettingsPage() {
   const router = useRouter()
   const { data: session } = useSession()
-  const { lenderConfig, profileLinks, cashTxs: initialCashTxs } = Route.useLoaderData()
+  const { lenderConfig, profileLinks } = Route.useLoaderData()
 
   // Profile
   const [isEditingName, setIsEditingName] = useState(false)
@@ -146,15 +142,6 @@ function SettingsPage() {
   const [capitalInput, setCapitalInput] = useState("")
   const [isSavingCapital, setIsSavingCapital] = useState(false)
   const [currentCapital, setCurrentCapital] = useState(lenderConfig?.initialCapital ?? 0)
-
-  // Cash Transactions
-  const [cashTxs, setCashTxs] = useState(initialCashTxs ?? [])
-  const [txType, setTxType] = useState<"deposit" | "expense">("expense")
-  const [txAmount, setTxAmount] = useState("")
-  const [txDescription, setTxDescription] = useState("")
-  const [txDate, setTxDate] = useState<Date>(new Date())
-  const [isAddingTx, setIsAddingTx] = useState(false)
-  const [deletingTxId, setDeletingTxId] = useState<string | null>(null)
 
   // Notifications
   const [paymentReceiptsEnabled, setPaymentReceiptsEnabled] = useState(lenderConfig?.paymentReceiptsEnabled ?? false)
@@ -220,31 +207,6 @@ function SettingsPage() {
   }
 
   const handleEditCapital = () => { setCapitalInput(currentCapital > 0 ? currentCapital.toString() : ""); setIsEditingCapital(true) }
-
-  const handleAddTransaction = async () => {
-    const amount = parseFloat(txAmount)
-    if (isNaN(amount) || amount <= 0) { toast.error("Enter a valid amount"); return }
-    if (!txDescription.trim()) { toast.error("Enter a description"); return }
-    setIsAddingTx(true)
-    try {
-      const row = await addCashTransaction({
-        data: { type: txType, amount, description: txDescription.trim(), transactionDate: format(txDate, "yyyy-MM-dd") },
-      })
-      setCashTxs((prev) => [row, ...prev])
-      setTxAmount(""); setTxDescription("")
-      toast.success("Transaction recorded")
-    } catch { toast.error("Failed to save") }
-    finally { setIsAddingTx(false) }
-  }
-
-  const handleDeleteTransaction = async (id: string) => {
-    setDeletingTxId(id)
-    try {
-      await deleteCashTransaction({ data: id })
-      setCashTxs((prev) => prev.filter((t) => t.id !== id))
-    } catch { toast.error("Failed to delete") }
-    finally { setDeletingTxId(null) }
-  }
 
   const handleSaveCapital = async () => {
     const amount = parseFloat(capitalInput)
@@ -482,108 +444,14 @@ function SettingsPage() {
           </SettingRow>
 
           {/* Cash Transactions */}
-          <div className="px-5 py-4 border-t space-y-4">
-            <div>
-              <p className="text-sm font-medium">Cash Transactions</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Record deposits and expenses that affect your cash position</p>
-            </div>
-
-            {/* Add form */}
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTxType("expense")}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium border transition-colors",
-                    txType === "expense"
-                      ? "bg-background border-border text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <ArrowDown className="h-3.5 w-3.5 text-red-500" />
-                  Expense
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTxType("deposit")}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium border transition-colors",
-                    txType === "deposit"
-                      ? "bg-background border-border text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <ArrowUp className="h-3.5 w-3.5 text-emerald-500" />
-                  Deposit
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <CurrencyInput
-                  value={txAmount}
-                  onValueChange={setTxAmount}
-                  placeholder="Amount"
-                  className="h-8 text-sm"
-                />
-                <DatePicker
-                  value={txDate}
-                  onChange={(d) => d && setTxDate(d)}
-                />
-              </div>
-              <Input
-                value={txDescription}
-                onChange={(e) => setTxDescription(e.target.value)}
-                placeholder="Description (e.g. GoDaddy renewal)"
-                className="h-8 text-sm"
-                onKeyDown={(e) => { if (e.key === "Enter") handleAddTransaction() }}
-              />
-              <Button size="sm" className="w-full h-8 gap-1.5" onClick={handleAddTransaction} disabled={isAddingTx}>
-                {isAddingTx ? <Spinner className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                Add Transaction
+          <SettingRow label="Cash Transactions" description="Record deposits and expenses against your cash position">
+            <Link to="/settings/cash-transactions">
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5">
+                <Receipt className="h-3.5 w-3.5" />
+                Manage
               </Button>
-            </div>
-
-            {/* Transaction list */}
-            {cashTxs.length > 0 && (
-              <div className="space-y-1">
-                {cashTxs.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between gap-3 py-1.5 border-b last:border-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={cn(
-                        "h-6 w-6 rounded-full flex items-center justify-center shrink-0",
-                        tx.type === "deposit" ? "bg-emerald-100 dark:bg-emerald-950/40" : "bg-red-100 dark:bg-red-950/40"
-                      )}>
-                        {tx.type === "deposit"
-                          ? <ArrowUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" weight="bold" />
-                          : <ArrowDown className="h-3 w-3 text-red-600 dark:text-red-400" weight="bold" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{tx.description}</p>
-                        <p className="text-[10px] text-muted-foreground">{format(new Date(tx.transactionDate), "MMM d, yyyy")}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={cn(
-                        "text-sm font-semibold tabular-nums",
-                        tx.type === "deposit" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
-                      )}>
-                        {tx.type === "deposit" ? "+" : "−"}{formatCapital(parseFloat(tx.amount))}
-                      </span>
-                      <button
-                        onClick={() => handleDeleteTransaction(tx.id)}
-                        disabled={deletingTxId === tx.id}
-                        className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
-                      >
-                        {deletingTxId === tx.id
-                          ? <Spinner className="h-3.5 w-3.5 animate-spin" />
-                          : <Trash className="h-3.5 w-3.5" />}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            </Link>
+          </SettingRow>
 
           {/* Penalty Rules */}
           <SettingRow label="Penalty Rules" description="Late fees, daily interest, and caps">

@@ -55,6 +55,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as DashboardToolsEstimatorRouteImport } from './routes/_dashboard/tools/estimator'
 import { Route as DashboardSettingsQrPaymentsRouteImport } from './routes/_dashboard/settings/qr-payments'
 import { Route as DashboardSettingsPenaltySettingsRouteImport } from './routes/_dashboard/settings/penalty-settings'
+import { Route as DashboardSettingsCashTransactionsRouteImport } from './routes/_dashboard/settings/cash-transactions'
 import { Route as DashboardReportsRiskRouteImport } from './routes/_dashboard/reports/risk'
 import { Route as DashboardReportsPortfolioRouteImport } from './routes/_dashboard/reports/portfolio'
 import { Route as DashboardReportsCashFlowRouteImport } from './routes/_dashboard/reports/cash-flow'
@@ -318,6 +319,12 @@ const DashboardSettingsPenaltySettingsRoute =
     path: '/settings/penalty-settings',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardSettingsCashTransactionsRoute =
+  DashboardSettingsCashTransactionsRouteImport.update({
+    id: '/settings/cash-transactions',
+    path: '/settings/cash-transactions',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardReportsRiskRoute = DashboardReportsRiskRouteImport.update({
   id: '/reports/risk',
   path: '/reports/risk',
@@ -525,6 +532,7 @@ export interface FileRoutesByFullPath {
   '/reports/cash-flow': typeof DashboardReportsCashFlowRoute
   '/reports/portfolio': typeof DashboardReportsPortfolioRoute
   '/reports/risk': typeof DashboardReportsRiskRoute
+  '/settings/cash-transactions': typeof DashboardSettingsCashTransactionsRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/settings/qr-payments': typeof DashboardSettingsQrPaymentsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
@@ -602,6 +610,7 @@ export interface FileRoutesByTo {
   '/reports/cash-flow': typeof DashboardReportsCashFlowRoute
   '/reports/portfolio': typeof DashboardReportsPortfolioRoute
   '/reports/risk': typeof DashboardReportsRiskRoute
+  '/settings/cash-transactions': typeof DashboardSettingsCashTransactionsRoute
   '/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/settings/qr-payments': typeof DashboardSettingsQrPaymentsRoute
   '/tools/estimator': typeof DashboardToolsEstimatorRoute
@@ -682,6 +691,7 @@ export interface FileRoutesById {
   '/_dashboard/reports/cash-flow': typeof DashboardReportsCashFlowRoute
   '/_dashboard/reports/portfolio': typeof DashboardReportsPortfolioRoute
   '/_dashboard/reports/risk': typeof DashboardReportsRiskRoute
+  '/_dashboard/settings/cash-transactions': typeof DashboardSettingsCashTransactionsRoute
   '/_dashboard/settings/penalty-settings': typeof DashboardSettingsPenaltySettingsRoute
   '/_dashboard/settings/qr-payments': typeof DashboardSettingsQrPaymentsRoute
   '/_dashboard/tools/estimator': typeof DashboardToolsEstimatorRoute
@@ -761,6 +771,7 @@ export interface FileRouteTypes {
     | '/reports/cash-flow'
     | '/reports/portfolio'
     | '/reports/risk'
+    | '/settings/cash-transactions'
     | '/settings/penalty-settings'
     | '/settings/qr-payments'
     | '/tools/estimator'
@@ -838,6 +849,7 @@ export interface FileRouteTypes {
     | '/reports/cash-flow'
     | '/reports/portfolio'
     | '/reports/risk'
+    | '/settings/cash-transactions'
     | '/settings/penalty-settings'
     | '/settings/qr-payments'
     | '/tools/estimator'
@@ -917,6 +929,7 @@ export interface FileRouteTypes {
     | '/_dashboard/reports/cash-flow'
     | '/_dashboard/reports/portfolio'
     | '/_dashboard/reports/risk'
+    | '/_dashboard/settings/cash-transactions'
     | '/_dashboard/settings/penalty-settings'
     | '/_dashboard/settings/qr-payments'
     | '/_dashboard/tools/estimator'
@@ -1315,6 +1328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSettingsPenaltySettingsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/settings/cash-transactions': {
+      id: '/_dashboard/settings/cash-transactions'
+      path: '/settings/cash-transactions'
+      fullPath: '/settings/cash-transactions'
+      preLoaderRoute: typeof DashboardSettingsCashTransactionsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/reports/risk': {
       id: '/_dashboard/reports/risk'
       path: '/reports/risk'
@@ -1570,6 +1590,7 @@ interface DashboardRouteChildren {
   DashboardReportsCashFlowRoute: typeof DashboardReportsCashFlowRoute
   DashboardReportsPortfolioRoute: typeof DashboardReportsPortfolioRoute
   DashboardReportsRiskRoute: typeof DashboardReportsRiskRoute
+  DashboardSettingsCashTransactionsRoute: typeof DashboardSettingsCashTransactionsRoute
   DashboardSettingsPenaltySettingsRoute: typeof DashboardSettingsPenaltySettingsRoute
   DashboardSettingsQrPaymentsRoute: typeof DashboardSettingsQrPaymentsRoute
   DashboardToolsEstimatorRoute: typeof DashboardToolsEstimatorRoute
@@ -1621,6 +1642,8 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardReportsCashFlowRoute: DashboardReportsCashFlowRoute,
   DashboardReportsPortfolioRoute: DashboardReportsPortfolioRoute,
   DashboardReportsRiskRoute: DashboardReportsRiskRoute,
+  DashboardSettingsCashTransactionsRoute:
+    DashboardSettingsCashTransactionsRoute,
   DashboardSettingsPenaltySettingsRoute: DashboardSettingsPenaltySettingsRoute,
   DashboardSettingsQrPaymentsRoute: DashboardSettingsQrPaymentsRoute,
   DashboardToolsEstimatorRoute: DashboardToolsEstimatorRoute,
