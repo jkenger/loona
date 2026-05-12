@@ -46,7 +46,7 @@ import {
 } from "@phosphor-icons/react"
 import { LendingTip } from "@/components/lending-tip"
 
-export const Route = createFileRoute("/_dashboard/contacts/$contactId")({
+export const Route = createFileRoute("/_dashboard/contacts/$contactId/")({
   loader: async ({ params, context }) => {
     const { session } = context as { session: { user: { role: string | null } } }
     if (!hasRole(session.user.role, ROLES.LENDER)) {
@@ -523,11 +523,24 @@ function ContactDetailPage() {
 
         {/* Loans */}
         <Card className="lg:col-span-2 shadow-sm rounded-xl">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle>Loans</CardTitle>
-            <CardDescription>
-              {contact.loans.length} loan{contact.loans.length !== 1 ? "s" : ""} total
-            </CardDescription>
+          <CardHeader className="p-4 pb-2 flex-row items-start justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle>Loans</CardTitle>
+              <CardDescription>
+                {contact.loans.length} loan{contact.loans.length !== 1 ? "s" : ""} total
+              </CardDescription>
+            </div>
+            {activeLoansCount > 0 && (
+              <Link
+                to="/contacts/$contactId/receipt"
+                params={{ contactId: contact.id }}
+              >
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                  <NoteBlank className="h-3.5 w-3.5" />
+                  View Receipt
+                </Button>
+              </Link>
+            )}
           </CardHeader>
           <CardContent className="p-4 pt-0">
             {contact.loans.length > 0 ? (

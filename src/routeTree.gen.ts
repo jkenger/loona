@@ -64,7 +64,6 @@ import { Route as DashboardLoansNewWizardRouteImport } from './routes/_dashboard
 import { Route as DashboardLoansNewRouteImport } from './routes/_dashboard/loans/new'
 import { Route as DashboardLoansApplicationsRouteImport } from './routes/_dashboard/loans/applications'
 import { Route as DashboardContactsNewRouteImport } from './routes/_dashboard/contacts/new'
-import { Route as DashboardContactsContactIdRouteImport } from './routes/_dashboard/contacts/$contactId'
 import { Route as DashboardAgentsCommissionSettingsRouteImport } from './routes/_dashboard/agents/commission-settings'
 import { Route as DashboardAgentPlaybookRouteImport } from './routes/_dashboard/agent/playbook'
 import { Route as DashboardAgentPaymentsRouteImport } from './routes/_dashboard/agent/payments'
@@ -76,11 +75,13 @@ import { Route as DashboardAdminUsersRouteImport } from './routes/_dashboard/adm
 import { Route as DashboardAdminComplianceRouteImport } from './routes/_dashboard/admin/compliance'
 import { Route as DashboardAdminAuditLogsRouteImport } from './routes/_dashboard/admin/audit-logs'
 import { Route as DashboardLoansLoanIdIndexRouteImport } from './routes/_dashboard/loans/$loanId/index'
+import { Route as DashboardContactsContactIdIndexRouteImport } from './routes/_dashboard/contacts/$contactId/index'
 import { Route as DashboardAgentLoansIndexRouteImport } from './routes/_dashboard/agent/loans/index'
 import { Route as DashboardAgentContactsIndexRouteImport } from './routes/_dashboard/agent/contacts/index'
 import { Route as DashboardAdminBlogIndexRouteImport } from './routes/_dashboard/admin/blog/index'
 import { Route as DashboardLoansLoanIdPromissoryNoteRouteImport } from './routes/_dashboard/loans/$loanId/promissory-note'
 import { Route as DashboardLoansLoanIdDisclosureRouteImport } from './routes/_dashboard/loans/$loanId/disclosure'
+import { Route as DashboardContactsContactIdReceiptRouteImport } from './routes/_dashboard/contacts/$contactId/receipt'
 import { Route as DashboardAgentLoansNewRouteImport } from './routes/_dashboard/agent/loans/new'
 import { Route as DashboardAgentLoansLoanIdRouteImport } from './routes/_dashboard/agent/loans/$loanId'
 import { Route as DashboardAgentContactsContactIdRouteImport } from './routes/_dashboard/agent/contacts/$contactId'
@@ -368,12 +369,6 @@ const DashboardContactsNewRoute = DashboardContactsNewRouteImport.update({
   path: '/contacts/new',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardContactsContactIdRoute =
-  DashboardContactsContactIdRouteImport.update({
-    id: '/contacts/$contactId',
-    path: '/contacts/$contactId',
-    getParentRoute: () => DashboardRoute,
-  } as any)
 const DashboardAgentsCommissionSettingsRoute =
   DashboardAgentsCommissionSettingsRouteImport.update({
     id: '/agents/commission-settings',
@@ -434,6 +429,12 @@ const DashboardLoansLoanIdIndexRoute =
     path: '/loans/$loanId/',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardContactsContactIdIndexRoute =
+  DashboardContactsContactIdIndexRouteImport.update({
+    id: '/contacts/$contactId/',
+    path: '/contacts/$contactId/',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAgentLoansIndexRoute =
   DashboardAgentLoansIndexRouteImport.update({
     id: '/agent/loans/',
@@ -461,6 +462,12 @@ const DashboardLoansLoanIdDisclosureRoute =
   DashboardLoansLoanIdDisclosureRouteImport.update({
     id: '/loans/$loanId/disclosure',
     path: '/loans/$loanId/disclosure',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardContactsContactIdReceiptRoute =
+  DashboardContactsContactIdReceiptRouteImport.update({
+    id: '/contacts/$contactId/receipt',
+    path: '/contacts/$contactId/receipt',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAgentLoansNewRoute = DashboardAgentLoansNewRouteImport.update({
@@ -523,7 +530,6 @@ export interface FileRoutesByFullPath {
   '/agent/payments': typeof DashboardAgentPaymentsRoute
   '/agent/playbook': typeof DashboardAgentPlaybookRoute
   '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
-  '/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/applications': typeof DashboardLoansApplicationsRoute
   '/loans/new': typeof DashboardLoansNewRoute
@@ -569,11 +575,13 @@ export interface FileRoutesByFullPath {
   '/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
   '/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/agent/loans/new': typeof DashboardAgentLoansNewRoute
+  '/contacts/$contactId/receipt': typeof DashboardContactsContactIdReceiptRoute
   '/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
   '/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
   '/admin/blog/': typeof DashboardAdminBlogIndexRoute
   '/agent/contacts/': typeof DashboardAgentContactsIndexRoute
   '/agent/loans/': typeof DashboardAgentLoansIndexRoute
+  '/contacts/$contactId/': typeof DashboardContactsContactIdIndexRoute
   '/loans/$loanId/': typeof DashboardLoansLoanIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -601,7 +609,6 @@ export interface FileRoutesByTo {
   '/agent/payments': typeof DashboardAgentPaymentsRoute
   '/agent/playbook': typeof DashboardAgentPlaybookRoute
   '/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
-  '/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/contacts/new': typeof DashboardContactsNewRoute
   '/loans/applications': typeof DashboardLoansApplicationsRoute
   '/loans/new': typeof DashboardLoansNewRoute
@@ -647,11 +654,13 @@ export interface FileRoutesByTo {
   '/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
   '/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/agent/loans/new': typeof DashboardAgentLoansNewRoute
+  '/contacts/$contactId/receipt': typeof DashboardContactsContactIdReceiptRoute
   '/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
   '/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
   '/admin/blog': typeof DashboardAdminBlogIndexRoute
   '/agent/contacts': typeof DashboardAgentContactsIndexRoute
   '/agent/loans': typeof DashboardAgentLoansIndexRoute
+  '/contacts/$contactId': typeof DashboardContactsContactIdIndexRoute
   '/loans/$loanId': typeof DashboardLoansLoanIdIndexRoute
 }
 export interface FileRoutesById {
@@ -682,7 +691,6 @@ export interface FileRoutesById {
   '/_dashboard/agent/payments': typeof DashboardAgentPaymentsRoute
   '/_dashboard/agent/playbook': typeof DashboardAgentPlaybookRoute
   '/_dashboard/agents/commission-settings': typeof DashboardAgentsCommissionSettingsRoute
-  '/_dashboard/contacts/$contactId': typeof DashboardContactsContactIdRoute
   '/_dashboard/contacts/new': typeof DashboardContactsNewRoute
   '/_dashboard/loans/applications': typeof DashboardLoansApplicationsRoute
   '/_dashboard/loans/new': typeof DashboardLoansNewRoute
@@ -728,11 +736,13 @@ export interface FileRoutesById {
   '/_dashboard/agent/contacts/$contactId': typeof DashboardAgentContactsContactIdRoute
   '/_dashboard/agent/loans/$loanId': typeof DashboardAgentLoansLoanIdRoute
   '/_dashboard/agent/loans/new': typeof DashboardAgentLoansNewRoute
+  '/_dashboard/contacts/$contactId/receipt': typeof DashboardContactsContactIdReceiptRoute
   '/_dashboard/loans/$loanId/disclosure': typeof DashboardLoansLoanIdDisclosureRoute
   '/_dashboard/loans/$loanId/promissory-note': typeof DashboardLoansLoanIdPromissoryNoteRoute
   '/_dashboard/admin/blog/': typeof DashboardAdminBlogIndexRoute
   '/_dashboard/agent/contacts/': typeof DashboardAgentContactsIndexRoute
   '/_dashboard/agent/loans/': typeof DashboardAgentLoansIndexRoute
+  '/_dashboard/contacts/$contactId/': typeof DashboardContactsContactIdIndexRoute
   '/_dashboard/loans/$loanId/': typeof DashboardLoansLoanIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -762,7 +772,6 @@ export interface FileRouteTypes {
     | '/agent/payments'
     | '/agent/playbook'
     | '/agents/commission-settings'
-    | '/contacts/$contactId'
     | '/contacts/new'
     | '/loans/applications'
     | '/loans/new'
@@ -808,11 +817,13 @@ export interface FileRouteTypes {
     | '/agent/contacts/$contactId'
     | '/agent/loans/$loanId'
     | '/agent/loans/new'
+    | '/contacts/$contactId/receipt'
     | '/loans/$loanId/disclosure'
     | '/loans/$loanId/promissory-note'
     | '/admin/blog/'
     | '/agent/contacts/'
     | '/agent/loans/'
+    | '/contacts/$contactId/'
     | '/loans/$loanId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -840,7 +851,6 @@ export interface FileRouteTypes {
     | '/agent/payments'
     | '/agent/playbook'
     | '/agents/commission-settings'
-    | '/contacts/$contactId'
     | '/contacts/new'
     | '/loans/applications'
     | '/loans/new'
@@ -886,11 +896,13 @@ export interface FileRouteTypes {
     | '/agent/contacts/$contactId'
     | '/agent/loans/$loanId'
     | '/agent/loans/new'
+    | '/contacts/$contactId/receipt'
     | '/loans/$loanId/disclosure'
     | '/loans/$loanId/promissory-note'
     | '/admin/blog'
     | '/agent/contacts'
     | '/agent/loans'
+    | '/contacts/$contactId'
     | '/loans/$loanId'
   id:
     | '__root__'
@@ -920,7 +932,6 @@ export interface FileRouteTypes {
     | '/_dashboard/agent/payments'
     | '/_dashboard/agent/playbook'
     | '/_dashboard/agents/commission-settings'
-    | '/_dashboard/contacts/$contactId'
     | '/_dashboard/contacts/new'
     | '/_dashboard/loans/applications'
     | '/_dashboard/loans/new'
@@ -966,11 +977,13 @@ export interface FileRouteTypes {
     | '/_dashboard/agent/contacts/$contactId'
     | '/_dashboard/agent/loans/$loanId'
     | '/_dashboard/agent/loans/new'
+    | '/_dashboard/contacts/$contactId/receipt'
     | '/_dashboard/loans/$loanId/disclosure'
     | '/_dashboard/loans/$loanId/promissory-note'
     | '/_dashboard/admin/blog/'
     | '/_dashboard/agent/contacts/'
     | '/_dashboard/agent/loans/'
+    | '/_dashboard/contacts/$contactId/'
     | '/_dashboard/loans/$loanId/'
   fileRoutesById: FileRoutesById
 }
@@ -1391,13 +1404,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardContactsNewRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/contacts/$contactId': {
-      id: '/_dashboard/contacts/$contactId'
-      path: '/contacts/$contactId'
-      fullPath: '/contacts/$contactId'
-      preLoaderRoute: typeof DashboardContactsContactIdRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/_dashboard/agents/commission-settings': {
       id: '/_dashboard/agents/commission-settings'
       path: '/agents/commission-settings'
@@ -1475,6 +1481,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLoansLoanIdIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/contacts/$contactId/': {
+      id: '/_dashboard/contacts/$contactId/'
+      path: '/contacts/$contactId'
+      fullPath: '/contacts/$contactId/'
+      preLoaderRoute: typeof DashboardContactsContactIdIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/agent/loans/': {
       id: '/_dashboard/agent/loans/'
       path: '/agent/loans'
@@ -1508,6 +1521,13 @@ declare module '@tanstack/react-router' {
       path: '/loans/$loanId/disclosure'
       fullPath: '/loans/$loanId/disclosure'
       preLoaderRoute: typeof DashboardLoansLoanIdDisclosureRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/contacts/$contactId/receipt': {
+      id: '/_dashboard/contacts/$contactId/receipt'
+      path: '/contacts/$contactId/receipt'
+      fullPath: '/contacts/$contactId/receipt'
+      preLoaderRoute: typeof DashboardContactsContactIdReceiptRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/agent/loans/new': {
@@ -1581,7 +1601,6 @@ interface DashboardRouteChildren {
   DashboardAgentPaymentsRoute: typeof DashboardAgentPaymentsRoute
   DashboardAgentPlaybookRoute: typeof DashboardAgentPlaybookRoute
   DashboardAgentsCommissionSettingsRoute: typeof DashboardAgentsCommissionSettingsRoute
-  DashboardContactsContactIdRoute: typeof DashboardContactsContactIdRoute
   DashboardContactsNewRoute: typeof DashboardContactsNewRoute
   DashboardLoansApplicationsRoute: typeof DashboardLoansApplicationsRoute
   DashboardLoansNewRoute: typeof DashboardLoansNewRoute
@@ -1612,11 +1631,13 @@ interface DashboardRouteChildren {
   DashboardAgentContactsContactIdRoute: typeof DashboardAgentContactsContactIdRoute
   DashboardAgentLoansLoanIdRoute: typeof DashboardAgentLoansLoanIdRoute
   DashboardAgentLoansNewRoute: typeof DashboardAgentLoansNewRoute
+  DashboardContactsContactIdReceiptRoute: typeof DashboardContactsContactIdReceiptRoute
   DashboardLoansLoanIdDisclosureRoute: typeof DashboardLoansLoanIdDisclosureRoute
   DashboardLoansLoanIdPromissoryNoteRoute: typeof DashboardLoansLoanIdPromissoryNoteRoute
   DashboardAdminBlogIndexRoute: typeof DashboardAdminBlogIndexRoute
   DashboardAgentContactsIndexRoute: typeof DashboardAgentContactsIndexRoute
   DashboardAgentLoansIndexRoute: typeof DashboardAgentLoansIndexRoute
+  DashboardContactsContactIdIndexRoute: typeof DashboardContactsContactIdIndexRoute
   DashboardLoansLoanIdIndexRoute: typeof DashboardLoansLoanIdIndexRoute
 }
 
@@ -1633,7 +1654,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAgentPlaybookRoute: DashboardAgentPlaybookRoute,
   DashboardAgentsCommissionSettingsRoute:
     DashboardAgentsCommissionSettingsRoute,
-  DashboardContactsContactIdRoute: DashboardContactsContactIdRoute,
   DashboardContactsNewRoute: DashboardContactsNewRoute,
   DashboardLoansApplicationsRoute: DashboardLoansApplicationsRoute,
   DashboardLoansNewRoute: DashboardLoansNewRoute,
@@ -1665,12 +1685,15 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAgentContactsContactIdRoute: DashboardAgentContactsContactIdRoute,
   DashboardAgentLoansLoanIdRoute: DashboardAgentLoansLoanIdRoute,
   DashboardAgentLoansNewRoute: DashboardAgentLoansNewRoute,
+  DashboardContactsContactIdReceiptRoute:
+    DashboardContactsContactIdReceiptRoute,
   DashboardLoansLoanIdDisclosureRoute: DashboardLoansLoanIdDisclosureRoute,
   DashboardLoansLoanIdPromissoryNoteRoute:
     DashboardLoansLoanIdPromissoryNoteRoute,
   DashboardAdminBlogIndexRoute: DashboardAdminBlogIndexRoute,
   DashboardAgentContactsIndexRoute: DashboardAgentContactsIndexRoute,
   DashboardAgentLoansIndexRoute: DashboardAgentLoansIndexRoute,
+  DashboardContactsContactIdIndexRoute: DashboardContactsContactIdIndexRoute,
   DashboardLoansLoanIdIndexRoute: DashboardLoansLoanIdIndexRoute,
 }
 

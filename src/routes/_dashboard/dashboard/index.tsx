@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { LunaDashboardWidget } from '@/components/luna/dashboard-widget'
 import { SkeletonDashboard } from '@/components/ui/skeleton'
 import { AccessDenied } from '@/components/access-denied'
 import { hasRole, ROLES } from '@/lib/constants/roles'
@@ -34,7 +33,6 @@ import {
   Briefcase,
   CalendarDots,
   ListChecks,
-  ChartBar,
   Receipt,
   Users,
   CurrencyCircleDollar,
@@ -46,15 +44,7 @@ import {
   EnvelopeSimple,
   Info,
 } from '@phosphor-icons/react'
-import {
-  format,
-  addMonths,
-  subMonths,
-  startOfWeek,
-  addDays,
-  isSameDay,
-  isToday,
-} from 'date-fns'
+import { format, addMonths, subMonths } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { formatRelativeDateLower } from '@/lib/utils/date'
 import { Stagger, StaggerItem } from '@/components/ui/stagger'
@@ -139,18 +129,16 @@ function DashboardPage() {
   const [currentMonth, setCurrentMonth] = useState(
     stats ? new Date(stats.currentMonth) : new Date(),
   )
-  const [calendarData, setCalendarData] = useState(stats?.calendarData ?? {})
   const [summary, setSummary] = useState({
-    expectedThisMonth: stats?.expectedThisMonth ?? 0,
-    collectedThisMonth: stats?.collectedThisMonth ?? 0,
+    expectedThisMonth: toNumber(stats?.expectedThisMonth),
+    collectedThisMonth: toNumber(stats?.collectedThisMonth),
     paymentsExpected: stats?.paymentsExpected ?? 0,
     paymentsCollected: stats?.paymentsCollected ?? 0,
     collectionRate: stats?.collectionRate ?? 0,
     overdueCount: stats?.overdueCount ?? 0,
-    overdueAmount: stats?.overdueAmount ?? 0,
+    overdueAmount: toNumber(stats?.overdueAmount),
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedDay, setSelectedDay] = useState(new Date())
 
   if (unauthorized || !stats) {
     return (
@@ -169,15 +157,14 @@ function DashboardPage() {
       const newStats = await getDashboardStats({
         data: { month: month.toISOString() },
       })
-      setCalendarData(newStats.calendarData)
       setSummary({
-        expectedThisMonth: newStats.expectedThisMonth,
-        collectedThisMonth: newStats.collectedThisMonth,
+        expectedThisMonth: toNumber(newStats.expectedThisMonth),
+        collectedThisMonth: toNumber(newStats.collectedThisMonth),
         paymentsExpected: newStats.paymentsExpected,
         paymentsCollected: newStats.paymentsCollected,
         collectionRate: newStats.collectionRate,
         overdueCount: newStats.overdueCount,
-        overdueAmount: newStats.overdueAmount,
+        overdueAmount: toNumber(newStats.overdueAmount),
       })
     } finally {
       setIsLoading(false)
@@ -191,13 +178,7 @@ function DashboardPage() {
   const upcomingPayments = (stats.upcomingPayments ?? []).filter(
     (p: any) => p.status !== 'overdue',
   )
-  const allCollections = [...overduePayments, ...upcomingPayments].slice(0, 5)
-
-  // Week calendar
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-  const selectedDayKey = format(selectedDay, 'yyyy-MM-dd')
-  const selectedDayPayments = (calendarData as any)[selectedDayKey]?.payments ?? []
+  const allCollections = [...overduePayments, ...upcomingPayments].slice(0, 6)
 
   // Collection progress
   const collectionProgress =
@@ -209,52 +190,133 @@ function DashboardPage() {
       : 0
 
   return (
-    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Page Header */}
+    <Stagger className="px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      {/* Hero — greeting + month KPIs + actions */}
       <StaggerItem>
-        <p className="text-sm text-muted-foreground">
-          {format(new Date(), 'EEEE, MMMM d')}
-        </p>
-        <h1 className="text-3xl font-bold tracking-tight mt-1">
-          Hello, {firstName}
-        </h1>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1">
-          <p className="text-2xl font-medium text-muted-foreground">
-            Here's what's happening with your{' '}
-            <span className="text-foreground font-semibold bg-primary/10 px-1.5 py-0.5 rounded-md">
-              portfolio
-            </span>{' '}
-            today.
-          </p>
-          <div className="flex items-center gap-2">
-          <Link to="/loans/new-wizard">
-            <Button size="sm" className="rounded-full gap-1.5 font-semibold shadow-[0_0_12px_hsl(var(--primary)/0.4)]">
-              <CurrencyCircleDollar className="h-4 w-4" weight="bold" />
-              Issue a Loan
-            </Button>
-          </Link>
-          <Link to="/payments">
-            <Button variant="outline" size="sm" className="rounded-full gap-1.5">
-              <Receipt className="h-4 w-4" weight="bold" />
-              View Payments
-            </Button>
-          </Link>
-          <Link to="/loans">
-            <Button variant="outline" size="sm" className="rounded-full gap-1.5">
-              <Users className="h-4 w-4" weight="bold" />
-              Borrowers
-            </Button>
-          </Link>
+        <Card className="rounded-xl shadow-sm overflow-hidden">
+          <div className="p-5 sm:p-6">
+            {/* Top row: greeting + actions */}
+            <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(), 'EEEE, MMMM d')}
+                </p>
+                <h1 className="text-2xl font-bold tracking-tight mt-1">
+                  Hello, {firstName}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Here's what's happening with your portfolio.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link to="/loans/new-wizard">
+                  <Button size="sm" className="rounded-full gap-1.5 font-semibold shadow-[0_0_12px_hsl(var(--primary)/0.3)]">
+                    <CurrencyCircleDollar className="h-4 w-4" weight="bold" />
+                    Issue a Loan
+                  </Button>
+                </Link>
+                <Link to="/payments">
+                  <Button variant="outline" size="sm" className="rounded-full gap-1.5">
+                    <Receipt className="h-4 w-4" weight="bold" />
+                    Payments
+                  </Button>
+                </Link>
+                <Link to="/loans">
+                  <Button variant="outline" size="sm" className="rounded-full gap-1.5">
+                    <Users className="h-4 w-4" weight="bold" />
+                    Borrowers
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Month KPI row */}
+            <div
+              className={cn(
+                'grid gap-5 sm:grid-cols-[1fr_1fr_minmax(180px,1.2fr)] items-end',
+                isLoading && 'opacity-50 pointer-events-none',
+              )}
+            >
+              {/* Collected */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Collected
+                  </p>
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => handleMonthChange(subMonths(currentMonth, 1))}
+                      className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center transition-colors"
+                      aria-label="Previous month"
+                    >
+                      <CaretLeft className="h-3 w-3" />
+                    </button>
+                    <span className="text-[11px] font-medium text-muted-foreground min-w-[56px] text-center">
+                      {format(currentMonth, 'MMM yyyy')}
+                    </span>
+                    <button
+                      onClick={() => handleMonthChange(addMonths(currentMonth, 1))}
+                      className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center transition-colors"
+                      aria-label="Next month"
+                    >
+                      <CaretRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-3xl sm:text-4xl font-bold text-primary tabular-nums">
+                  {formatCurrency(summary.collectedThisMonth)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  of {formatCurrency(summary.expectedThisMonth)} expected
+                </p>
+              </div>
+
+              {/* Overdue */}
+              <div>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Overdue
+                </p>
+                <p
+                  className={cn(
+                    'text-3xl sm:text-4xl font-bold tabular-nums',
+                    summary.overdueCount > 0 ? 'text-destructive' : 'text-foreground',
+                  )}
+                >
+                  {summary.overdueCount}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(summary.overdueAmount)} unpaid
+                </p>
+              </div>
+
+              {/* Progress */}
+              <div className="w-full">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Collection Rate
+                  </span>
+                  <span className="text-xs font-semibold">{summary.collectionRate}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${collectionProgress}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  {summary.paymentsCollected} of {summary.paymentsExpected} payments
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        </Card>
       </StaggerItem>
 
-      {/* Bento Grid */}
+      {/* Row 2 — Upcoming Collections + Portfolio/Forecast */}
       <StaggerItem className="grid gap-5 lg:grid-cols-5">
-        {/* Left Column */}
-        <div className="lg:col-span-3 space-y-5">
-          {/* Upcoming Collections */}
-          <Card className="rounded-xl shadow-sm">
+        {/* Upcoming Collections */}
+        <div className="lg:col-span-3">
+          <Card className="rounded-xl shadow-sm h-full">
             <CardHeader className="p-5 pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -273,7 +335,7 @@ function DashboardPage() {
             </CardHeader>
             <CardContent className="p-5 pt-0">
               {allCollections.length === 0 ? (
-                <div className="py-8 text-center">
+                <div className="py-10 text-center">
                   <CheckCircle className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">
                     You're all caught up
@@ -314,7 +376,7 @@ function DashboardPage() {
                         <div className="text-right shrink-0">
                           <p
                             className={cn(
-                              'text-sm font-semibold',
+                              'text-sm font-semibold tabular-nums',
                               isOverdue && 'text-destructive',
                             )}
                           >
@@ -334,254 +396,11 @@ function DashboardPage() {
               )}
             </CardContent>
           </Card>
-
-          {/* Monthly Overview */}
-          <Card className="rounded-xl shadow-sm">
-            <CardHeader className="p-5 pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ChartBar className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base font-semibold">
-                    Monthly Overview
-                  </CardTitle>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() =>
-                      handleMonthChange(subMonths(currentMonth, 1))
-                    }
-                  >
-                    <CaretLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm font-medium min-w-[120px] text-center">
-                    {format(currentMonth, 'MMMM yyyy')}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() =>
-                      handleMonthChange(addMonths(currentMonth, 1))
-                    }
-                  >
-                    <CaretRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent
-              className={cn('p-5 pt-0', isLoading && 'opacity-50 pointer-events-none')}
-            >
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Expected</p>
-                  <p className="text-lg font-bold">
-                    {formatCurrency(summary.expectedThisMonth)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Collected</p>
-                  <p className="text-lg font-bold text-primary">
-                    {formatCurrency(summary.collectedThisMonth)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {summary.collectionRate}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Overdue</p>
-                  <p
-                    className={cn(
-                      'text-lg font-bold',
-                      summary.overdueCount > 0 && 'text-destructive',
-                    )}
-                  >
-                    {summary.overdueCount}
-                  </p>
-                </div>
-              </div>
-              {/* Progress bar */}
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: `${collectionProgress}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                {summary.paymentsCollected} of {summary.paymentsExpected}{' '}
-                payments collected
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Calendar — Week Strip */}
-          <Card className="rounded-xl shadow-sm">
-            <CardHeader className="p-5 pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CalendarDots className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base font-semibold">
-                    This Week
-                  </CardTitle>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {format(weekDays[0], 'MMM d')} – {format(weekDays[6], 'MMM d')}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              {/* Week strip */}
-              <div className="grid grid-cols-7 gap-1 mb-3">
-                {weekDays.map((day) => {
-                  const dayKey = format(day, 'yyyy-MM-dd')
-                  const dayPayments =
-                    (calendarData as any)[dayKey]?.payments ?? []
-                  const isSelected = isSameDay(day, selectedDay)
-                  const today = isToday(day)
-                  const hasOverdue = dayPayments.some(
-                    (p: any) => p.status === 'overdue',
-                  )
-                  return (
-                    <button
-                      key={dayKey}
-                      onClick={() => setSelectedDay(day)}
-                      className={cn(
-                        'flex flex-col items-center py-2 rounded-lg text-xs transition-colors relative',
-                        isSelected && !today && 'bg-muted ring-1 ring-border',
-                        today && 'bg-primary text-primary-foreground',
-                        !isSelected && !today && 'hover:bg-muted/50',
-                      )}
-                    >
-                      <span className="font-medium">
-                        {format(day, 'EEE')}
-                      </span>
-                      <span
-                        className={cn(
-                          'text-lg font-bold mt-0.5',
-                          today
-                            ? 'text-primary-foreground'
-                            : 'text-foreground',
-                        )}
-                      >
-                        {format(day, 'd')}
-                      </span>
-                      {dayPayments.length > 0 && (
-                        <span
-                          className={cn(
-                            'text-[10px] font-semibold mt-0.5 px-1 rounded-full min-w-[16px] text-center',
-                            today
-                              ? 'bg-primary-foreground/20 text-primary-foreground'
-                              : hasOverdue
-                                ? 'bg-destructive/10 text-destructive'
-                                : 'bg-primary/10 text-primary',
-                          )}
-                        >
-                          {dayPayments.length}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Selected day header */}
-              <div className="border-t pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium">
-                    {isToday(selectedDay)
-                      ? 'Today'
-                      : format(selectedDay, 'EEEE, MMM d')}
-                  </p>
-                  {selectedDayPayments.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {selectedDayPayments.length} payment
-                      {selectedDayPayments.length !== 1 ? 's' : ''} ·{' '}
-                      {formatCurrency(
-                        selectedDayPayments.reduce(
-                          (sum: number, p: any) =>
-                            sum + parseFloat(p.amount),
-                          0,
-                        ),
-                      )}
-                    </p>
-                  )}
-                </div>
-
-                {/* Selected day's payments */}
-                <div className="space-y-1.5">
-                  {selectedDayPayments.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-3">
-                      No payments scheduled
-                    </p>
-                  ) : (
-                    selectedDayPayments.map((p: any, i: number) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-2 text-sm py-1"
-                      >
-                        <span
-                          className={cn(
-                            'h-2 w-2 rounded-full shrink-0',
-                            p.status === 'paid'
-                              ? 'bg-emerald-500'
-                              : p.status === 'overdue'
-                                ? 'bg-destructive'
-                                : 'bg-amber-500',
-                          )}
-                        />
-                        <span className="truncate flex-1">
-                          {p.contactName || p.borrowerName}
-                        </span>
-                        <Badge
-                          variant={
-                            p.status === 'paid'
-                              ? 'secondary'
-                              : p.status === 'overdue'
-                                ? 'destructive'
-                                : 'outline'
-                          }
-                          className="text-[10px] shrink-0"
-                        >
-                          {p.status}
-                        </Badge>
-                        <span className="font-medium shrink-0 w-20 text-right">
-                          {formatCurrency(p.amount)}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="flex items-center gap-4 mt-3 pt-3 border-t">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] text-muted-foreground">Paid</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  <span className="text-[10px] text-muted-foreground">Pending</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-destructive" />
-                  <span className="text-[10px] text-muted-foreground">Overdue</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Right Column */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Luna AI */}
-          <LunaDashboardWidget />
-
-          {/* Portfolio */}
-          <Card className="rounded-xl shadow-sm">
+        {/* Portfolio + Forecast combined */}
+        <div className="lg:col-span-2">
+          <Card className="rounded-xl shadow-sm h-full">
             <CardHeader className="p-5 pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -594,77 +413,72 @@ function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="p-5 pt-0">
+              {/* Snapshot */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Active Loans</span>
-                  <span className="text-sm font-semibold">{stats.activeLoans}</span>
+                  <span className="text-sm font-semibold tabular-nums">{stats.activeLoans}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Total Contacts</span>
-                  <span className="text-sm font-semibold">{stats.totalContacts}</span>
+                  <span className="text-sm font-semibold tabular-nums">{stats.totalContacts}</span>
                 </div>
                 <div className="flex items-center justify-between border-t pt-2.5">
                   <span className="text-sm text-muted-foreground">Outstanding</span>
-                  <span className="text-sm font-semibold">{formatCurrency(stats.outstandingBalance)}</span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatCurrency(stats.outstandingBalance)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Total Collected</span>
-                  <span className="text-sm font-semibold">{formatCurrency(stats.totalCollected)}</span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatCurrency(stats.totalCollected)}
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Forecast */}
-          <Card className="rounded-xl shadow-sm">
-            <CardHeader className="p-5 pb-3">
-              <div className="flex items-center gap-2">
-                <TrendUp className="h-4 w-4 text-primary" weight="bold" />
-                <CardTitle className="text-base font-semibold">
-                  Forecast
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 pt-0">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Next 30 days
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.forecast.next30DaysCount} payments
-                    </p>
-                  </div>
-                  <p className="text-lg font-bold">
-                    {formatCurrency(stats.forecast.next30Days)}
-                  </p>
+              {/* Forecast */}
+              <div className="mt-5 pt-4 border-t">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendUp className="h-4 w-4 text-primary" weight="bold" />
+                  <p className="text-sm font-semibold">Forecast</p>
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Next 60 days
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.forecast.next60DaysCount} payments
-                    </p>
-                  </div>
-                  <p className="text-lg font-bold">
-                    {formatCurrency(stats.forecast.next60Days)}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Next 90 days
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.forecast.next90DaysCount} payments
-                    </p>
-                  </div>
-                  <p className="text-lg font-bold">
-                    {formatCurrency(stats.forecast.next90Days)}
-                  </p>
+                <div className="space-y-0">
+                  {[
+                    {
+                      label: 'Next 30 days',
+                      amount: stats.forecast.next30Days,
+                      count: stats.forecast.next30DaysCount,
+                    },
+                    {
+                      label: 'Next 60 days',
+                      amount: stats.forecast.next60Days,
+                      count: stats.forecast.next60DaysCount,
+                    },
+                    {
+                      label: 'Next 90 days',
+                      amount: stats.forecast.next90Days,
+                      count: stats.forecast.next90DaysCount,
+                    },
+                  ].map((f, i) => (
+                    <div
+                      key={f.label}
+                      className={cn(
+                        'flex items-center justify-between py-2',
+                        i > 0 && 'border-t',
+                      )}
+                    >
+                      <div>
+                        <p className="text-xs text-muted-foreground">{f.label}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {f.count} payments
+                        </p>
+                      </div>
+                      <p className="text-sm font-bold tabular-nums">
+                        {formatCurrency(f.amount)}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </CardContent>
@@ -764,12 +578,12 @@ function DashboardPage() {
           </div>
 
           {/* Footer */}
-          <div className="px-6 pb-6 pt-3 space-y-3">
+          <DialogFooter className="px-6 pb-6 pt-3 flex-col gap-3 sm:flex-col sm:space-x-0">
             <Button onClick={handleEnableAll} disabled={isEnablingAll} className="w-full h-11 text-sm font-semibold gap-2">
               <EnvelopeSimple className="h-4 w-4" weight="bold" />
               {isEnablingAll ? "Saving..." : "Save Preferences"}
             </Button>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               <button
                 onClick={() => setOnboardingToggles({ paymentReceipts: true, overdueAlerts: true, lenderPayment: true, lenderDocument: true, lenderPenalty: true, dailySummary: true })}
                 disabled={isEnablingAll}
@@ -785,7 +599,7 @@ function DashboardPage() {
                 Skip for now
               </button>
             </div>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Stagger>
@@ -800,4 +614,9 @@ function formatCurrency(amount: number | string): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(num)
+}
+
+function toNumber(v: number | string | null | undefined): number {
+  if (v == null) return 0
+  return typeof v === 'string' ? parseFloat(v) || 0 : v
 }
