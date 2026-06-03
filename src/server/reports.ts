@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { db, loans, contacts, paymentSchedule, payments, penalties, agents, commissions } from "@/lib/db"
+import { db, loans, contacts, paymentSchedule, payments, penalties, agents, commissions, auditLogs } from "@/lib/db"
 import { eq, and, gte, lte, desc, sql, ne, isNull, inArray } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { subMonths, startOfMonth, addDays, startOfDay } from "date-fns"
@@ -75,13 +75,14 @@ export const getPortfolioAnalytics = createServerFn()
       .where(eq(contacts.lenderId, lenderId))
       .groupBy(contacts.tier)
 
-    // Default rate
+    // Default rate + loss aggregates
     const loanCounts = await db
       .select({
         total: sql<number>`count(*)::int`,
         defaulted: sql<number>`count(*) filter (where ${loans.status} = 'defaulted')::int`,
         active: sql<number>`count(*) filter (where ${loans.status} = 'active')::int`,
         completed: sql<number>`count(*) filter (where ${loans.status} = 'completed')::int`,
+        defaultedAmount: sql<string>`coalesce(sum(case when ${loans.status} = 'defaulted' then ${loans.remainingBalance} else 0 end), 0)`,
       })
       .from(loans)
       .where(eq(loans.lenderId, lenderId))
@@ -90,6 +91,93 @@ export const getPortfolioAnalytics = createServerFn()
     const defaultedCount = loanCounts[0]?.defaulted ?? 0
     const activeCount = loanCounts[0]?.active ?? 0
     const completedCount = loanCounts[0]?.completed ?? 0
+    const defaultedAmount = Number(loanCounts[0]?.defaultedAmount ?? 0)
+    const averageLoss = defaultedCount > 0 ? defaultedAmount / defaultedCount : 0
+
+    // Recovered loans — distinct loan IDs with a "loan.recovered" audit entry
+    const recoveredRows = await db
+      .selectDistinct({ entityId: auditLogs.entityId })
+      .from(auditLogs)
+      .where(and(
+        eq(auditLogs.userId, lenderId),
+        eq(auditLogs.action, "loan.recovered"),
+      ))
+    const recoveredCount = recoveredRows.length
+    const everDefaultedRows = await db
+      .selectDistinct({ entityId: auditLogs.entityId })
+      .from(auditLogs)
+      .where(and(
+        eq(auditLogs.userId, lenderId),
+        eq(auditLogs.action, "loan.defaulted"),
+      ))
+    const everDefaultedCount = everDefaultedRows.length
+    const recoveryRate = everDefaultedCount > 0
+      ? Number(((recoveredCount / everDefaultedCount) * 100).toFixed(1))
+      : 0
+
+    // Monthly default trend — bucket `loan.defaulted` audit entries by month for the period
+    const defaultEvents = await db
+      .select({
+        createdAt: auditLogs.createdAt,
+        metadata: auditLogs.metadata,
+      })
+      .from(auditLogs)
+      .where(and(
+        eq(auditLogs.userId, lenderId),
+        eq(auditLogs.action, "loan.defaulted"),
+        gte(auditLogs.createdAt, periodStart),
+      ))
+      .orderBy(auditLogs.createdAt)
+
+    const trendBuckets: Record<string, { count: number; totalLoss: number }> = {}
+    for (let i = 0; i < months; i++) {
+      const d = startOfMonth(subMonths(now, months - 1 - i))
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      trendBuckets[key] = { count: 0, totalLoss: 0 }
+    }
+    for (const e of defaultEvents) {
+      const d = new Date(e.createdAt)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      if (!trendBuckets[key]) continue
+      trendBuckets[key].count++
+      if (e.metadata) {
+        try {
+          const meta = JSON.parse(e.metadata) as { remainingBalance?: string | number }
+          const loss = typeof meta.remainingBalance === "string"
+            ? parseFloat(meta.remainingBalance)
+            : (meta.remainingBalance ?? 0)
+          if (!isNaN(loss)) trendBuckets[key].totalLoss += loss
+        } catch {
+          // ignore malformed metadata
+        }
+      }
+    }
+    const defaultTrend = Object.entries(trendBuckets).map(([month, v]) => ({
+      month,
+      count: v.count,
+      totalLoss: v.totalLoss,
+    }))
+
+    // Top defaulters — current defaulted loans grouped by contact, ranked by loss
+    const topDefaultersRows = await db
+      .select({
+        contactId: contacts.id,
+        contactName: contacts.name,
+        loanCount: sql<number>`count(*)::int`,
+        totalLoss: sql<string>`coalesce(sum(${loans.remainingBalance}), 0)`,
+      })
+      .from(loans)
+      .innerJoin(contacts, eq(loans.contactId, contacts.id))
+      .where(and(eq(loans.lenderId, lenderId), eq(loans.status, "defaulted")))
+      .groupBy(contacts.id, contacts.name)
+      .orderBy(sql`sum(${loans.remainingBalance}) desc`)
+      .limit(5)
+    const topDefaulters = topDefaultersRows.map((r) => ({
+      contactId: r.contactId,
+      contactName: r.contactName,
+      loanCount: r.loanCount,
+      totalLoss: Number(r.totalLoss),
+    }))
 
     // Aging analysis of overdue payments
     const today = startOfDay(now)
@@ -125,6 +213,16 @@ export const getPortfolioAnalytics = createServerFn()
       loanCounts: { total: totalLoans, defaulted: defaultedCount, active: activeCount, completed: completedCount },
       defaultRate: totalLoans > 0 ? Number(((defaultedCount / totalLoans) * 100).toFixed(1)) : 0,
       agingAnalysis: aging.map((a) => ({ bucket: a.bucket, count: a.count, amount: Number(a.amount) })),
+      defaults: {
+        count: defaultedCount,
+        totalLoss: defaultedAmount,
+        averageLoss,
+        recoveredCount,
+        everDefaultedCount,
+        recoveryRate,
+        trend: defaultTrend,
+        topDefaulters,
+      },
     }
   })
 

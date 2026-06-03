@@ -99,12 +99,13 @@ function PortfolioAnalyticsPage() {
 
       {/* KPI Cards */}
       <StaggerItem>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
           {[
             { label: "Total Loans", value: String(data.loanCounts.total), icon: Briefcase, iconColor: "text-muted-foreground", iconBg: "bg-muted" },
             { label: "Active", value: String(data.loanCounts.active), valueColor: "text-primary", icon: TrendUp, iconColor: "text-blue-600 dark:text-blue-400", iconBg: "bg-blue-100 dark:bg-blue-950/40" },
             { label: "Completed", value: String(data.loanCounts.completed), valueColor: "text-green-600 dark:text-green-400", icon: CheckCircle, iconColor: "text-green-600 dark:text-green-400", iconBg: "bg-green-100 dark:bg-green-950/40" },
             { label: "Default Rate", value: `${data.defaultRate}%`, valueColor: data.defaultRate > 10 ? "text-destructive" : "text-green-600 dark:text-green-400", icon: XCircle, iconColor: data.defaultRate > 10 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400", iconBg: data.defaultRate > 10 ? "bg-red-100 dark:bg-red-950/40" : "bg-green-100 dark:bg-green-950/40" },
+            { label: "Total Losses", value: fmt(data.defaults.totalLoss), valueColor: data.defaults.totalLoss > 0 ? "text-destructive" : "", icon: Warning, iconColor: data.defaults.totalLoss > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground", iconBg: data.defaults.totalLoss > 0 ? "bg-red-100 dark:bg-red-950/40" : "bg-muted" },
             { label: "Outstanding", value: fmt(data.totalOutstanding), icon: CurrencyCircleDollar, iconColor: "text-amber-600 dark:text-amber-400", iconBg: "bg-amber-100 dark:bg-amber-950/40" },
           ].map((kpi) => (
             <Card key={kpi.label} className="rounded-xl shadow-sm">
@@ -335,6 +336,131 @@ function PortfolioAnalyticsPage() {
           </CardContent>
         </Card>
       </StaggerItem>
+
+      {/* Default & Recovery */}
+      <StaggerItem>
+        <Card className="rounded-xl shadow-sm">
+          <CardHeader className="p-5 pb-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-red-100 dark:bg-red-950/30 flex items-center justify-center">
+                  <Warning className="h-4.5 w-4.5 text-red-600 dark:text-red-400" weight="bold" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-semibold">Default & Recovery</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Track write-offs over time and which borrowers represent the biggest exposure.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-5 pt-4 space-y-6">
+            {/* Mini KPI strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <MiniStat label="Defaulted Loans" value={String(data.defaults.count)} tone={data.defaults.count > 0 ? "warn" : "muted"} />
+              <MiniStat label="Total Loss" value={fmt(data.defaults.totalLoss)} tone={data.defaults.totalLoss > 0 ? "loss" : "muted"} />
+              <MiniStat label="Average Loss" value={fmt(data.defaults.averageLoss)} tone="muted" />
+              <MiniStat
+                label="Recovery Rate"
+                value={`${data.defaults.recoveryRate}%`}
+                hint={`${data.defaults.recoveredCount} of ${data.defaults.everDefaultedCount} recovered`}
+                tone={data.defaults.recoveryRate >= 50 ? "good" : data.defaults.recoveryRate > 0 ? "warn" : "muted"}
+              />
+            </div>
+
+            {/* Trend + Top defaulters */}
+            <div className="grid gap-5 lg:grid-cols-5">
+              {/* Trend chart */}
+              <div className="lg:col-span-3">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold">Default Trend</p>
+                  <p className="text-xs text-muted-foreground">Last 6 months · loss in ₱</p>
+                </div>
+                {data.defaults.trend.some((m) => m.count > 0) ? (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={data.defaults.trend}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                      <YAxis tick={{ fontSize: 12 }} className="fill-muted-foreground" tickFormatter={(v) => fmt(v)} />
+                      <Tooltip contentStyle={tooltipStyle} formatter={((value: number) => [fmt(value), "Loss"]) as any} />
+                      <Bar dataKey="totalLoss" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                    <CheckCircle className="h-8 w-8 mb-2 text-green-500 opacity-50" />
+                    <p className="text-sm font-medium">No defaults in the last 6 months</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Top defaulters */}
+              <div className="lg:col-span-2">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold">Top Defaulters</p>
+                  <p className="text-xs text-muted-foreground">By outstanding loss</p>
+                </div>
+                {data.defaults.topDefaulters.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {data.defaults.topDefaulters.map((d, i) => (
+                      <div key={d.contactId} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs font-mono text-muted-foreground w-4 shrink-0">#{i + 1}</span>
+                          <Link
+                            to="/contacts/$contactId"
+                            params={{ contactId: d.contactId }}
+                            className="text-sm font-medium hover:text-primary transition-colors truncate"
+                          >
+                            {d.contactName}
+                          </Link>
+                          {d.loanCount > 1 && (
+                            <Badge variant="outline" className="text-[10px] shrink-0">
+                              {d.loanCount} loans
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-sm font-semibold text-destructive tabular-nums shrink-0">
+                          {fmt(d.totalLoss)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    No defaulted loans yet.
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </StaggerItem>
     </Stagger>
+  )
+}
+
+function MiniStat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string
+  value: string
+  hint?: string
+  tone: "muted" | "warn" | "loss" | "good"
+}) {
+  const valueClass =
+    tone === "loss" ? "text-destructive"
+    : tone === "warn" ? "text-amber-600 dark:text-amber-400"
+    : tone === "good" ? "text-green-600 dark:text-green-400"
+    : "text-foreground"
+  return (
+    <div className="rounded-lg border bg-card px-4 py-3">
+      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className={`text-xl font-bold mt-1 tabular-nums ${valueClass}`}>{value}</p>
+      {hint && <p className="text-[11px] text-muted-foreground mt-0.5">{hint}</p>}
+    </div>
   )
 }
