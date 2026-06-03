@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { db, loans, contacts, paymentSchedule, agents, commissions, penalties, lenderSettings } from "@/lib/db"
-import { eq, and, sql, gte, lte, or } from "drizzle-orm"
+import { eq, ne, and, sql, gte, lte, or } from "drizzle-orm"
 import { requireAuth } from "./session"
 import { parseLenderConfig } from "@/lib/constants/lender-defaults"
 import {
@@ -41,14 +41,14 @@ export const getDashboardStats = createServerFn()
 
   const targetMonth = data?.month ? new Date(data.month) : new Date()
 
-  // Get loan stats
+  // Get loan stats — outstandingBalance reflects only the active book (defaulted = off the book)
   const loanStats = await db
     .select({
       totalLoans: sql<number>`count(*)::int`,
       activeLoans: sql<number>`count(*) filter (where ${loans.status} = 'active')::int`,
       totalDisbursed: sql<string>`coalesce(sum(${loans.principal}), 0)`,
       totalCollected: sql<string>`coalesce(sum(${loans.amountPaid}), 0)`,
-      outstandingBalance: sql<string>`coalesce(sum(${loans.remainingBalance}), 0)`,
+      outstandingBalance: sql<string>`coalesce(sum(case when ${loans.status} <> 'defaulted' then ${loans.remainingBalance} else 0 end), 0)`,
       interestEarned: sql<string>`coalesce(sum(${loans.interestEarned}), 0)`,
     })
     .from(loans)
@@ -88,7 +88,7 @@ export const getDashboardStats = createServerFn()
   })
   const lenderConfig = parseLenderConfig(lenderSettingsRow?.config ?? null)
 
-  // Get overdue payments
+  // Get overdue payments — exclude defaulted loans (they're off the active book)
   const now = new Date()
   const overdueStats = await db
     .select({
@@ -97,7 +97,11 @@ export const getDashboardStats = createServerFn()
     })
     .from(paymentSchedule)
     .innerJoin(loans, eq(paymentSchedule.loanId, loans.id))
-    .where(and(eq(loans.lenderId, userId), eq(paymentSchedule.status, "overdue")))
+    .where(and(
+      eq(loans.lenderId, userId),
+      ne(loans.status, "defaulted"),
+      eq(paymentSchedule.status, "overdue"),
+    ))
 
   // Get expected/collected payments this month
   const monthStart = startOfMonth(targetMonth)
@@ -113,6 +117,7 @@ export const getDashboardStats = createServerFn()
     .where(
       and(
         eq(loans.lenderId, userId),
+        ne(loans.status, "defaulted"),
         gte(paymentSchedule.dueDate, monthStart),
         lte(paymentSchedule.dueDate, monthEnd)
       )
@@ -128,6 +133,7 @@ export const getDashboardStats = createServerFn()
     .where(
       and(
         eq(loans.lenderId, userId),
+        ne(loans.status, "defaulted"),
         gte(paymentSchedule.dueDate, monthStart),
         lte(paymentSchedule.dueDate, monthEnd),
         eq(paymentSchedule.status, "paid")
@@ -151,6 +157,7 @@ export const getDashboardStats = createServerFn()
     .where(
       and(
         eq(loans.lenderId, userId),
+        ne(loans.status, "defaulted"),
         gte(paymentSchedule.dueDate, monthStart),
         lte(paymentSchedule.dueDate, monthEnd)
       )
@@ -201,6 +208,7 @@ export const getDashboardStats = createServerFn()
     .where(
       and(
         eq(loans.lenderId, userId),
+        ne(loans.status, "defaulted"),
         gte(paymentSchedule.dueDate, now),
         lte(paymentSchedule.dueDate, next30),
         or(eq(paymentSchedule.status, "pending"), eq(paymentSchedule.status, "overdue"))
@@ -217,6 +225,7 @@ export const getDashboardStats = createServerFn()
     .where(
       and(
         eq(loans.lenderId, userId),
+        ne(loans.status, "defaulted"),
         gte(paymentSchedule.dueDate, now),
         lte(paymentSchedule.dueDate, next60),
         or(eq(paymentSchedule.status, "pending"), eq(paymentSchedule.status, "overdue"))
@@ -233,6 +242,7 @@ export const getDashboardStats = createServerFn()
     .where(
       and(
         eq(loans.lenderId, userId),
+        ne(loans.status, "defaulted"),
         gte(paymentSchedule.dueDate, now),
         lte(paymentSchedule.dueDate, next90),
         or(eq(paymentSchedule.status, "pending"), eq(paymentSchedule.status, "overdue"))
@@ -263,6 +273,7 @@ export const getDashboardStats = createServerFn()
     .where(
       and(
         eq(loans.lenderId, userId),
+        ne(loans.status, "defaulted"),
         gte(paymentSchedule.dueDate, now),
         lte(paymentSchedule.dueDate, next7Days),
         or(eq(paymentSchedule.status, "pending"), eq(paymentSchedule.status, "partial"))

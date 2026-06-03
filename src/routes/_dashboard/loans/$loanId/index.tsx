@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { getLoan, deleteLoan, approveLoan, rejectLoan, activateDraftLoan, updateDraftLoan } from "@/server/loans"
+import { getLoan, deleteLoan, approveLoan, rejectLoan, activateDraftLoan, updateDraftLoan, markLoanDefaulted, markLoanActive } from "@/server/loans"
 import { restructureLoan } from "@/server/restructure"
 import { getLoanSigningStatus } from "@/server/signatures"
 import { getAgents, assignLoanToAgent } from "@/server/agents"
@@ -154,6 +154,13 @@ function LoanDetailPage() {
     id: string; amount: string; method: string; paidAt: string; scheduleItemId: string | null
   } | null>(null)
 
+  // Default flow state
+  const [showMarkDefaultedDialog, setShowMarkDefaultedDialog] = useState(false)
+  const [defaultReason, setDefaultReason] = useState("")
+  const [isMarkingDefaulted, setIsMarkingDefaulted] = useState(false)
+  const [showMarkActiveDialog, setShowMarkActiveDialog] = useState(false)
+  const [isMarkingActive, setIsMarkingActive] = useState(false)
+
   // Draft loan state
   const [showActivateDraftDialog, setShowActivateDraftDialog] = useState(false)
   const [isActivatingDraft, setIsActivatingDraft] = useState(false)
@@ -247,6 +254,40 @@ function LoanDetailPage() {
       toast.error(err instanceof Error ? err.message : "Failed to activate loan")
     } finally {
       setIsActivatingDraft(false)
+    }
+  }
+
+  const handleMarkDefaulted = async () => {
+    setIsMarkingDefaulted(true)
+    try {
+      await markLoanDefaulted({
+        data: {
+          loanId: loan.id,
+          reason: defaultReason.trim() || undefined,
+        },
+      })
+      toast.success("Loan marked as defaulted")
+      setShowMarkDefaultedDialog(false)
+      setDefaultReason("")
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark as defaulted")
+    } finally {
+      setIsMarkingDefaulted(false)
+    }
+  }
+
+  const handleMarkActive = async () => {
+    setIsMarkingActive(true)
+    try {
+      await markLoanActive({ data: { loanId: loan.id } })
+      toast.success("Loan marked as active")
+      setShowMarkActiveDialog(false)
+      router.invalidate()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark as active")
+    } finally {
+      setIsMarkingActive(false)
     }
   }
 
@@ -497,9 +538,19 @@ function LoanDetailPage() {
                     Restructure Loan
                   </DropdownMenuItem>
                 )}
-                {import.meta.env.DEV && loan.status === "active" && loan.schedule.some((s) => s.status !== "paid") && (
-                  <DropdownMenuSeparator />
+                {loan.status === "active" && (
+                  <DropdownMenuItem onClick={() => { setDefaultReason(""); setShowMarkDefaultedDialog(true) }}>
+                    <Warning className="h-4 w-4" />
+                    Mark as Defaulted
+                  </DropdownMenuItem>
                 )}
+                {loan.status === "defaulted" && (
+                  <DropdownMenuItem onClick={() => setShowMarkActiveDialog(true)}>
+                    <ArrowCounterClockwise className="h-4 w-4" />
+                    Mark as Active
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
                   <Trash className="h-4 w-4" />
                   Delete Loan
@@ -664,6 +715,38 @@ function LoanDetailPage() {
                 >
                   <CurrencyCircleDollar className="h-4 w-4" />
                   Activate
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Defaulted Banner */}
+      {loan.status === "defaulted" && loan.isLender && (
+        <Card className="border-destructive/40 bg-destructive/5 shadow-sm rounded-xl">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                  <Warning className="h-5 w-5 text-destructive" weight="fill" />
+                </div>
+                <div>
+                  <p className="font-semibold">Loan Defaulted</p>
+                  <p className="text-sm text-muted-foreground">
+                    No new penalties will accrue. The borrower still owes {formatCurrency(loan.remainingBalance)}. Mark as active if collection resumes.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 sm:shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setShowMarkActiveDialog(true)}
+                >
+                  <ArrowCounterClockwise className="h-4 w-4" />
+                  Mark as Active
                 </Button>
               </div>
             </div>
@@ -1709,6 +1792,99 @@ function LoanDetailPage() {
                 <><Spinner className="h-4 w-4 animate-spin" /> Activating...</>
               ) : (
                 <><CurrencyCircleDollar className="h-4 w-4" /> Activate Loan</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Defaulted Dialog */}
+      <Dialog open={showMarkDefaultedDialog} onOpenChange={setShowMarkDefaultedDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark Loan as Defaulted</DialogTitle>
+            <DialogDescription>
+              This stops new penalties from accruing and removes the loan from your daily collection queue. The balance still appears on {loan.contact.name}'s receipt — you can mark it active again later if you resume collecting.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="p-3 rounded-lg border bg-muted/30 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Warning className="h-5 w-5 text-destructive" weight="fill" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium truncate">{loan.contact.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatCurrency(loan.remainingBalance)} remaining
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="defaultReason">
+                Reason <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Textarea
+                id="defaultReason"
+                value={defaultReason}
+                onChange={(e) => setDefaultReason(e.target.value)}
+                placeholder="e.g. Borrower unreachable for 3 months"
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Saved to the audit log for your records.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowMarkDefaultedDialog(false)}
+              disabled={isMarkingDefaulted}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleMarkDefaulted}
+              disabled={isMarkingDefaulted}
+              className="gap-2"
+            >
+              {isMarkingDefaulted ? (
+                <><Spinner className="h-4 w-4 animate-spin" /> Marking...</>
+              ) : (
+                <><Warning className="h-4 w-4" /> Mark as Defaulted</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Active (Recovery) Dialog */}
+      <Dialog open={showMarkActiveDialog} onOpenChange={setShowMarkActiveDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mark Loan as Active</DialogTitle>
+            <DialogDescription>
+              The loan will return to your collection queue and resume accruing penalties on unpaid items. Use this when {loan.contact.name} starts paying again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowMarkActiveDialog(false)}
+              disabled={isMarkingActive}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleMarkActive}
+              disabled={isMarkingActive}
+              className="gap-2"
+            >
+              {isMarkingActive ? (
+                <><Spinner className="h-4 w-4 animate-spin" /> Updating...</>
+              ) : (
+                <><ArrowCounterClockwise className="h-4 w-4" /> Mark as Active</>
               )}
             </Button>
           </DialogFooter>

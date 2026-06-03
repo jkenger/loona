@@ -117,6 +117,7 @@ export const getUpcomingPayments = createServerFn().handler(async () => {
     .where(
       and(
         eq(loans.lenderId, session.user.id),
+        ne(loans.status, "defaulted"),
         ne(paymentSchedule.status, "paid"),
         lte(paymentSchedule.dueDate, next30Days)
       )

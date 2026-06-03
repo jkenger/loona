@@ -21,8 +21,9 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   draft: ["active"],
   pending_disbursement: ["active"],
   pending_approval: ["active", "rejected"],
-  active: ["completed"],
+  active: ["completed", "defaulted"],
   completed: ["active"], // via reversePayment
+  defaulted: ["active", "completed"], // recovery or full payoff
 }
 
 export function assertTransition(current: string, next: string) {
@@ -1305,6 +1306,89 @@ export const rejectLoan = createServerFn()
       principal: loan.principal,
       rejectedBy: session.user.id,
       reason: data.reason,
+    })
+
+    return {
+      ...updated,
+      startDate: updated.startDate?.toISOString() ?? null,
+      maturityDate: updated.maturityDate?.toISOString() ?? null,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    }
+  })
+
+// ============================================================================
+// Mark Loan as Defaulted / Recovered
+// ============================================================================
+
+export const markLoanDefaulted = createServerFn()
+  .inputValidator(z.object({
+    loanId: z.string(),
+    reason: z.string().optional(),
+  }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+      with: { contact: true },
+    })
+
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    assertTransition(loan.status, "defaulted")
+
+    const [updated] = await db
+      .update(loans)
+      .set({ status: "defaulted", updatedAt: new Date() })
+      .where(eq(loans.id, data.loanId))
+      .returning()
+
+    log("loan.defaulted", "loan", data.loanId, {
+      contactName: loan.contact.name,
+      remainingBalance: loan.remainingBalance,
+      principal: loan.principal,
+      reason: data.reason ?? null,
+    })
+
+    return {
+      ...updated,
+      startDate: updated.startDate?.toISOString() ?? null,
+      maturityDate: updated.maturityDate?.toISOString() ?? null,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    }
+  })
+
+export const markLoanActive = createServerFn()
+  .inputValidator(z.object({ loanId: z.string() }))
+  .handler(async ({ data }) => {
+    const session = await requireAuth()
+    const log = createAuditLogger(session.user)
+
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, data.loanId),
+      with: { contact: true },
+    })
+
+    if (!loan || loan.lenderId !== session.user.id) {
+      throw new Error("Loan not found")
+    }
+
+    assertTransition(loan.status, "active")
+
+    const [updated] = await db
+      .update(loans)
+      .set({ status: "active", updatedAt: new Date() })
+      .where(eq(loans.id, data.loanId))
+      .returning()
+
+    log("loan.recovered", "loan", data.loanId, {
+      contactName: loan.contact.name,
+      remainingBalance: loan.remainingBalance,
     })
 
     return {

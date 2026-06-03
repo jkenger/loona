@@ -16,6 +16,10 @@ type AuditAction =
   | "loan.updateClauses"
   | "loan.regenerate_schedule"
   | "loan.restructure"
+  | "loan.activate_draft"
+  | "loan.update_draft"
+  | "loan.defaulted"
+  | "loan.recovered"
   // Payments
   | "payment.record"
   | "payment.reverse"
