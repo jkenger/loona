@@ -44,8 +44,9 @@ FROM base
 # Copy built application
 COPY --from=build /app /app
 
-# Migration runner. Uses drizzle-orm's neon-http migrator (a production
-# dependency), so it still works after `npm prune --omit=dev` removed drizzle-kit.
+# Migration runner, invoked once per deploy by release_command in fly.toml.
+# Uses drizzle-orm's neon-http migrator (a production dependency), so it still
+# works after `npm prune --omit=dev` removed drizzle-kit.
 COPY <<'EOF' /app/docker-migrate.mjs
 import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
@@ -65,5 +66,6 @@ EOF
 ENV PORT=8080
 EXPOSE 8080
 
-# Apply migrations, then start the server
-CMD [ "sh", "-c", "node ./docker-migrate.mjs && node .output/server/index.mjs" ]
+# Migrations run via release_command in fly.toml, so they happen once per deploy
+# instead of once per machine boot.
+CMD [ "node", ".output/server/index.mjs" ]

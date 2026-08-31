@@ -8,6 +8,11 @@ primary_region = 'sin'
 
 [build]
 
+# Runs once per deploy, in its own machine, before any app machine starts.
+# A failure here aborts the deploy and leaves the running version untouched.
+[deploy]
+  release_command = "node /app/docker-migrate.mjs"
+
 [http_service]
   internal_port = 8080
   force_https = true
